@@ -1,7 +1,8 @@
+// app/(child)/index.tsx
 import React, { useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import Animated, { 
   FadeInDown, 
   FadeInRight, 
@@ -14,7 +15,7 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
-// 임시 데이터 - 실제 앱에서는 상태 관리 도구 또는 API에서 가져와야 함
+// 임시 데이터
 const childData = {
   name: '민준',
   avatar: require('../../assets/images/react-logo.png'),
@@ -66,6 +67,11 @@ export default function ChildHomeScreen() {
     };
   });
 
+  const handleProfilePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/(tabs)/profile');
+  };
+
   // 스티커 애니메이션 스타일
   const stickerAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -99,32 +105,34 @@ export default function ChildHomeScreen() {
     );
   }, []);
 
+  const router = useRouter();
+
   const handleVerifyPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/');
+    router.push('/(child)/verify-promise');
   };
 
-  const handlePromisePress = (promise:any) => {
+  const handlePromisePress = (promise) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push({ pathname: '/promise-details', params: { id: promise.id } });
+    router.push({ pathname: '/(child)/promise-details', params: { id: promise.id } });
   };
 
   const handleRewardsPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/my-rewards');
+    router.push('/(child)/my-rewards');
   };
 
   const handleStickersPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/my-stickers');
+    router.push('/(child)/my-stickers');
   };
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       {/* 헤더 */}
       <View className="flex-row justify-between items-center px-6 py-4">
-        <Text className="text-xl text-[#3D5366] font-bold">안녕, {childData.name}! 👋</Text>
-        <TouchableOpacity className="w-10 h-10 rounded-full overflow-hidden shadow-sm">
+        <Text className="text-xl font-bold text-[#3D5366]">안녕, {childData.name}! 👋</Text>
+        <TouchableOpacity onPress={handleProfilePress} className="w-10 h-10 rounded-full overflow-hidden shadow-sm">
           <Image
             source={childData.avatar}
             className="w-full h-full"
@@ -219,7 +227,7 @@ export default function ChildHomeScreen() {
                   promise.status === 'completed' ? 'bg-[rgba(126,217,87,0.2)]' : 'bg-[#A6E1FA]'
                 }`}>
                   <Ionicons 
-                    name={promise.icon as any} 
+                    name={promise.icon} 
                     size={24} 
                     color={promise.status === 'completed' ? '#7ED957' : '#70CAF8'} 
                   />

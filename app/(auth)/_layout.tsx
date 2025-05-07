@@ -1,24 +1,37 @@
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
-import { Colors } from '../../constants/theme';
 
 export default function AuthLayout() {
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background.primary }}>
-      <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: Colors.background.primary },
-          animation: 'fade',
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: '#FFFFFF' },
+      }}
+    >
+      <Stack.Screen
+        name="login"
+        options={{
+          title: '로그인',
         }}
-      >
-        <Stack.Screen name="login" />
-        <Stack.Screen name="register" />
-        <Stack.Screen name="connect" />
-        <Stack.Screen name="reset-password" />
-      </Stack>
-    </View>
+      />
+      <Stack.Screen
+        name="register"
+        options={{
+          title: '회원가입',
+        }}
+      />
+      <Stack.Screen
+        name="reset-password"
+        options={{
+          title: '비밀번호 재설정',
+        }}
+      />
+      <Stack.Screen
+        name="connect"
+        options={{
+          title: '계정 연결',
+        }}
+      />
+    </Stack>
   );
 }

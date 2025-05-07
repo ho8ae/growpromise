@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Switch, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
@@ -42,15 +40,16 @@ const weekdays = [
 export default function AddPromiseModal() {
   // 상태 관리
   const [title, setTitle] = useState('');
-  const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
-  const [selectedReward, setSelectedReward] = useState<number>(1);
+  const [selectedIcon, setSelectedIcon] = useState(null);
+  const [selectedReward, setSelectedReward] = useState(1);
   const [reminderTime, setReminderTime] = useState('');
   const [isRepeating, setIsRepeating] = useState(false);
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [selectedDays, setSelectedDays] = useState([]);
   const [description, setDescription] = useState('');
+  const [selectedChild, setSelectedChild] = useState('민준'); // 실제 앱에서는 다중 아이 지원
 
   // 요일 선택 토글
-  const toggleDay = (day: string) => {
+  const toggleDay = (day) => {
     if (selectedDays.includes(day)) {
       setSelectedDays(selectedDays.filter(d => d !== day));
     } else {
@@ -60,47 +59,48 @@ export default function AddPromiseModal() {
   };
 
   // 아이콘 선택
-  const handleIconSelect = (iconName: string) => {
+  const handleIconSelect = (iconName) => {
     setSelectedIcon(iconName);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   // 보상 선택
-  const handleRewardSelect = (value: number) => {
+  const handleRewardSelect = (value) => {
     setSelectedReward(value);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   // 약속 저장
   const handleSavePromise = () => {
-    if (!title || !selectedIcon) {
-      // 필수 입력 항목 검증
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      return;
-    }
+    // if (!title || !selectedIcon) {
+    //   // 필수 입력 항목 검증
+    //   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    //   return;
+    // }
 
-    // 약속 데이터 구성
-    const newPromise = {
-      title,
-      icon: selectedIcon,
-      reward: selectedReward,
-      reminderTime,
-      isRepeating,
-      repeatingDays: isRepeating ? selectedDays : [],
-      description,
-    };
+    // // 약속 데이터 구성
+    // const newPromise = {
+    //   title,
+    //   icon: selectedIcon,
+    //   reward: selectedReward,
+    //   reminderTime,
+    //   isRepeating,
+    //   repeatingDays: isRepeating ? selectedDays : [],
+    //   description,
+    //   childName: selectedChild,
+    // };
 
-    console.log('새 약속 저장:', newPromise);
+    // console.log('새 약속 저장:', newPromise);
     
-    // 저장 성공 피드백
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // // 저장 성공 피드백
+    // Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
-    // 모달 닫기
+    // // 모달 닫기
     router.back();
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+    <View className="flex-1 bg-white">
       <StatusBar style="dark" />
       
       {/* 헤더 */}
@@ -135,6 +135,20 @@ export default function AddPromiseModal() {
           />
         </View>
 
+        {/* 아이 선택 (다중 아이 지원 시) */}
+        <View className="px-6 py-4">
+          <Text className="text-sm text-[#5D5E8C] font-medium mb-2">누구의 약속인가요?</Text>
+          <View className="flex-row">
+            <TouchableOpacity 
+              className="flex-row items-center bg-[rgba(166,225,250,0.3)] rounded-full px-4 py-2"
+              onPress={() => {}}
+            >
+              <Text className="text-sm text-[#3D5366] font-medium mr-2">민준</Text>
+              <Ionicons name="checkmark-circle" size={16} color="#70CAF8" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* 아이콘 선택 */}
         <View className="px-6 py-4">
           <Text className="text-sm text-[#5D5E8C] font-medium mb-2">약속 아이콘</Text>
@@ -148,7 +162,7 @@ export default function AddPromiseModal() {
                 onPress={() => handleIconSelect(icon.name)}
               >
                 <Ionicons 
-                  name={icon.name as any} 
+                  name={icon.name} 
                   size={32} 
                   color={selectedIcon === icon.name ? '#70CAF8' : '#7E8CA3'} 
                 />
@@ -266,6 +280,6 @@ export default function AddPromiseModal() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

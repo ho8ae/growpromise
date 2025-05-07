@@ -1,25 +1,44 @@
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
-import { Colors } from '../../constants/theme';
+import React from 'react';
 
 export default function ChildLayout() {
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background.primary }}>
-      <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: Colors.background.primary },
-          animation: 'slide_from_right',
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: '#F8FAFF' },
+      }}
+    >
+      <Stack.Screen
+        name="index"
+        options={{
+          title: '아이 메인',
         }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="verify-promise" />
-        <Stack.Screen name="my-rewards" />
-        <Stack.Screen name="my-stickers" />
-        <Stack.Screen name="achievement" />
-      </Stack>
-    </View>
+      />
+      <Stack.Screen
+        name="achievement"
+        options={{
+          title: '달성 현황',
+        }}
+      />
+      <Stack.Screen
+        name="my-rewards"
+        options={{
+          title: '나의 보상',
+        }}
+      />
+      <Stack.Screen
+        name="my-stickers"
+        options={{
+          title: '나의 스티커',
+        }}
+      />
+      <Stack.Screen
+        name="verify-promise"
+        options={{
+          title: '약속 인증',
+        }}
+      />
+    </Stack>
   );
 }

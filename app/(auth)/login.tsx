@@ -1,6 +1,6 @@
+// app/(auth)/login.tsx (수정 버전)
 import { Ionicons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Image,
@@ -16,23 +16,79 @@ import Animated, {
   FadeInDown,
   FadeInUp,
 } from 'react-native-reanimated';
+import { StatusBar } from 'expo-status-bar';
 
-const LoginScreen = () => {
-  const router = useRouter();
+// Import the global router this way
+import * as Router from 'expo-router';
+
+// 목 사용자 데이터
+const mockUsers = [
+  {
+    id: '1',
+    email: 'parent',
+    password: 'password123',
+    name: '김엄마',
+    role: 'parent',
+  },
+  {
+    id: '2',
+    email: 'child',
+    password: 'password123',
+    name: '민준',
+    role: 'child',
+  },
+];
+
+export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [userType, setUserType] = useState<'parent' | 'child'>('child');
+
+  // 테스트용 로그인 정보 자동 입력
+  const fillParentCredentials = () => {
+    setEmail(mockUsers[0].email);
+    setPassword(mockUsers[0].password);
+  };
+
+  const fillChildCredentials = () => {
+    setEmail(mockUsers[1].email);
+    setPassword(mockUsers[1].password);
+  };
 
   const handleLogin = () => {
-    // 실제 로그인 로직 구현 필요
-    console.log('로그인 시도:', { email, password, userType });
+    // 간단한 검증
+    if (!email || !password) {
+      alert('이메일과 비밀번호를 입력해주세요');
+      return;
+    }
 
-    // 유저 타입에 따라 다른 경로로 이동
-    if (userType === 'parent') {
-      router.replace('/(parent)');
+    // 목 데이터에서 사용자 찾기
+    const user = mockUsers.find(
+      (user) => user.email === email && user.password === password
+    );
+
+    if (user) {
+      console.log('로그인 성공:', user);
+      
+      // 사용자 역할에 따라 다른 경로로 이동
+      try {
+        if (user.role === 'parent') {
+          Router.router.replace('/(parent)');
+        } else {
+          Router.router.replace('/(child)');
+        }
+      } catch (error) {
+        console.error('Navigation error:', error);
+        // 폴백 네비게이션
+        if (user.role === 'parent') {
+          Router.router.navigate('/(parent)');
+        } else {
+          Router.router.navigate('/(child)');
+        }
+      }
     } else {
-      router.replace('/(child)');
+      // 로그인 실패
+      alert('이메일 또는 비밀번호가 올바르지 않습니다');
     }
   };
 
@@ -68,59 +124,9 @@ const LoginScreen = () => {
         </Animated.Text>
       </Animated.View>
 
-      {/* 사용자 타입 선택 탭 */}
-      <Animated.View
-        entering={FadeInDown.delay(800).duration(1000)}
-        className="flex-row bg-[#F8FAFF] rounded-md mb-6 p-1 shadow-sm"
-      >
-        <TouchableOpacity
-          className={`flex-1 flex-row items-center justify-center py-4 rounded-sm ${
-            userType === 'parent' ? 'bg-white shadow-sm' : ''
-          }`}
-          onPress={() => setUserType('parent')}
-        >
-          <Ionicons
-            name="person"
-            size={20}
-            color={userType === 'parent' ? '#70CAF8' : '#7E8CA3'}
-          />
-          <Text
-            className={`ml-1 ${
-              userType === 'parent'
-                ? 'text-[#3D5366] font-medium'
-                : 'text-[#7E8CA3]'
-            }`}
-          >
-            부모님
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          className={`flex-1 flex-row items-center justify-center py-4 rounded-sm ${
-            userType === 'child' ? 'bg-white shadow-sm' : ''
-          }`}
-          onPress={() => setUserType('child')}
-        >
-          <Ionicons
-            name="happy"
-            size={20}
-            color={userType === 'child' ? '#70CAF8' : '#7E8CA3'}
-          />
-          <Text
-            className={`ml-1 ${
-              userType === 'child'
-                ? 'text-[#3D5366] font-medium'
-                : 'text-[#7E8CA3]'
-            }`}
-          >
-            아이
-          </Text>
-        </TouchableOpacity>
-      </Animated.View>
-
       {/* 로그인 폼 */}
       <Animated.View
-        entering={FadeInDown.delay(1000).duration(1000)}
+        entering={FadeInDown.delay(800).duration(1000)}
         className="flex-1"
       >
         <View className="flex-row items-center bg-[#F5F8FF] rounded-md mb-4 px-4 py-0 ios:py-4 shadow-sm">
@@ -179,6 +185,22 @@ const LoginScreen = () => {
           <Text className="text-base text-white font-bold">로그인</Text>
         </TouchableOpacity>
 
+        {/* 테스트용 자동 로그인 버튼 */}
+        <View className="flex-row justify-center mb-6">
+          <TouchableOpacity 
+            className="bg-[#F5F8FF] rounded-md py-2 px-4 mr-2"
+            onPress={fillParentCredentials}
+          >
+            <Text className="text-sm text-[#70CAF8]">부모님 로그인</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            className="bg-[#F5F8FF] rounded-md py-2 px-4 ml-2"
+            onPress={fillChildCredentials}
+          >
+            <Text className="text-sm text-[#70CAF8]">아이 로그인</Text>
+          </TouchableOpacity>
+        </View>
+
         <View className="flex-row justify-center mb-6">
           <Text className="text-sm text-[#7E8CA3]">계정이 없으신가요? </Text>
           <Link href="/(auth)/register" asChild>
@@ -209,5 +231,3 @@ const LoginScreen = () => {
     </KeyboardAvoidingView>
   );
 }
-
-export default LoginScreen;

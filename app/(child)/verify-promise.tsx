@@ -1,19 +1,21 @@
+// app/(child)/verify-promise.tsx
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import Animated, { 
+  FadeIn, 
+  FadeInDown, 
+  FadeInUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withDelay
+} from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import Animated, {
-    FadeInDown,
-    FadeInUp,
-    useAnimatedStyle,
-    useSharedValue,
-    withDelay,
-    withSequence,
-    withTiming
-} from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 // 임시 데이터
 const promises = [
@@ -84,8 +86,10 @@ export default function VerifyPromiseScreen() {
     };
   });
 
+  const router = useRouter();
+
   // 약속 선택 시
-  const handlePromiseSelect = (promise:any) => {
+  const handlePromiseSelect = (promise) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedPromise(promise);
   };
@@ -170,7 +174,7 @@ export default function VerifyPromiseScreen() {
           {promises.map((promise, index) => (
             <Animated.View 
               key={promise.id}
-              entering={FadeInDown.delay(300 + index * 100).duration(700)}
+              entering={FadeInRight.delay(300 + index * 100).duration(700)}
             >
               <TouchableOpacity
                 className={`flex-row items-center bg-white rounded-xl p-4 mb-4 shadow-sm ${
@@ -182,7 +186,7 @@ export default function VerifyPromiseScreen() {
                   selectedPromise?.id === promise.id ? 'bg-[#70CAF8]' : 'bg-[#A6E1FA]'
                 }`}>
                   <Ionicons 
-                    name={promise.icon as any} 
+                    name={promise.icon} 
                     size={24} 
                     color={selectedPromise?.id === promise.id ? 'white' : '#70CAF8'} 
                   />

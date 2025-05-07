@@ -1,11 +1,12 @@
+// app/(parent)/index.tsx
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 
-// 임시 데이터 - 실제 앱에서는 상태 관리 도구 또는 API에서 가져와야 함
+// 임시 데이터
 const childData = {
   name: '민준',
   avatar: require('../../assets/images/react-logo.png'),
@@ -63,16 +64,22 @@ const recentActivities = [
 ];
 
 export default function ParentHomeScreen() {
+  const router = useRouter();
+
   const handleVerificationPress = () => {
-    router.push('/');
+    router.push('/(parent)/verification');
   };
 
   const handleAddPromisePress = () => {
-    router.push('/');
+    router.push('/modals/add-promise');
   };
 
   const handleChildProgressPress = () => {
-    router.push('/');
+    router.push('/(parent)/child-progress');
+  };
+  
+  const handleProfilePress = () => {
+    router.push('/(tabs)/profile');
   };
 
   return (
@@ -80,10 +87,10 @@ export default function ParentHomeScreen() {
       {/* 헤더 */}
       <View className="flex-row justify-between items-center px-6 py-4">
         <View className="flex-1">
-          <Text className="text-[#7E8CA3] text-sm">안녕하세요!</Text>
-          <Text className="text-[#3D5366] text-xl font-bold">김엄마님</Text>
+          <Text className="text-sm text-[#7E8CA3]">안녕하세요!</Text>
+          <Text className="text-xl font-bold text-[#3D5366]">김엄마님</Text>
         </View>
-        <TouchableOpacity className="w-10 h-10 rounded-full overflow-hidden shadow-sm">
+        <TouchableOpacity onPress={handleProfilePress} className="w-10 h-10 rounded-full overflow-hidden shadow-sm">
           <Image
             source={require('../../assets/images/react-logo.png')}
             className="w-full h-full"
@@ -159,7 +166,7 @@ export default function ParentHomeScreen() {
                 promise.status === 'completed' ? 'bg-[rgba(126,217,87,0.2)]' : 'bg-[#A6E1FA]'
               }`}>
                 <Ionicons 
-                  name={promise.icon as any} 
+                  name={promise.icon} 
                   size={24} 
                   color={promise.status === 'completed' ? '#7ED957' : '#70CAF8'} 
                 />
@@ -201,7 +208,7 @@ export default function ParentHomeScreen() {
                   activity.type === 'reward' ? 'bg-[rgba(255,237,163,0.3)]' : 'bg-[rgba(166,225,250,0.3)]'
                 }`}>
                   <Ionicons 
-                    name={activity.icon as any} 
+                    name={activity.icon} 
                     size={24} 
                     color={
                       activity.type === 'reward' 
