@@ -1,10 +1,11 @@
 // app/onboarding.tsx
-import React, { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Pressable, Animated, Easing } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSlideInAnimation } from '../utils/animations';
 
 const slides = [
   {
@@ -14,7 +15,7 @@ const slides = [
   },
   {
     title: '인증하고 칭찬받아요',
-    description: '약속을 지키면 사진으로 인증하고 칭찬 스티커를 받아요.',
+    description: '약속을 지키면, 사진으로 인증하고 칭찬 스티커를 받아요.',
     image: require('../assets/images/react-logo.png'),
   },
   {
@@ -27,6 +28,11 @@ const slides = [
 export default function OnboardingScreen() {
   const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const { animation, startAnimation } = useSlideInAnimation();
+  
+  useEffect(() => {
+    startAnimation();
+  }, [currentSlide]);
   
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
@@ -61,33 +67,44 @@ export default function OnboardingScreen() {
           className="self-end py-4"
           onPress={handleSkip}
         >
-          <Text className="text-gray-500">건너뛰기</Text>
+          <Text className="text-emerald-500">건너뛰기</Text>
         </Pressable>
         
-        <View className="items-center">
-          <Image
-            source={slides[currentSlide].image}
-            style={{ width: 200, height: 200 }}
-            contentFit="contain"
-          />
-          <Text className="text-2xl font-bold mt-8 text-center">
+        <Animated.View 
+          className="items-center"
+          style={{
+            transform: [{ translateX: animation }],
+            opacity: animation.interpolate({
+              inputRange: [0, 300],
+              outputRange: [1, 0],
+            }),
+          }}
+        >
+          <View className="bg-emerald-100 p-6 rounded-full mb-4">
+            <Image
+              source={slides[currentSlide].image}
+              style={{ width: 180, height: 180 }}
+              contentFit="contain"
+            />
+          </View>
+          <Text className="text-2xl font-bold mt-6 text-center text-emerald-700">
             {slides[currentSlide].title}
           </Text>
-          <Text className="text-gray-600 mt-4 text-center">
+          <Text className="text-gray-600 mt-4 text-center text-base">
             {slides[currentSlide].description}
           </Text>
-        </View>
+        </Animated.View>
         
         <View className="mb-12">
-          <View className="mb-8 w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+          <View className="mb-8 w-full h-2 bg-emerald-100 rounded-full overflow-hidden">
             <View 
-              className="h-full bg-blue-500 rounded-full"
+              className="h-full bg-emerald-400 rounded-full"
               style={{ width: `${progress}%` }}
             />
           </View>
           
           <Pressable
-            className="bg-blue-500 py-3 rounded-xl"
+            className="bg-emerald-500 py-4 rounded-xl shadow-md"
             onPress={handleNext}
           >
             <Text className="text-white text-center font-medium">
@@ -100,7 +117,7 @@ export default function OnboardingScreen() {
               className="mt-4"
               onPress={() => router.push('/(auth)')}
             >
-              <Text className="text-blue-500 text-center">
+              <Text className="text-emerald-500 text-center">
                 계정이 있으신가요? 로그인
               </Text>
             </Pressable>

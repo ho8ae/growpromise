@@ -2,19 +2,25 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
+import Colors from '../../constants/Colors';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#3b82f6', // blue-500
-        tabBarInactiveTintColor: '#9ca3af', // gray-400
+        tabBarActiveTintColor: Colors.light.primary, // green-400
+        tabBarInactiveTintColor: Colors.light.gray, // gray-400
         tabBarStyle: {
           paddingBottom: 5,
           paddingTop: 5,
           height: 60,
+          borderTopColor: '#e5e7eb', // gray-200
         },
         headerShown: false,
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+        }
       }}
     >
       <Tabs.Screen
