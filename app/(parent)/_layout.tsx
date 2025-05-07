@@ -1,49 +1,44 @@
-import { Stack } from 'expo-router';
+// app/(parent)/_layout.tsx
 import React from 'react';
+import { Stack } from 'expo-router';
 
 export default function ParentLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: '#F8FAFF' },
-      }}
-    >
-      <Stack.Screen
-        name="index"
-        options={{
-          title: '부모 메인',
-        }}
+    <Stack>
+      <Stack.Screen 
+        name="index" 
+        options={{ 
+          title: '부모 대시보드',
+          animation: 'slide_from_right',
+        }} 
       />
-      <Stack.Screen
-        name="child-progress"
-        options={{
-          title: '아이 진행 상황',
-        }}
+      <Stack.Screen 
+        name="create-promise" 
+        options={{ 
+          title: '약속 만들기',
+          animation: 'slide_from_right',
+        }} 
       />
-      <Stack.Screen
-        name="promise-details"
-        options={{
-          title: '약속 상세',
-        }}
+      <Stack.Screen 
+        name="manage-promises" 
+        options={{ 
+          title: '약속 관리',
+          animation: 'slide_from_right',
+        }} 
       />
-      <Stack.Screen
-        name="rewards-setup"
-        options={{
-          title: '보상 설정',
-        }}
-      />
-      <Stack.Screen
-        name="setting"
-        options={{
-          title: '설정',
-        }}
-      />
-      <Stack.Screen
-        name="verification"
-        options={{
+      <Stack.Screen 
+        name="approvals" 
+        options={{ 
           title: '인증 확인',
-        }}
+          animation: 'slide_from_right',
+        }} 
+      />
+      <Stack.Screen 
+        name="set-rewards" 
+        options={{ 
+          title: '보상 설정',
+          animation: 'slide_from_right',
+        }} 
       />
     </Stack>
   );
