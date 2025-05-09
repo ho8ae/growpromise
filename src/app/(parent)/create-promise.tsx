@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import promiseApi, { CreatePromiseRequest } from '../../api/promiseApi';
+import api from '../../api'; // 수정된 import
+import { CreatePromiseRequest, RepeatType } from '../../api/modules/promise'; // 수정된 import
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -17,7 +18,7 @@ export default function CreatePromiseScreen() {
   const [formData, setFormData] = useState<Partial<CreatePromiseRequest>>({
     title: '',
     description: '',
-    repeatType: 'ONCE',
+    repeatType: RepeatType.ONCE,
     startDate: new Date().toISOString(),
     childIds: []
   });
@@ -35,12 +36,12 @@ export default function CreatePromiseScreen() {
     error: childrenError 
   } = useQuery({
     queryKey: ['parentChildren'],
-    queryFn: () => promiseApi.getParentChildren(),
+    queryFn: () => api.promise.getParentChildren(), // 수정된 API 호출
   });
   
   // 약속 생성 뮤테이션
   const createPromiseMutation = useMutation({
-    mutationFn: (data: CreatePromiseRequest) => promiseApi.createPromise(data),
+    mutationFn: (data: CreatePromiseRequest) => api.promise.createPromise(data), // 수정된 API 호출
     onSuccess: () => {
       // 관련 데이터 갱신
       queryClient.invalidateQueries({ queryKey: ['parentPromises'] });
@@ -121,7 +122,7 @@ export default function CreatePromiseScreen() {
     }
     
     // 반복 약속인데 종료일이 없는 경우
-    if (formData.repeatType !== 'ONCE' && !formData.endDate) {
+    if (formData.repeatType !== RepeatType.ONCE && !formData.endDate) {
       Alert.alert('입력 오류', '반복 약속인 경우 종료일은 필수입니다.');
       return;
     }
@@ -172,10 +173,10 @@ export default function CreatePromiseScreen() {
             <Text className="text-gray-700 font-medium mb-1">반복 유형</Text>
             <View className="flex-row flex-wrap">
               {[
-                { value: 'ONCE', label: '한 번만' },
-                { value: 'DAILY', label: '매일' },
-                { value: 'WEEKLY', label: '매주' },
-                { value: 'MONTHLY', label: '매월' }
+                { value: RepeatType.ONCE, label: '한 번만' },
+                { value: RepeatType.DAILY, label: '매일' },
+                { value: RepeatType.WEEKLY, label: '매주' },
+                { value: RepeatType.MONTHLY, label: '매월' }
               ].map((option) => (
                 <Pressable
                   key={option.value}
@@ -222,7 +223,7 @@ export default function CreatePromiseScreen() {
           </View>
           
           {/* 종료일 선택 (반복 약속인 경우) */}
-          {formData.repeatType !== 'ONCE' && (
+          {formData.repeatType !== RepeatType.ONCE && (
             <View className="mb-4">
               <Text className="text-gray-700 font-medium mb-1">종료일</Text>
               <Pressable

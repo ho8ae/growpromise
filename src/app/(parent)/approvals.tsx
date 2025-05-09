@@ -1,37 +1,16 @@
-// app/(parent)/approvals.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
-
-// 인증 요청 인터페이스 정의
-interface Verification {
-  id: string;
-  child?: {
-    id: string;
-    user: {
-      id: string;
-      username: string;
-      profileImage?: string;
-    };
-  };
-  promise?: {
-    id: string;
-    title: string;
-    description?: string;
-  };
-  verificationTime?: string;
-  verificationImage?: string;
-  dueDate: string;
-  message?: string;
-}
+import promiseApi, { PromiseAssignment } from '../../api/modules/promise';
+import * as Haptics from 'expo-haptics';
 
 export default function ApprovalsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [verification, setVerification] = useState<Verification | null>(null);
+  const [verification, setVerification] = useState<PromiseAssignment | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,12 +29,15 @@ export default function ApprovalsScreen() {
       setIsLoading(true);
       setError(null);
       
-      // 실제 구현 시 API 호출 부분
-      // const response = await promiseApi.getVerificationDetails(id as string);
-      // setVerification(response);
+      // 이 API 엔드포인트가 구현되어 있지 않은 경우 getPendingVerifications에서 필터링하여 사용
+      const pendingVerifications = await promiseApi.getPendingVerifications();
+      const verificationDetails = pendingVerifications.find(v => v.id === id);
       
-      // 개발 중에는 빈 데이터 설정
-      setVerification(null);
+      if (verificationDetails) {
+        setVerification(verificationDetails);
+      } else {
+        setError('요청한 인증 정보를 찾을 수 없습니다.');
+      }
       
       setIsLoading(false);
     } catch (error) {
@@ -87,12 +69,17 @@ export default function ApprovalsScreen() {
     if (imagePath.startsWith('http')) {
       return { uri: imagePath };
     } else {
-      return { uri: `http://localhost:3000/${imagePath}` };
+      // 개발 환경에 맞는 기본 URL 설정
+      const baseUrl = __DEV__ 
+        ? 'http://localhost:3000' 
+        : 'https://api.kidsplan.app';
+      return { uri: `${baseUrl}/${imagePath}` };
     }
   };
   
   // 인증 승인 처리
   const handleApprove = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
       '인증 승인',
       '이 약속 인증을 승인하시겠습니까?',
@@ -104,10 +91,10 @@ export default function ApprovalsScreen() {
             try {
               setIsSubmitting(true);
               
-              // 실제 구현 시 API 호출 부분
-              // await promiseApi.respondToVerification(id as string, true);
+              await promiseApi.respondToVerification(id as string, true);
               
               // 성공 처리
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               Alert.alert(
                 '성공',
                 '인증을 승인했습니다. 자녀에게 스티커가 지급되었습니다.',
@@ -117,6 +104,7 @@ export default function ApprovalsScreen() {
               setIsSubmitting(false);
             } catch (error) {
               console.error('인증 승인 중 오류:', error);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
               Alert.alert('오류', '인증 승인 중 문제가 발생했습니다.');
               setIsSubmitting(false);
             }
@@ -129,10 +117,12 @@ export default function ApprovalsScreen() {
   // 인증 거절 처리
   const handleReject = async () => {
     if (!rejectionReason.trim()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Alert.alert('알림', '거절 사유를 입력해주세요.');
       return;
     }
     
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
       '인증 거절',
       '이 약속 인증을 거절하시겠습니까?',
@@ -145,8 +135,7 @@ export default function ApprovalsScreen() {
             try {
               setIsSubmitting(true);
               
-              // 실제 구현 시 API 호출 부분
-              // await promiseApi.respondToVerification(id as string, false, rejectionReason);
+              await promiseApi.respondToVerification(id as string, false, rejectionReason);
               
               // 성공 처리
               Alert.alert(
@@ -158,6 +147,7 @@ export default function ApprovalsScreen() {
               setIsSubmitting(false);
             } catch (error) {
               console.error('인증 거절 중 오류:', error);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
               Alert.alert('오류', '인증 거절 중 문제가 발생했습니다.');
               setIsSubmitting(false);
             }
@@ -171,7 +161,11 @@ export default function ApprovalsScreen() {
     <SafeAreaView className="flex-1 bg-white">
       <View className="px-4 pt-2 flex-1">
         <View className="flex-row items-center justify-between mb-4">
-          <Pressable onPress={() => router.back()} className="p-2">
+          <Pressable 
+            onPress={() => router.back()} 
+            className="p-2"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <FontAwesome5 name="arrow-left" size={20} color="#10b981" />
           </Pressable>
           <Text className="text-2xl font-bold text-emerald-700">인증 확인</Text>
@@ -256,16 +250,6 @@ export default function ApprovalsScreen() {
                 기한: {formatDate(verification.dueDate)}
               </Text>
             </View>
-            
-            {/* 인증 메시지 */}
-            {verification.message && (
-              <View className="bg-emerald-50 p-4 rounded-xl mb-4">
-                <Text className="text-gray-700 font-medium mb-1">자녀의 메시지:</Text>
-                <Text className="text-gray-600">
-                  {verification.message}
-                </Text>
-              </View>
-            )}
             
             {/* 인증 이미지 */}
             <View className="mb-4 rounded-xl overflow-hidden">

@@ -1,40 +1,42 @@
-// app/(parent)/index.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Animated, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, Animated, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useSlideInAnimation } from '../../utils/animations';
+import * as Haptics from 'expo-haptics';
+import promiseApi, { PromiseAssignment } from '../../api/modules/promise';
 import { useAuthStore } from '../../stores/authStore';
 
-// 인증 요청 인터페이스 정의
-interface Verification {
-  id: string;
-  child?: {
-    id: string;
-    user: {
-      id: string;
-      username: string;
-      profileImage?: string;
+// 슬라이드인 애니메이션 훅
+const useSlideInAnimation = (initialValue = 100, duration = 500) => {
+  const animation = React.useRef(new Animated.Value(initialValue)).current;
+
+  const startAnimation = () => {
+    Animated.timing(animation, {
+      toValue: 0,
+      duration,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  useEffect(() => {
+    startAnimation();
+    return () => {
+      animation.stopAnimation();
     };
-  };
-  promise?: {
-    id: string;
-    title: string;
-    description?: string;
-  };
-  verificationTime?: string;
-  verificationImage?: string;
-  dueDate: string;
-}
+  }, []);
+
+  return { animation, startAnimation };
+};
 
 export default function ParentDashboard() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { animation, startAnimation } = useSlideInAnimation();
-  const [pendingVerifications, setPendingVerifications] = useState<Verification[]>([]);
+  const [pendingVerifications, setPendingVerifications] = useState<PromiseAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // 애니메이션 시작 및 데이터 로드
@@ -49,18 +51,24 @@ export default function ParentDashboard() {
       setIsLoading(true);
       setError(null);
       
-      // 실제 구현 시 API 호출 부분
-      // const response = await promiseApi.getPendingVerifications();
-      // setPendingVerifications(response);
-      
-      // 개발 중에는 빈 데이터 설정
-      setPendingVerifications([]);
+      const response = await promiseApi.getPendingVerifications();
+      setPendingVerifications(response);
       
       setIsLoading(false);
     } catch (error) {
       console.error('인증 요청 목록 로드 중 오류:', error);
       setError('인증 요청 목록을 불러오는 중 오류가 발생했습니다.');
       setIsLoading(false);
+    }
+  };
+
+  // 새로고침 처리
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadPendingVerifications();
+    } finally {
+      setIsRefreshing(false);
     }
   };
   
@@ -97,8 +105,21 @@ export default function ParentDashboard() {
     if (imagePath.startsWith('http')) {
       return { uri: imagePath };
     } else {
-      return { uri: `http://localhost:3000/${imagePath}` };
+      // 개발 환경에 맞는 기본 URL 설정
+      const baseUrl = __DEV__ 
+        ? 'http://localhost:3000' 
+        : 'https://api.kidsplan.app';
+      return { uri: `${baseUrl}/${imagePath}` };
     }
+  };
+
+  // 인증 확인 화면으로 이동
+  const navigateToApproval = (verificationId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push({
+      pathname: '/(parent)/approvals',
+      params: { id: verificationId }
+    });
   };
   
   return (
@@ -155,14 +176,25 @@ export default function ParentDashboard() {
         )}
         
         {/* 인증 요청 목록 */}
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          className="flex-1" 
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor="#10b981"
+              colors={["#10b981"]}
+            />
+          }
+        >
           {!isLoading && !error && pendingVerifications.length > 0 && 
-           pendingVerifications.map((verification: Verification) => (
+           pendingVerifications.map((verification) => (
             <Animated.View 
               key={verification.id}
               style={{
                 opacity: animation.interpolate({
-                  inputRange: [0, 300],
+                  inputRange: [0, 100],
                   outputRange: [1, 0]
                 }),
                 transform: [{ translateX: animation }]
@@ -170,14 +202,14 @@ export default function ParentDashboard() {
             >
               <Pressable
                 className="mb-3 p-4 rounded-xl border border-emerald-300 bg-emerald-50 shadow-sm"
-                onPress={() => router.push({
-                  pathname: '/(parent)/approvals',
-                  params: { id: verification.id }
-                })}
+                onPress={() => navigateToApproval(verification.id)}
               >
                 <View className="flex-row items-center">
                   <Image
-                    source={getImageUrl(verification.child?.user.profileImage)}
+                    source={verification.child?.user.profileImage ? 
+                      getImageUrl(verification.child.user.profileImage) : 
+                      require('../../assets/images/react-logo.png')
+                    }
                     style={{ width: 50, height: 50 }}
                     contentFit="cover"
                     className="mr-3 rounded-full bg-gray-200"
@@ -205,7 +237,7 @@ export default function ParentDashboard() {
           className="my-4"
           style={{
             opacity: animation.interpolate({
-              inputRange: [0, 300],
+              inputRange: [0, 100],
               outputRange: [1, 0]
             }),
             transform: [{ translateY: animation }]
@@ -213,7 +245,10 @@ export default function ParentDashboard() {
         >
           <Pressable
             className="bg-emerald-500 py-3 rounded-xl mb-3 shadow-md"
-            onPress={() => router.push('/(parent)/create-promise')}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push('/(parent)/create-promise');
+            }}
           >
             <View className="flex-row items-center justify-center">
               <FontAwesome5 name="plus" size={16} color="white" style={{ marginRight: 8 }} />
@@ -225,7 +260,10 @@ export default function ParentDashboard() {
           
           <Pressable
             className="bg-emerald-600 py-3 rounded-xl shadow-md"
-            onPress={() => router.push('/(parent)/manage-promises')}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push('/(parent)/manage-promises');
+            }}
           >
             <View className="flex-row items-center justify-center">
               <FontAwesome5 name="list" size={16} color="white" style={{ marginRight: 8 }} />
@@ -237,7 +275,10 @@ export default function ParentDashboard() {
           
           <Pressable
             className="bg-emerald-400 py-3 rounded-xl mt-3 shadow-md"
-            onPress={() => router.push('/(parent)/set-rewards')}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push('/(parent)/set-rewards');
+            }}
           >
             <View className="flex-row items-center justify-center">
               <FontAwesome5 name="gift" size={16} color="white" style={{ marginRight: 8 }} />
