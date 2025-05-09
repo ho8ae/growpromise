@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import authApi, { LoginRequest, ParentSignupRequest, ChildSignupRequest } from '../api/authApi';
+import authApi, { LoginRequest, ParentSignupRequest, ChildSignupRequest } from '../api/modules/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface User {
