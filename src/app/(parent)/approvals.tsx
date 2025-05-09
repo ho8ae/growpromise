@@ -1,132 +1,335 @@
 // app/(parent)/approvals.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, TextInput, ScrollView, Animated } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { FontAwesome } from '@expo/vector-icons';
-import { useBouncyAnimation } from '../../utils/animations';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { FontAwesome5 } from '@expo/vector-icons';
 
-export default function ApprovalScreen() {
+// 인증 요청 인터페이스 정의
+interface Verification {
+  id: string;
+  child?: {
+    id: string;
+    user: {
+      id: string;
+      username: string;
+      profileImage?: string;
+    };
+  };
+  promise?: {
+    id: string;
+    title: string;
+    description?: string;
+  };
+  verificationTime?: string;
+  verificationImage?: string;
+  dueDate: string;
+  message?: string;
+}
+
+export default function ApprovalsScreen() {
   const router = useRouter();
-  const [message, setMessage] = useState('');
-  const [selectedSticker, setSelectedSticker] = useState('1');
-  const { animation, startAnimation } = useBouncyAnimation();
+  const { id } = useLocalSearchParams();
+  const [verification, setVerification] = useState<Verification | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
+  // 인증 요청 상세 정보 로드
   useEffect(() => {
-    startAnimation();
-  }, [selectedSticker]);
+    if (id) {
+      loadVerificationDetails();
+    }
+  }, [id]);
   
-  const stickers = [
-    { id: '1', image: require('../../assets/images/react-logo.png') },
-    { id: '2', image: require('../../assets/images/react-logo.png') },
-    { id: '3', image: require('../../assets/images/react-logo.png') },
-    { id: '4', image: require('../../assets/images/react-logo.png') },
-  ];
-  
-  const handleApprove = () => {
-    // 실제 앱에서는 API 요청 등 구현
-    alert('약속 인증을 승인했습니다!');
-    router.back();
+  // 인증 요청 상세 정보 로드 함수
+  const loadVerificationDetails = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // 실제 구현 시 API 호출 부분
+      // const response = await promiseApi.getVerificationDetails(id as string);
+      // setVerification(response);
+      
+      // 개발 중에는 빈 데이터 설정
+      setVerification(null);
+      
+      setIsLoading(false);
+    } catch (error) {
+      console.error('인증 요청 상세 정보 로드 중 오류:', error);
+      setError('인증 요청 정보를 불러오는 중 오류가 발생했습니다.');
+      setIsLoading(false);
+    }
   };
   
-  const handleReject = () => {
-    // 실제 앱에서는 API 요청 등 구현
-    alert('약속 인증을 거절했습니다.');
-    router.back();
+  // 날짜 포맷 함수
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '날짜 정보 없음';
+    
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    
+    return `${year}년 ${month}월 ${day}일 ${hours}:${minutes < 10 ? '0' + minutes : minutes}`;
+  };
+  
+  // 이미지 URL 변환
+  const getImageUrl = (imagePath?: string) => {
+    if (!imagePath) return undefined;
+    
+    // 서버 URL과 이미지 경로 결합
+    if (imagePath.startsWith('http')) {
+      return { uri: imagePath };
+    } else {
+      return { uri: `http://localhost:3000/${imagePath}` };
+    }
+  };
+  
+  // 인증 승인 처리
+  const handleApprove = async () => {
+    Alert.alert(
+      '인증 승인',
+      '이 약속 인증을 승인하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '승인', 
+          onPress: async () => {
+            try {
+              setIsSubmitting(true);
+              
+              // 실제 구현 시 API 호출 부분
+              // await promiseApi.respondToVerification(id as string, true);
+              
+              // 성공 처리
+              Alert.alert(
+                '성공',
+                '인증을 승인했습니다. 자녀에게 스티커가 지급되었습니다.',
+                [{ text: '확인', onPress: () => router.back() }]
+              );
+              
+              setIsSubmitting(false);
+            } catch (error) {
+              console.error('인증 승인 중 오류:', error);
+              Alert.alert('오류', '인증 승인 중 문제가 발생했습니다.');
+              setIsSubmitting(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+  
+  // 인증 거절 처리
+  const handleReject = async () => {
+    if (!rejectionReason.trim()) {
+      Alert.alert('알림', '거절 사유를 입력해주세요.');
+      return;
+    }
+    
+    Alert.alert(
+      '인증 거절',
+      '이 약속 인증을 거절하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '거절', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsSubmitting(true);
+              
+              // 실제 구현 시 API 호출 부분
+              // await promiseApi.respondToVerification(id as string, false, rejectionReason);
+              
+              // 성공 처리
+              Alert.alert(
+                '성공',
+                '인증을 거절했습니다. 자녀에게 알림이 전송되었습니다.',
+                [{ text: '확인', onPress: () => router.back() }]
+              );
+              
+              setIsSubmitting(false);
+            } catch (error) {
+              console.error('인증 거절 중 오류:', error);
+              Alert.alert('오류', '인증 거절 중 문제가 발생했습니다.');
+              setIsSubmitting(false);
+            }
+          }
+        }
+      ]
+    );
   };
   
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <ScrollView className="flex-1">
-        <View className="px-4 pt-4 pb-8">
-          <Text className="text-2xl font-bold text-center my-4 text-emerald-700">
-            인증 확인하기
-          </Text>
-          
-          <View className="bg-emerald-50 rounded-xl p-4 mb-5 border border-emerald-200">
-            <Text className="text-lg font-medium mb-1 text-emerald-700">약속</Text>
-            <Text className="text-emerald-800 text-lg">숙제하기</Text>
-            <Text className="text-gray-500 text-sm mt-1">민준 • 방금 전</Text>
-            <View className="mt-2 px-3 py-2 bg-white rounded-lg border border-emerald-200 italic">
-              <Text className="text-gray-600">
-                "숙제를 다 했어요! 칭찬해주세요~"
-              </Text>
-            </View>
+      <View className="px-4 pt-2 flex-1">
+        <View className="flex-row items-center justify-between mb-4">
+          <Pressable onPress={() => router.back()} className="p-2">
+            <FontAwesome5 name="arrow-left" size={20} color="#10b981" />
+          </Pressable>
+          <Text className="text-2xl font-bold text-emerald-700">인증 확인</Text>
+          <View style={{ width: 30 }} />
+        </View>
+        
+        {/* 로딩 상태 */}
+        {isLoading && (
+          <View className="flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color="#10b981" />
+            <Text className="mt-2 text-gray-600">인증 정보를 불러오는 중...</Text>
           </View>
-          
-          <Text className="text-lg font-medium mb-3 text-emerald-700">인증 사진</Text>
-          <View className="bg-emerald-50 rounded-xl aspect-square mb-6 border border-emerald-200 overflow-hidden">
-            <Image
-              source={require('../../assets/images/react-logo.png')}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="cover"
-              className="rounded-xl"
-            />
-          </View>
-          
-          <Text className="text-lg font-medium mb-3 text-emerald-700">칭찬 스티커 선택</Text>
-          <View className="flex-row flex-wrap mb-6 bg-emerald-50 p-3 rounded-xl border border-emerald-200">
-            {stickers.map(sticker => (
-              <Pressable
-                key={sticker.id}
-                className={`mr-4 mb-2 p-2 rounded-xl ${
-                  selectedSticker === sticker.id ? 'bg-emerald-100 border-2 border-emerald-500' : ''
-                }`}
-                onPress={() => setSelectedSticker(sticker.id)}
-              >
-                <Animated.View
-                  style={{
-                    transform: [
-                      { scale: selectedSticker === sticker.id ? animation : 1 }
-                    ]
-                  }}
-                >
-                  <Image
-                    source={sticker.image}
-                    style={{ width: 60, height: 60 }}
-                    contentFit="contain"
-                  />
-                </Animated.View>
-              </Pressable>
-            ))}
-          </View>
-          
-          <Text className="text-lg font-medium mb-3 text-emerald-700">칭찬 메시지</Text>
-          <TextInput
-            value={message}
-            onChangeText={setMessage}
-            placeholder="칭찬 메시지를 입력하세요 (예: 정말 잘했어요! 최고예요!)"
-            className="border border-emerald-200 bg-emerald-50 rounded-xl p-4 mb-6"
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-          />
-          
-          <View className="flex-row mb-4">
+        )}
+        
+        {/* 에러 상태 */}
+        {error && (
+          <View className="flex-1 justify-center items-center">
+            <FontAwesome5 name="exclamation-circle" size={40} color="#ef4444" />
+            <Text className="mt-2 text-gray-700">불러오기 실패</Text>
+            <Text className="text-gray-500 text-center mb-4">{error}</Text>
             <Pressable
-              className="flex-1 py-4 bg-gray-400 rounded-xl mr-2 shadow-md"
-              onPress={handleReject}
+              className="bg-emerald-500 px-4 py-2 rounded-lg"
+              onPress={() => router.back()}
             >
-              <Text className="text-white text-center font-medium">
-                거절하기
-              </Text>
+              <Text className="text-white font-medium">돌아가기</Text>
             </Pressable>
-            
+          </View>
+        )}
+        
+        {/* 데이터가 없는 경우 */}
+        {!isLoading && !error && !verification && (
+          <View className="flex-1 justify-center items-center">
+            <FontAwesome5 name="search" size={40} color="#d1d5db" />
+            <Text className="mt-2 text-gray-700">인증을 찾을 수 없습니다</Text>
+            <Text className="text-gray-500 text-center mb-4">
+              요청한 인증 정보를 찾을 수 없습니다. 이미 처리되었거나 삭제되었을 수 있습니다.
+            </Text>
             <Pressable
-              className="flex-1 py-4 bg-emerald-500 rounded-xl ml-2 shadow-md"
-              onPress={handleApprove}
+              className="bg-emerald-500 px-4 py-2 rounded-lg"
+              onPress={() => router.back()}
             >
-              <View className="flex-row items-center justify-center">
-                <FontAwesome name="check" size={16} color="white" style={{ marginRight: 6 }} />
-                <Text className="text-white text-center font-medium">
-                  승인하기
+              <Text className="text-white font-medium">돌아가기</Text>
+            </Pressable>
+          </View>
+        )}
+        
+        {/* 인증 정보 */}
+        {!isLoading && !error && verification && (
+          <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+            {/* 자녀 정보 */}
+            <View className="flex-row items-center mb-4">
+              <Image
+                source={verification.child?.user.profileImage ? 
+                  getImageUrl(verification.child.user.profileImage) : 
+                  require('../../assets/images/react-logo.png')
+                }
+                style={{ width: 60, height: 60 }}
+                contentFit="cover"
+                className="mr-4 rounded-full bg-gray-200"
+              />
+              <View>
+                <Text className="text-xl font-bold text-gray-800">
+                  {verification.child?.user.username || '이름 없음'}
+                </Text>
+                <Text className="text-gray-500">
+                  인증 시간: {formatDate(verification.verificationTime)}
                 </Text>
               </View>
-            </Pressable>
-          </View>
-        </View>
-      </ScrollView>
+            </View>
+            
+            {/* 약속 정보 */}
+            <View className="bg-emerald-50 p-4 rounded-xl mb-4">
+              <Text className="text-lg font-bold text-emerald-800">
+                {verification.promise?.title || '제목 없음'}
+              </Text>
+              {verification.promise?.description && (
+                <Text className="text-gray-700 mt-1">
+                  {verification.promise.description}
+                </Text>
+              )}
+              <Text className="text-gray-600 mt-2">
+                기한: {formatDate(verification.dueDate)}
+              </Text>
+            </View>
+            
+            {/* 인증 메시지 */}
+            {verification.message && (
+              <View className="bg-emerald-50 p-4 rounded-xl mb-4">
+                <Text className="text-gray-700 font-medium mb-1">자녀의 메시지:</Text>
+                <Text className="text-gray-600">
+                  {verification.message}
+                </Text>
+              </View>
+            )}
+            
+            {/* 인증 이미지 */}
+            <View className="mb-4 rounded-xl overflow-hidden">
+              {verification.verificationImage ? (
+                <Image
+                  source={getImageUrl(verification.verificationImage)}
+                  style={{ width: '100%', height: 300 }}
+                  contentFit="cover"
+                />
+              ) : (
+                <View className="bg-gray-200 h-60 items-center justify-center">
+                  <FontAwesome5 name="image" size={40} color="#9ca3af" />
+                  <Text className="text-gray-500 mt-2">이미지 없음</Text>
+                </View>
+              )}
+            </View>
+            
+            {/* 승인/거절 영역 */}
+            <View className="mb-4">
+              <Text className="text-lg font-bold text-gray-800 mb-2">
+                인증 결정
+              </Text>
+              
+              {/* 거절 사유 입력 필드 */}
+              <TextInput
+                className="border border-gray-300 rounded-xl p-3 mb-4"
+                placeholder="거절 사유를 입력하세요 (거절 시 필수)"
+                value={rejectionReason}
+                onChangeText={setRejectionReason}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+              
+              {/* 버튼 영역 */}
+              <View className="flex-row mt-2">
+                <Pressable
+                  className="flex-1 bg-red-500 py-3 rounded-xl mr-2"
+                  onPress={handleReject}
+                  disabled={isSubmitting}
+                >
+                  <Text className="text-white text-center font-medium">거절하기</Text>
+                </Pressable>
+                
+                <Pressable
+                  className="flex-1 bg-emerald-500 py-3 rounded-xl ml-2"
+                  onPress={handleApprove}
+                  disabled={isSubmitting}
+                >
+                  <Text className="text-white text-center font-medium">승인하기</Text>
+                </Pressable>
+              </View>
+              
+              {/* 로딩 상태 */}
+              {isSubmitting && (
+                <View className="items-center mt-4">
+                  <ActivityIndicator size="small" color="#10b981" />
+                  <Text className="text-gray-500 mt-1">처리 중...</Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
