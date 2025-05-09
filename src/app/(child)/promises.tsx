@@ -1,26 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
-
-// 약속 할당 인터페이스 정의
-interface PromiseAssignment {
-  id: string;
-  promise?: {
-    id: string;
-    title: string;
-    description?: string;
-  };
-  dueDate: string;
-  status: 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
-  rejectionReason?: string;
-}
+import api from '../../api';
+import { PromiseAssignment, PromiseStatus } from '../../api/modules/promise';
+import * as Haptics from 'expo-haptics';
 
 export default function ChildPromisesScreen() {
   const router = useRouter();
-  const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [filter, setFilter] = useState<'ALL' | PromiseStatus>('ALL');
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [promises, setPromises] = useState<PromiseAssignment[]>([]);
   
@@ -35,23 +26,29 @@ export default function ChildPromisesScreen() {
       setIsLoading(true);
       setError(null);
       
-      // 실제 구현 시 API 호출 부분
-      // let response;
-      // if (filter === 'ALL') {
-      //   response = await promiseApi.getChildPromises();
-      // } else {
-      //   response = await promiseApi.getChildPromises(filter);
-      // }
-      // setPromises(response);
-      
-      // 개발 중에는 빈 데이터 설정
-      setPromises([]);
+      let response;
+      if (filter === 'ALL') {
+        response = await api.promise.getChildPromises();
+      } else {
+        response = await api.promise.getChildPromises(filter);
+      }
+      setPromises(response);
       
       setIsLoading(false);
     } catch (error) {
       console.error('약속 데이터 로드 중 오류:', error);
       setError('약속 목록을 불러오는 중 오류가 발생했습니다.');
       setIsLoading(false);
+    }
+  };
+
+  // 새로고침 처리
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadPromises();
+    } finally {
+      setIsRefreshing(false);
     }
   };
   
@@ -107,20 +104,42 @@ export default function ChildPromisesScreen() {
   };
   
   // 필터 버튼 컴포넌트
-  const FilterButton = ({ title, value }: { title: string; value: typeof filter }) => (
+  const FilterButton = ({ 
+    title, 
+    value 
+  }: { 
+    title: string; 
+    value: 'ALL' | PromiseStatus 
+  }) => (
     <Pressable
       className={`px-4 py-2 rounded-full mr-2 ${filter === value ? 'bg-emerald-600' : 'bg-gray-200'}`}
-      onPress={() => setFilter(value)}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setFilter(value);
+      }}
     >
       <Text className={filter === value ? 'text-white' : 'text-gray-700'}>{title}</Text>
     </Pressable>
   );
+
+  // 인증 화면으로 이동
+  const navigateToVerify = (assignmentId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push({ 
+      pathname: '/(child)/verify', 
+      params: { assignmentId } 
+    });
+  };
   
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View className="px-4 pt-2 flex-1">
         <View className="flex-row items-center justify-between mb-4">
-          <Pressable onPress={() => router.back()} className="p-2">
+          <Pressable 
+            onPress={() => router.back()} 
+            className="p-2"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <FontAwesome5 name="arrow-left" size={20} color="#10b981" />
           </Pressable>
           <Text className="text-2xl font-bold text-emerald-700">약속 목록</Text>
@@ -130,10 +149,10 @@ export default function ChildPromisesScreen() {
         {/* 필터 버튼 목록 */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
           <FilterButton title="전체" value="ALL" />
-          <FilterButton title="대기 중" value="PENDING" />
-          <FilterButton title="인증 요청됨" value="SUBMITTED" />
-          <FilterButton title="완료" value="APPROVED" />
-          <FilterButton title="거절됨" value="REJECTED" />
+          <FilterButton title="대기 중" value={PromiseStatus.PENDING} />
+          <FilterButton title="인증 요청됨" value={PromiseStatus.SUBMITTED} />
+          <FilterButton title="완료" value={PromiseStatus.APPROVED} />
+          <FilterButton title="거절됨" value={PromiseStatus.REJECTED} />
         </ScrollView>
         
         {/* 로딩 상태 */}
@@ -172,14 +191,24 @@ export default function ChildPromisesScreen() {
         
         {/* 약속 목록 */}
         {!isLoading && !error && promises && promises.length > 0 && (
-          <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            className="flex-1" 
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor="#10b981"
+                colors={["#10b981"]}
+              />
+            }
+          >
             {promises.map((assignment: PromiseAssignment) => (
               <Pressable
                 key={assignment.id}
                 className="mb-4 p-4 rounded-xl border border-gray-200 bg-white shadow-sm"
                 onPress={() => assignment.status === 'PENDING' ? 
-                  router.push({ pathname: '/(child)/verify', params: { assignmentId: assignment.id } }) :
-                  null
+                  navigateToVerify(assignment.id) : null
                 }
               >
                 <View className="flex-row justify-between items-start mb-2">
@@ -196,10 +225,7 @@ export default function ChildPromisesScreen() {
                 {assignment.status === 'PENDING' && (
                   <Pressable
                     className="bg-emerald-500 py-2 rounded-lg mt-2"
-                    onPress={() => router.push({ 
-                      pathname: '/(child)/verify', 
-                      params: { assignmentId: assignment.id }
-                    })}
+                    onPress={() => navigateToVerify(assignment.id)}
                   >
                     <Text className="text-white text-center font-medium">인증하기</Text>
                   </Pressable>
@@ -228,10 +254,7 @@ export default function ChildPromisesScreen() {
                     </Text>
                     <Pressable
                       className="bg-emerald-500 py-2 rounded-lg mt-2"
-                      onPress={() => router.push({ 
-                        pathname: '/(child)/verify', 
-                        params: { assignmentId: assignment.id }
-                      })}
+                      onPress={() => navigateToVerify(assignment.id)}
                     >
                       <Text className="text-white text-center font-medium">다시 인증하기</Text>
                     </Pressable>

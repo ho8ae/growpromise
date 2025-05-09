@@ -1,18 +1,13 @@
-// app/(child)/verify.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Pressable, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, TextInput, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { FontAwesome } from '@expo/vector-icons';
-
-// 약속 인터페이스 정의
-interface Promise {
-  id: string;
-  title: string;
-}
+import * as Haptics from 'expo-haptics';
+import promiseApi, { PromiseAssignment, PromiseTask,PromiseStatus } from '../../api/modules/promise';
 
 export default function VerifyPromise() {
   const router = useRouter();
@@ -28,7 +23,7 @@ export default function VerifyPromise() {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [promises, setPromises] = useState<Promise[]>([]);
+  const [pendingPromises, setPendingPromises] = useState<PromiseAssignment[]>([]);
   const [error, setError] = useState<string | null>(null);
   
   const cameraRef = useRef<CameraView>(null);
@@ -44,18 +39,16 @@ export default function VerifyPromise() {
       setIsLoading(true);
       setError(null);
       
-      // 실제 구현 시 API 호출 부분
-      // const response = await promiseApi.getPendingPromises();
-      // setPromises(response);
-      
-      // 개발 중에는 빈 데이터 설정
-      setPromises([]);
+      // API 호출하여 PENDING 상태의 약속 가져오기
+      const response = await promiseApi.getChildPromises(PromiseStatus.PENDING);
+      setPendingPromises(response);
       
       // 만약 assignmentId가 있으면 해당 약속을 선택
       if (assignmentId) {
-        // 실제 구현 시 API 호출로 해당 약속 할당 정보 가져오기
-        // const assignmentData = await promiseApi.getPromiseAssignment(assignmentId);
-        // setSelectedPromise(assignmentData.promise.id);
+        const foundAssignment = response.find(assignment => assignment.id === assignmentId);
+        if (foundAssignment && foundAssignment.promiseId) {
+          setSelectedPromise(foundAssignment.promiseId);
+        }
       }
       
       setIsLoading(false);
@@ -69,47 +62,72 @@ export default function VerifyPromise() {
   const takePicture = async () => {
     if (cameraRef.current) {
       try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         const photo = await cameraRef.current.takePictureAsync();
         setPhotoUri(photo?.uri);
         setIsCameraActive(false);
       } catch (error) {
         console.error('Failed to take picture:', error);
+        Alert.alert('오류', '사진 촬영 중 문제가 발생했습니다.');
       }
     }
   };
   
   const pickImage = async () => {
-    // 갤러리에서 이미지 선택
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-    
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setPhotoUri(result.assets[0].uri);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // 갤러리에서 이미지 선택
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setPhotoUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('이미지 선택 중 오류:', error);
+      Alert.alert('오류', '이미지를 선택하는 중 문제가 발생했습니다.');
     }
   };
   
   const handleSubmit = async () => {
     try {
+      if (!photoUri) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert('알림', '사진을 찍어주세요.');
+        return;
+      }
+      
+      // assignmentId가 없고, 선택된 약속이 없으면 에러
+      if (!assignmentId && !selectedPromise) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert('알림', '인증할 약속을 선택해주세요.');
+        return;
+      }
+      
       setIsSubmitting(true);
       
-      // 실제 구현 시 API 호출 부분
-      // await promiseApi.submitVerification({
-      //   promiseId: selectedPromise,
-      //   assignmentId: assignmentId,
-      //   photoUri: photoUri,
-      //   message: message
-      // });
+      // API 호출하여 인증 제출
+      await promiseApi.submitVerification(
+        assignmentId || selectedPromise, // assignmentId가 없으면 선택된 약속 ID 사용
+        photoUri,
+        // message.trim() ? message : undefined, 사진 uri를 어떻게 처리하지
+      );
       
       // 성공 시 알림 및 화면 이동
-      alert('부모님께 인증 요청을 보냈어요!');
-      router.back();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        '성공', 
+        '부모님께 인증 요청을 보냈어요!',
+        [{ text: '확인', onPress: () => router.back() }]
+      );
     } catch (error) {
       console.error('인증 제출 중 오류:', error);
-      alert('인증 요청을 보내는 중 오류가 발생했습니다. 다시 시도해주세요.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('오류', '인증 요청을 보내는 중 오류가 발생했습니다. 다시 시도해주세요.');
       setIsSubmitting(false);
     }
   };
@@ -172,6 +190,7 @@ export default function VerifyPromise() {
                         <Pressable
                           className="bg-black/30 p-3 rounded-full"
                           onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             setCameraType(
                               cameraType === 'back' ? 'front' : 'back'
                             );
@@ -224,28 +243,43 @@ export default function VerifyPromise() {
                 </View>
               )}
               
-              {promises.length > 0 ? (
+              {/* 이미 assignmentId가 있으면 약속 선택 UI를 표시하지 않음 */}
+              {!assignmentId && pendingPromises.length > 0 && (
                 <>
                   <Text className="text-lg font-medium my-3 text-emerald-700">어떤 약속을 인증할까요?</Text>
                   <View className="mb-4">
-                    {promises.map(promise => (
+                    {pendingPromises.map(assignment => (
                       <Pressable
-                        key={promise.id}
+                        key={assignment.id}
                         className={`p-4 mb-2 rounded-xl border ${
-                          selectedPromise === promise.id 
+                          selectedPromise === assignment.id 
                             ? 'bg-emerald-100 border-emerald-500' 
                             : 'bg-white border-gray-300'
                         }`}
-                        onPress={() => setSelectedPromise(promise.id)}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setSelectedPromise(assignment.id);
+                        }}
                       >
-                        <Text className={`${selectedPromise === promise.id ? 'font-medium text-emerald-800' : 'text-gray-700'}`}>
-                          {promise.title}
+                        <Text className={`${selectedPromise === assignment.id ? 'font-medium text-emerald-800' : 'text-gray-700'}`}>
+                          {assignment.promise?.title || '제목 없음'}
                         </Text>
+                        {assignment.dueDate && (
+                          <Text className="text-gray-500 text-sm mt-1">
+                            기한: {new Date(assignment.dueDate).toLocaleDateString('ko-KR', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </Text>
+                        )}
                       </Pressable>
                     ))}
                   </View>
                 </>
-              ) : (
+              )}
+              
+              {!assignmentId && pendingPromises.length === 0 && (
                 <View className="p-4 mb-4 items-center justify-center">
                   <Text className="text-gray-500 text-center">
                     인증할 수 있는 약속이 없습니다. 부모님께 약속을 만들어 달라고 요청해보세요!
@@ -266,12 +300,12 @@ export default function VerifyPromise() {
               
               <Pressable
                 className={`py-4 rounded-xl shadow-md ${
-                  photoUri && (selectedPromise || promises.length === 0) && !isSubmitting
+                  photoUri && (assignmentId || selectedPromise || pendingPromises.length === 0) && !isSubmitting
                     ? 'bg-emerald-500' 
                     : 'bg-gray-300'
                 }`}
                 onPress={handleSubmit}
-                disabled={!photoUri || !(selectedPromise || promises.length === 0) || isSubmitting}
+                disabled={!photoUri || !(assignmentId || selectedPromise || pendingPromises.length === 0) || isSubmitting}
               >
                 {isSubmitting ? (
                   <View className="flex-row justify-center items-center">
@@ -291,6 +325,7 @@ export default function VerifyPromise() {
                 <Pressable
                   className="mt-4 py-3"
                   onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     setPhotoUri(null);
                     setIsCameraActive(false);
                   }}
