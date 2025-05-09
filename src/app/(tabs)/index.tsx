@@ -24,7 +24,7 @@ export default function TabsScreen() {
   const characterData = {
     stage: 5,
     completedPromises: 10,
-    totalPromises: 10,
+    totalPromises: 3,
   };
 
   const { animation, startAnimation } = useSlideInAnimation(100, 800);

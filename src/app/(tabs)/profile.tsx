@@ -2,9 +2,12 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useState, useEffect } from 'react';
-import { Pressable, ScrollView, Switch, Text, View, Alert } from 'react-native';
+import { Pressable, ScrollView, Switch, Text, View, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../api'; // 수정된 import
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -30,6 +33,32 @@ export default function ProfileScreen() {
       });
     }
   }, [isAuthenticated, user]);
+
+  // 연결된 계정 정보 가져오기 (부모인 경우 자녀 목록, 자녀인 경우 부모 정보)
+  const { 
+    data: connectedAccounts, 
+    isLoading: isLoadingConnections,
+    refetch: refetchConnections
+  } = useQuery({
+    queryKey: ['connectedAccounts'],
+    queryFn: async () => {
+      if (!isAuthenticated || !user) return null;
+      
+      try {
+        if (user.userType === 'PARENT') {
+          // 부모 계정인 경우 연결된 자녀 목록 가져오기
+          return await api.user.getParentChildren(); // 수정된 API 호출
+        } else {
+          // 자녀 계정인 경우 연결된 부모 정보 가져오기
+          return await api.user.getChildParents(); // 수정된 API 호출
+        }
+      } catch (error) {
+        console.error('연결된 계정 정보 로드 실패:', error);
+        return null;
+      }
+    },
+    enabled: isAuthenticated && !!user,
+  });
 
   const handleLogout = async () => {
     try {
@@ -63,9 +92,27 @@ export default function ProfileScreen() {
     return false;
   };
 
+  // 계정 연결 관리
+  const handleConnectedAccounts = () => {
+    if (handleAuthRequired()) return;
+    
+    if (user?.userType === 'PARENT') {
+      // 부모 계정인 경우 연결 코드 생성 화면으로 이동
+      router.push('/(parent)/generate-code');
+    } else {
+      // 자녀 계정인 경우 연결 코드 입력 화면으로 이동
+      router.push('/(auth)/connect');
+    }
+  };
+
   // 설정 메뉴 항목 처리
   const handleSettingPress = (settingName: string) => {
     if (handleAuthRequired()) return;
+    
+    if (settingName === '연결된 계정') {
+      handleConnectedAccounts();
+      return;
+    }
     
     Alert.alert('알림', `${settingName} 설정은 아직 개발 중입니다.`);
   };
@@ -112,7 +159,7 @@ export default function ProfileScreen() {
                   onPress={() => handleSettingPress('프로필 정보')}
                 >
                   <Text className="text-lg">프로필 정보 변경</Text>
-                  <Text className="text-gray-400">›</Text>
+                  <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
                 </Pressable>
 
                 <Pressable
@@ -120,16 +167,88 @@ export default function ProfileScreen() {
                   onPress={() => handleSettingPress('비밀번호')}
                 >
                   <Text className="text-lg">비밀번호 변경</Text>
-                  <Text className="text-gray-400">›</Text>
+                  <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
                 </Pressable>
 
-                <Pressable
-                  className="flex-row justify-between items-center py-3"
-                  onPress={() => handleSettingPress('연결된 계정')}
-                >
-                  <Text className="text-lg">연결된 계정 관리</Text>
-                  <Text className="text-gray-400">›</Text>
-                </Pressable>
+                {/* 연결된 계정 관리 섹션 - 수정된 부분 */}
+                <View>
+                  <Pressable
+                    className="flex-row justify-between items-center py-3 border-b border-gray-200"
+                    onPress={() => handleSettingPress('연결된 계정')}
+                  >
+                    <View className="flex-row items-center">
+                      <Text className="text-lg">
+                        {user?.userType === 'PARENT' ? '자녀 계정 연결' : '부모님 계정 연결'}
+                      </Text>
+                      
+                      {/* 연결 상태 표시 */}
+                      {isLoadingConnections ? (
+                        <ActivityIndicator size="small" color="#10b981" style={{ marginLeft: 8 }} />
+                      ) : (
+                        connectedAccounts && 
+                        (Array.isArray(connectedAccounts) ? 
+                          connectedAccounts.length > 0 : 
+                          connectedAccounts !== null) && (
+                          <View className="ml-2 px-2 py-1 bg-green-100 rounded-full">
+                            <Text className="text-xs text-green-700">연결됨</Text>
+                          </View>
+                        )
+                      )}
+                    </View>
+                    <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
+                  </Pressable>
+                  
+                  {/* 연결된 계정 정보 표시 */}
+                  {user?.userType === 'PARENT' ? (
+                    // 부모인 경우 자녀 목록 표시
+                    <>
+                      {Array.isArray(connectedAccounts) && connectedAccounts.length > 0 && (
+                        <View className="mt-2 ml-4">
+                          <Text className="text-sm text-gray-500 mb-2">연결된 자녀</Text>
+                          {connectedAccounts.map(child => (
+                            <View key={child.id} className="flex-row items-center py-2">
+                              <MaterialCommunityIcons name="account-child" size={20} color="#10b981" />
+                              <Text className="ml-2 text-gray-700">{child.username}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </>
+                  ) : (
+                    // 자녀인 경우 부모 정보 표시
+                    <>
+                      {connectedAccounts && !Array.isArray(connectedAccounts) && (
+                        <View className="mt-2 ml-4">
+                          <Text className="text-sm text-gray-500 mb-2">연결된 부모님</Text>
+                          <View className="flex-row items-center py-2">
+                            <MaterialCommunityIcons name="account-tie" size={20} color="#10b981" />
+                            <Text className="ml-2 text-gray-700">{connectedAccounts.username}</Text>
+                          </View>
+                        </View>
+                      )}
+                    </>
+                  )}
+                </View>
+
+                {/* 계정 연결 안내 메시지 */}
+                {(user?.userType === 'PARENT' && (!connectedAccounts || !Array.isArray(connectedAccounts) || connectedAccounts.length === 0)) ||
+                 (user?.userType === 'CHILD' && (!connectedAccounts || connectedAccounts === null)) ? (
+                  <View className="mt-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <Text className="text-amber-800 text-sm">
+                      {user?.userType === 'PARENT' 
+                        ? '아직 연결된 자녀 계정이 없습니다. 자녀 계정을 연결하면 약속을 관리할 수 있어요.'
+                        : '아직 부모님 계정과 연결되지 않았습니다. 부모님 계정과 연결하면 약속을 인증하고 스티커를 모을 수 있어요.'}
+                    </Text>
+                    <Pressable
+                      className="mt-2 py-2 bg-amber-500 rounded-lg"
+                      onPress={handleConnectedAccounts}
+                    >
+                      <Text className="text-white text-center font-medium">
+                        {user?.userType === 'PARENT' ? '자녀 계정 연결하기' : '부모님 계정 연결하기'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
               </View>
             </>
           )}
@@ -160,7 +279,7 @@ export default function ProfileScreen() {
               onPress={() => handleSettingPress('테마')}
             >
               <Text className="text-lg">테마 설정</Text>
-              <Text className="text-gray-400">›</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
             </Pressable>
           </View>
 
@@ -172,7 +291,7 @@ export default function ProfileScreen() {
               onPress={() => handleSettingPress('도움말')}
             >
               <Text className="text-lg">도움말</Text>
-              <Text className="text-gray-400">›</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
             </Pressable>
 
             <Pressable
@@ -180,7 +299,7 @@ export default function ProfileScreen() {
               onPress={() => handleSettingPress('문의하기')}
             >
               <Text className="text-lg">문의하기</Text>
-              <Text className="text-gray-400">›</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
             </Pressable>
 
             <Pressable
@@ -188,7 +307,7 @@ export default function ProfileScreen() {
               onPress={() => handleSettingPress('앱 정보')}
             >
               <Text className="text-lg">앱 정보</Text>
-              <Text className="text-gray-400">›</Text>
+              <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
             </Pressable>
           </View>
 
