@@ -1,78 +1,45 @@
-// app/_layout.tsx
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import React from 'react';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { QueryProvider } from '../components/QueryProvider';
+import { useAuth } from '../hooks/useAuth';
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    ...FontAwesome.font,
-  });
-
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
-  return <RootLayoutNav />;
+// 앱 로딩 화면
+function LoadingScreen() {
+  return (
+    <View className="flex-1 justify-center items-center bg-white">
+      <ActivityIndicator size="large" color="#10b981" />
+      <Text className="mt-4 text-gray-700">쑥쑥약속 로딩 중...</Text>
+    </View>
+  );
 }
 
-function RootLayoutNav() {
+// 인증 상태에 따라 화면을 제어하는 컴포넌트
+function AuthenticationManager({ children }: { children: React.ReactNode }) {
+  const { isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  return <>{children}</>;
+}
+
+export default function RootLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="onboarding" />
-      <Stack.Screen 
-        name="(auth)" 
-        options={{ 
-          headerShown: false,
-          animation: 'fade',
-        }} 
-      />
-      <Stack.Screen 
-        name="(tabs)" 
-        options={{ 
-          headerShown: false,
-          animation: 'fade',
-        }} 
-      />
-      <Stack.Screen 
-        name="(child)" 
-        options={{ 
-          headerShown: false,
-          animation: 'slide_from_right',
-        }} 
-      />
-      <Stack.Screen 
-        name="(parent)" 
-        options={{ 
-          headerShown: false,
-          animation: 'slide_from_right',
-        }} 
-      />
-    </Stack>
+    <QueryProvider>
+      <StatusBar style="auto" />
+      <AuthenticationManager>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(child)" options={{ headerShown: false }} />
+          <Stack.Screen name="(parent)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        </Stack>
+      </AuthenticationManager>
+    </QueryProvider>
   );
 }

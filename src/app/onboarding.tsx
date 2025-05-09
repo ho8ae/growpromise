@@ -1,27 +1,35 @@
 // app/onboarding.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, Animated, Easing } from 'react-native';
+import { View, Text, Pressable, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSlideInAnimation } from '../utils/animations';
+import Colors from '../constants/Colors';
 
 const slides = [
   {
-    title: '약속을 함께 만들어요',
-    description: '부모와 아이가 함께 약속을 만들고 성장할 수 있어요.',
-    image: require('../assets/images/react-logo.png'),
+    title: '씨앗을 심어요',
+    description: '부모와 아이가 함께 약속의 씨앗을 심어요.',
+    icon: 'seedling',
+    bgColor: 'bg-emerald-100',
+    iconColor: Colors.light.leafGreen
   },
   {
-    title: '인증하고 칭찬받아요',
-    description: '약속을 지키면, 사진으로 인증하고 칭찬 스티커를 받아요.',
-    image: require('../assets/images/react-logo.png'),
+    title: '약속을 지켜요',
+    description: '약속을 지키면 사진으로 인증하고 물을 줄 수 있어요.',
+    icon: 'tint',
+    bgColor: 'bg-sky-100',
+    iconColor: '#0ea5e9'
   },
   {
-    title: '캐릭터와 함께 성장해요',
-    description: '약속을 지킬수록 캐릭터가 성장하고 보상도 받을 수 있어요.',
-    image: require('../assets/images/react-logo.png'),
+    title: '쑥쑥 자라요',
+    description: '약속을 지킬수록 식물이 자라고 보상도 받을 수 있어요.',
+    icon: 'sun',
+    bgColor: 'bg-amber-100',
+    iconColor: Colors.light.sunYellow
   },
 ];
 
@@ -48,10 +56,7 @@ export default function OnboardingScreen() {
   
   const completeOnboarding = async () => {
     try {
-      // 최초 실행 완료 표시
       await AsyncStorage.setItem('isFirstLaunch', 'false');
-      
-      // 메인 화면으로 이동
       router.replace('/(tabs)');
     } catch (error) {
       console.error('Error completing onboarding:', error);
@@ -61,7 +66,7 @@ export default function OnboardingScreen() {
   const progress = ((currentSlide + 1) / slides.length) * 100;
   
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-slate-50">
       <View className="px-6 flex-1 justify-between">
         <Pressable
           className="self-end py-4"
@@ -80,17 +85,17 @@ export default function OnboardingScreen() {
             }),
           }}
         >
-          <View className="bg-emerald-100 p-6 rounded-full mb-4">
-            <Image
-              source={slides[currentSlide].image}
-              style={{ width: 180, height: 180 }}
-              contentFit="contain"
+          <View className={`${slides[currentSlide].bgColor} p-8 rounded-full mb-6`}>
+            <FontAwesome5 
+              name={slides[currentSlide].icon} 
+              size={100} 
+              color={slides[currentSlide].iconColor} 
             />
           </View>
           <Text className="text-2xl font-bold mt-6 text-center text-emerald-700">
             {slides[currentSlide].title}
           </Text>
-          <Text className="text-gray-600 mt-4 text-center text-base">
+          <Text className="text-gray-600 mt-4 text-center text-base px-6">
             {slides[currentSlide].description}
           </Text>
         </Animated.View>
