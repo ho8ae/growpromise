@@ -4,7 +4,7 @@
     "slug": "kids-plan",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./src/assets/images/icon.png",
     "scheme": "kidsplan",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./src/assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
@@ -21,17 +21,37 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./src/assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./src/assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "accuracy": "best",
+          "foregroundService": true,
+          "requestAlwaysAuthorization": true,
+          "requestWhenInUseAuthorization": true,
+          "useActivity": true,
+          "locationAlwaysAndWhenInUsePermission": "앱이 위치 정보를 사용하여 약속 장소를 확인합니다."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "mediaTypes": "photo",
+          "allowsEditing": true,
+          "aspect": [4, 3],
+          "quality": 1
         }
       ]
     ],
