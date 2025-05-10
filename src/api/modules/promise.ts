@@ -1,4 +1,5 @@
 import apiClient, { ApiResponse, apiRequest } from '../client';
+import api from '../index';
 
 // 약속 상태 타입
 export enum PromiseStatus {
@@ -6,7 +7,7 @@ export enum PromiseStatus {
   SUBMITTED = 'SUBMITTED',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
-  EXPIRED = 'EXPIRED'
+  EXPIRED = 'EXPIRED',
 }
 
 // 약속 반복 타입
@@ -14,7 +15,7 @@ export enum RepeatType {
   ONCE = 'ONCE',
   DAILY = 'DAILY',
   WEEKLY = 'WEEKLY',
-  MONTHLY = 'MONTHLY'
+  MONTHLY = 'MONTHLY',
 }
 
 // 약속 타입 (Promise 이름은 자바스크립트 내장 타입과 충돌하므로 PromiseTask로 변경)
@@ -85,7 +86,7 @@ const promiseApi = {
       // isActive 필드가 없으면 기본값 true로 설정
       const requestData = {
         ...data,
-        isActive: data.isActive !== undefined ? data.isActive : true
+        isActive: data.isActive !== undefined ? data.isActive : true,
       };
       return await apiRequest<PromiseTask>('post', '/promises', requestData);
     } catch (error) {
@@ -93,7 +94,7 @@ const promiseApi = {
       throw error;
     }
   },
-  
+
   // 부모의 자녀 목록 조회
   getParentChildren: async () => {
     try {
@@ -103,38 +104,45 @@ const promiseApi = {
       throw error;
     }
   },
-  
+
   // 부모의 약속 목록 조회
   getParentPromises: async (): Promise<PromiseTask[]> => {
     try {
       const response = await apiRequest<PromiseTask[]>('get', '/promises');
-      
+
       // 응답에 isActive 필드가 없는 경우 기본값 true 설정
-      return response.map(promise => ({
+      return response.map((promise) => ({
         ...promise,
-        isActive: promise.isActive !== undefined ? promise.isActive : true
+        isActive: promise.isActive !== undefined ? promise.isActive : true,
       }));
     } catch (error) {
       console.error('부모 약속 목록 조회 오류:', error);
       throw error;
     }
   },
-  
+
   // 자녀의 약속 목록 조회
-  getChildPromises: async (status?: PromiseStatus): Promise<PromiseAssignment[]> => {
+  getChildPromises: async (
+    status?: PromiseStatus,
+  ): Promise<PromiseAssignment[]> => {
     try {
-      const url = status ? `/promises/child?status=${status}` : '/promises/child';
+      const url = status
+        ? `/promises/child?status=${status}`
+        : '/promises/child';
       const response = await apiRequest<PromiseAssignment[]>('get', url);
-      
+
       // promise 객체가 있는 경우 isActive 필드 설정
-      return response.map(assignment => {
+      return response.map((assignment) => {
         if (assignment.promise) {
           return {
             ...assignment,
             promise: {
               ...assignment.promise,
-              isActive: assignment.promise.isActive !== undefined ? assignment.promise.isActive : true
-            }
+              isActive:
+                assignment.promise.isActive !== undefined
+                  ? assignment.promise.isActive
+                  : true,
+            },
           };
         }
         return assignment;
@@ -144,25 +152,28 @@ const promiseApi = {
       throw error;
     }
   },
-  
+
   // 약속 상세 조회
   getPromiseById: async (id: string): Promise<PromiseTask> => {
     try {
       const response = await apiRequest<PromiseTask>('get', `/promises/${id}`);
-      
+
       // isActive 필드가 없는 경우 기본값 true 설정
       return {
         ...response,
-        isActive: response.isActive !== undefined ? response.isActive : true
+        isActive: response.isActive !== undefined ? response.isActive : true,
       };
     } catch (error) {
       console.error('약속 상세 조회 오류:', error);
       throw error;
     }
   },
-  
+
   // 약속 수정 (부모)
-  updatePromise: async (id: string, data: Partial<CreatePromiseRequest>): Promise<PromiseTask> => {
+  updatePromise: async (
+    id: string,
+    data: Partial<CreatePromiseRequest>,
+  ): Promise<PromiseTask> => {
     try {
       return await apiRequest<PromiseTask>('put', `/promises/${id}`, data);
     } catch (error) {
@@ -170,17 +181,22 @@ const promiseApi = {
       throw error;
     }
   },
-  
+
   // 약속 상태 업데이트 (활성화/비활성화)
-  updatePromiseStatus: async (id: string, isActive: boolean): Promise<PromiseTask> => {
+  updatePromiseStatus: async (
+    id: string,
+    isActive: boolean,
+  ): Promise<PromiseTask> => {
     try {
-      return await apiRequest<PromiseTask>('put', `/promises/${id}/status`, { isActive });
+      return await apiRequest<PromiseTask>('put', `/promises/${id}/status`, {
+        isActive,
+      });
     } catch (error) {
       console.error('약속 상태 업데이트 오류:', error);
       throw error;
     }
   },
-  
+
   // 약속 삭제 (부모)
   deletePromise: async (id: string): Promise<any> => {
     try {
@@ -190,83 +206,167 @@ const promiseApi = {
       throw error;
     }
   },
-  
+
   // 약속 인증 제출 (자녀)
-  submitVerification: async (promiseAssignmentId: string, imageUri: string, message?: string): Promise<PromiseAssignment> => {
+  submitVerification: async (
+    promiseAssignmentId: string,
+    imageUri: string,
+    message?: string,
+  ): Promise<PromiseAssignment> => {
     try {
       // 이미지 파일로 FormData 생성
       const formData = new FormData();
       formData.append('promiseAssignmentId', promiseAssignmentId);
-      
+
       // 메시지가 있으면 추가
       if (message) {
         formData.append('message', message);
       }
-      
+
       // 이미지 파일 준비
       const uriParts = imageUri.split('.');
       const fileType = uriParts[uriParts.length - 1];
-      
+
       formData.append('image', {
         uri: imageUri,
         name: `photo.${fileType}`,
         type: `image/${fileType}`,
       } as any);
-      
+
       const response = await apiClient.post<ApiResponse<PromiseAssignment>>(
-        '/promises/verify', 
+        '/promises/verify',
         formData,
         {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-        }
+        },
       );
-      
+
       return response.data.data;
     } catch (error) {
       console.error('약속 인증 제출 오류:', error);
       throw error;
     }
   },
-  
+
   // 약속 인증 응답 (부모)
-  respondToVerification: async (id: string, approved: boolean, rejectionReason?: string): Promise<PromiseAssignment> => {
+  respondToVerification: async (
+    id: string,
+    approved: boolean,
+    rejectionReason?: string,
+  ): Promise<PromiseAssignment> => {
     try {
       return await apiRequest<PromiseAssignment>(
         'post',
         `/promises/verify/respond/${id}`,
-        { approved, rejectionReason }
+        { approved, rejectionReason },
       );
     } catch (error) {
       console.error('약속 인증 응답 오류:', error);
       throw error;
     }
   },
-  
+
   // 승인 대기 중인 약속 인증 목록 조회 (부모)
   getPendingVerifications: async (): Promise<PromiseAssignment[]> => {
     try {
-      return await apiRequest<PromiseAssignment[]>('get', '/promises/verifications/pending');
+      return await apiRequest<PromiseAssignment[]>(
+        'get',
+        '/promises/verifications/pending',
+      );
     } catch (error) {
       console.error('대기 중인 인증 목록 조회 오류:', error);
       throw error;
     }
   },
-  
+
   // 약속 통계 조회 (자녀)
   getChildPromiseStats: async (): Promise<PromiseStats> => {
     try {
       const response = await apiRequest<PromiseStats>('get', '/promises/stats');
-      
+
       // 만약 response에 stickerCount가 없으면 기본값 0 추가
       return {
         ...response,
-        stickerCount: response.stickerCount !== undefined ? response.stickerCount : 0
+        stickerCount:
+          response.stickerCount !== undefined ? response.stickerCount : 0,
       };
     } catch (error) {
       console.error('약속 통계 조회 오류:', error);
       throw error;
+    }
+  },
+  // 부모가 자녀의 약속 목록 조회 (childId 기준)
+
+  // 부모가 자녀의 약속 목록 조회 (childId 기준)
+  getPromiseAssignmentsByChild: async (
+    childId: string,
+  ): Promise<PromiseAssignment[]> => {
+    try {
+      return await apiRequest<PromiseAssignment[]>(
+        'get',
+        `/promises/assignments/${childId}`,
+      );
+    } catch (error) {
+      console.error('자녀 약속 목록 조회 오류:', error);
+      return [];
+    }
+  },
+
+  // 부모가 자녀 약속 통계 계산 (자녀의 약속 목록을 이용하여 통계 직접 계산)
+  calculateChildPromiseStats: async (
+    childId: string,
+  ): Promise<PromiseStats> => {
+    try {
+      // 1. 자녀 약속 목록 조회
+      const assignments = await promiseApi.getPromiseAssignmentsByChild(
+        childId,
+      );
+
+      // 2. 통계 계산
+      const totalPromises = assignments.length;
+      const completedPromises = assignments.filter(
+        (a) => a.status === 'APPROVED',
+      ).length;
+      const pendingPromises = assignments.filter(
+        (a) => a.status === 'PENDING' || a.status === 'SUBMITTED',
+      ).length;
+
+      // 3. 자녀 프로필 정보 조회 (characterStage 정보용)
+      const childProfileInfo = await api.user.getUserById(childId);
+      const characterStage = childProfileInfo.childProfile?.characterStage || 1;
+
+      // 4. 스티커 개수 (선택적)
+      let stickerCount = 0;
+      try {
+        // 스티커 정보가 있다면 가져오기 (없을 수도 있음)
+        const stickerStats = await apiRequest<{ totalStickers: number }>(
+          'get',
+          `/stickers/child/${childId}/count`,
+        );
+        stickerCount = stickerStats.totalStickers || 0;
+      } catch (error) {
+        // 스티커 정보 조회 실패는 무시 (필수 정보가 아니므로)
+        console.log('스티커 통계 조회 실패 (무시됨):', error);
+      }
+
+      return {
+        totalPromises,
+        completedPromises,
+        pendingPromises,
+        characterStage,
+        stickerCount,
+      };
+    } catch (error) {
+      console.error('자녀 약속 통계 계산 오류:', error);
+      return {
+        totalPromises: 0,
+        completedPromises: 0,
+        pendingPromises: 0,
+        characterStage: 1,
+        stickerCount: 0,
+      };
     }
   },
 };

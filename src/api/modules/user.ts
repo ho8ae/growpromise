@@ -33,6 +33,8 @@ export interface ChildParentConnection {
   parentId: string;
   child?: {
     id: string;
+    userId: string;
+    characterStage: number; 
     user: {
       id: string;
       username: string;

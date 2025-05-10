@@ -78,7 +78,6 @@ export default function ProfileScreen() {
     queryKey: ['connectedAccounts'],
     queryFn: async () => {
       if (!isAuthenticated || !user) return null;
-      
       try {
         if (user.userType === 'PARENT') {
           // 부모 계정인 경우 연결된 자녀 목록 가져오기
@@ -478,7 +477,7 @@ export default function ProfileScreen() {
               }}
             >
               <Pressable
-                className="bg-gradient-to-r from-red-500 to-red-400 py-3.5 rounded-2xl mb-6 shadow-sm active:opacity-90"
+                className="bg-red-400 py-3.5 rounded-2xl mb-6 shadow-sm active:opacity-90"
                 onPress={handleLogout}
               >
                 <Text className="text-white text-center font-bold">로그아웃</Text>

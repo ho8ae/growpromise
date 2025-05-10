@@ -2,12 +2,11 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, Animated, Easing, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons'; // FontAwesome5 대신 안전한 아이콘 세트 사용
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Colors from '../../constants/Colors';
 import { useAuthStore } from '../../stores/authStore';
 import promiseApi from '../../api/modules/promise';
-import stickerApi from '../../api/modules/sticker';
 import userApi from '../../api/modules/user';
 
 // 캐릭터 단계 타입 정의
@@ -23,7 +22,7 @@ interface CharacterStage {
   isCurrent: boolean;
 }
 
-// 아이콘 매핑 설정 - FontAwesome5 대신 MaterialIcons/MaterialCommunityIcons 사용
+// 아이콘 매핑 설정 - MaterialIcons/MaterialCommunityIcons 사용
 const ICONS = {
   seedling: { name: "grass", type: "material" },
   spa: { name: "eco", type: "material" },
@@ -146,7 +145,7 @@ export default function CharacterScreen() {
         name: '아기 꼬마',
         description: '이제 막 성장을 시작했어요.',
         requirements: '5개의 약속을 완료하세요.',
-        image: require('../../assets/images/react-logo.png'),
+        image: require('../../assets/images/character/level_1.png'),
         icon: 'seedling',
         color: '#fbbf24', // amber-400
         isUnlocked: true,
@@ -157,7 +156,7 @@ export default function CharacterScreen() {
         name: '튼튼한 어린이',
         description: '약속을 꾸준히 지키는 멋진 어린이에요.',
         requirements: '20개의 약속을 완료하세요.',
-        image: require('../../assets/images/react-logo.png'),
+        image: require('../../assets/images/character/level_2.png'),
         icon: 'spa',
         color: '#34d399', // emerald-400
         isUnlocked: false,
@@ -168,7 +167,7 @@ export default function CharacterScreen() {
         name: '책임감 있는 꼬맹이',
         description: '매우 책임감 있고 믿음직한 아이로 성장했어요!',
         requirements: '50개의 약속을 완료하세요.',
-        image: require('../../assets/images/react-logo.png'),
+        image: require('../../assets/images/character/level_3.png'),
         icon: 'tree',
         color: '#60a5fa', // blue-400
         isUnlocked: false,
@@ -179,7 +178,7 @@ export default function CharacterScreen() {
         name: '당당한 챔피언',
         description: '모든 약속을 지키는 훌륭한 아이가 되었어요!',
         requirements: '100개의 약속을 완료하세요.',
-        image: require('../../assets/images/react-logo.png'),
+        image: require('../../assets/images/character/level_5.png'),
         icon: 'apple-alt',
         color: '#f472b6', // pink-400
         isUnlocked: false,
@@ -198,97 +197,149 @@ export default function CharacterScreen() {
   // 캐릭터 데이터 로드 (실제 API 호출)
   const loadCharacterData = async () => {
     try {
-      // 1. 사용자 프로필 정보 가져오기
-      const userProfile = await userApi.getUserProfile();
+      // 사용자 유형에 따라 다른 데이터 로드 방식 적용
+      const userType = user?.userType;
       
-      // 2. 캐릭터 단계 (characterStage) 가져오기
-      const characterStage = userProfile.childProfile?.characterStage || 1; // 기본값 1
-      
-      // 3. 약속 통계 가져오기
-      const promiseStats = await promiseApi.getChildPromiseStats();
-      
-      // 4. 스티커 통계 가져오기
-      const stickerStats = await stickerApi.getChildStickerStats();
-      
-      // 캐릭터 단계 정보 설정
-      const stages: CharacterStage[] = [
-        {
-          id: '1',
-          name: '아기 꼬마',
-          description: '이제 막 성장을 시작했어요.',
-          requirements: '5개의 약속을 완료하세요.',
-          image: require('../../assets/images/react-logo.png'),
-          icon: 'seedling',
-          color: '#fbbf24', // amber-400
-          isUnlocked: characterStage >= 1,
-          isCurrent: characterStage === 1,
-        },
-        {
-          id: '2',
-          name: '튼튼한 어린이',
-          description: '약속을 꾸준히 지키는 멋진 어린이에요.',
-          requirements: '20개의 약속을 완료하세요.',
-          image: require('../../assets/images/react-logo.png'),
-          icon: 'spa',
-          color: '#34d399', // emerald-400
-          isUnlocked: characterStage >= 2,
-          isCurrent: characterStage === 2,
-        },
-        {
-          id: '3',
-          name: '책임감 있는 꼬맹이',
-          description: '매우 책임감 있고 믿음직한 아이로 성장했어요!',
-          requirements: '50개의 약속을 완료하세요.',
-          image: require('../../assets/images/react-logo.png'),
-          icon: 'tree',
-          color: '#60a5fa', // blue-400
-          isUnlocked: characterStage >= 3,
-          isCurrent: characterStage === 3,
-        },
-        {
-          id: '4',
-          name: '당당한 챔피언',
-          description: '모든 약속을 지키는 훌륭한 아이가 되었어요!',
-          requirements: '100개의 약속을 완료하세요.',
-          image: require('../../assets/images/react-logo.png'),
-          icon: 'apple-alt',
-          color: '#f472b6', // pink-400
-          isUnlocked: characterStage >= 4,
-          isCurrent: characterStage === 4,
-        },
-      ];
-      
-      // 다음 단계의 목표 설정
-      const nextGoals = [5, 20, 50, 100];
-      const completedPromises = promiseStats.completedPromises;
-      let nextGoal = nextGoals[0]; // 기본값 5
-      
-      if (characterStage <= nextGoals.length) {
-        nextGoal = nextGoals[characterStage - 1];
+      if (userType === 'CHILD') {
+        // 자녀 계정인 경우 직접 약속 통계 가져오기
+        await loadChildCharacterData();
+      } else if (userType === 'PARENT') {
+        // 부모 계정인 경우 첫 번째 자녀의 약속 통계 가져오기
+        await loadParentChildCharacterData();
+      } else {
+        // 예외 처리: 알 수 없는 사용자 유형
+        throw new Error('알 수 없는 사용자 유형');
       }
-      
-      // 진행률 계산
-      const nextCharacterStage = characterStage <= nextGoals.length ? characterStage : nextGoals.length;
-      const percentage = Math.min(Math.round((completedPromises / nextGoal) * 100), 100);
-      
-      setCharacterStages(stages);
-      setProgress({
-        completed: completedPromises,
-        nextGoal,
-        percentage
-      });
-      
-      // 현재 단계를 선택
-      const currentStage = stages.find(s => s.isCurrent);
-      if (currentStage) {
-        setSelectedStage(currentStage.id);
-      }
-      
     } catch (error) {
       console.error('캐릭터 데이터 로드 중 오류:', error);
       // 에러 발생 시 기본 데이터 사용
       setDefaultCharacterData();
       throw error;
+    }
+  };
+  
+  // 자녀 계정의 캐릭터 데이터 로드
+  const loadChildCharacterData = async () => {
+    try {
+      // 1. 사용자 프로필 정보 가져오기 - GET /api/users/profile
+      const userProfile = await userApi.getUserProfile();
+      
+      // 2. 캐릭터 단계 (characterStage) 가져오기
+      const characterStage = userProfile.childProfile?.characterStage || 1; // 기본값 1
+      
+      // 3. 약속 통계 가져오기 - GET /api/promises/stats
+      const promiseStats = await promiseApi.getChildPromiseStats();
+      
+      await setCharacterDataFromStats(characterStage, promiseStats.completedPromises);
+    } catch (error) {
+      console.error('자녀 캐릭터 데이터 로드 오류:', error);
+      throw error;
+    }
+  };
+  
+  // 부모 계정의 자녀 캐릭터 데이터 로드
+  const loadParentChildCharacterData = async () => {
+    try {
+      // 1. 부모에 연결된 자녀 목록 가져오기 - GET /api/users/children
+      const children = await userApi.getParentChildren();
+      
+      if (children.length === 0) {
+        // 연결된 자녀가 없는 경우
+        throw new Error('연결된 자녀가 없습니다');
+      }
+      
+      // 첫 번째 자녀의 정보 가져오기
+      const firstChildConnection = children[0];
+      const firstChildId = firstChildConnection.childId;
+      
+      // 2. 자녀의 사용자 정보 가져오기 - GET /api/users/{id}
+      // 주의: 여기서 필요한 정보는 이미 firstChildConnection에 있습니다
+      const characterStage = firstChildConnection.child?.characterStage || 1;
+      
+      // 3. 자녀의 약속 목록으로부터 통계 계산
+      const assignments = await promiseApi.getPromiseAssignmentsByChild(firstChildId);
+      const completedPromises = assignments.filter(a => a.status === 'APPROVED').length;
+      
+      await setCharacterDataFromStats(characterStage, completedPromises);
+    } catch (error) {
+      console.error('부모의 자녀 캐릭터 데이터 로드 오류:', error);
+      throw error;
+    }
+  };
+  
+  // 통계 정보로부터 캐릭터 데이터 설정
+  const setCharacterDataFromStats = async (characterStage: number, completedPromises: number) => {
+    // 캐릭터 단계 정보 설정
+    const stages: CharacterStage[] = [
+      {
+        id: '1',
+        name: '아기 꼬마',
+        description: '이제 막 성장을 시작했어요.',
+        requirements: '5개의 약속을 완료하세요.',
+        image: require('../../assets/images/character/level_1.png'),
+        icon: 'seedling',
+        color: '#fbbf24', // amber-400
+        isUnlocked: characterStage >= 1,
+        isCurrent: characterStage === 1,
+      },
+      {
+        id: '2',
+        name: '튼튼한 어린이',
+        description: '약속을 꾸준히 지키는 멋진 어린이에요.',
+        requirements: '20개의 약속을 완료하세요.',
+        image: require('../../assets/images/character/level_2.png'),
+        icon: 'spa',
+        color: '#34d399', // emerald-400
+        isUnlocked: characterStage >= 2,
+        isCurrent: characterStage === 2,
+      },
+      {
+        id: '3',
+        name: '책임감 있는 꼬맹이',
+        description: '매우 책임감 있고 믿음직한 아이로 성장했어요!',
+        requirements: '50개의 약속을 완료하세요.',
+        image: require('../../assets/images/character/level_3.png'),
+        icon: 'tree',
+        color: '#60a5fa', // blue-400
+        isUnlocked: characterStage >= 3,
+        isCurrent: characterStage === 3,
+      },
+      {
+        id: '4',
+        name: '당당한 챔피언',
+        description: '모든 약속을 지키는 훌륭한 아이가 되었어요!',
+        requirements: '100개의 약속을 완료하세요.',
+        image: require('../../assets/images/character/level_4.png'),
+        icon: 'apple-alt',
+        color: '#f472b6', // pink-400
+        isUnlocked: characterStage >= 4,
+        isCurrent: characterStage === 4,
+      },
+    ];
+    
+    // 다음 단계의 목표 설정
+    const nextGoals = [5, 20, 50, 100];
+    let nextGoal = nextGoals[0]; // 기본값 5
+    
+    if (characterStage <= nextGoals.length) {
+      nextGoal = nextGoals[characterStage - 1];
+    }
+    
+    // 진행률 계산
+    const nextCharacterStage = characterStage <= nextGoals.length ? characterStage : nextGoals.length;
+    const percentage = Math.min(Math.round((completedPromises / nextGoal) * 100), 100);
+    
+    setCharacterStages(stages);
+    setProgress({
+      completed: completedPromises,
+      nextGoal,
+      percentage
+    });
+    
+    // 현재 단계를 선택
+    const currentStage = stages.find(s => s.isCurrent);
+    if (currentStage) {
+      setSelectedStage(currentStage.id);
     }
   };
   
@@ -315,6 +366,25 @@ export default function CharacterScreen() {
       }),
     ]).start();
   };
+
+  // 재시도 함수
+  const handleRetry = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      if (isAuthenticated) {
+        await loadCharacterData();
+      } else {
+        setDefaultCharacterData();
+      }
+    } catch (error) {
+      console.error('데이터 재로드 오류:', error);
+      setError('캐릭터 데이터를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const selectedStageData = characterStages.find(s => s.id === selectedStage);
   
@@ -336,7 +406,7 @@ export default function CharacterScreen() {
         <Text className="text-red-500 text-center text-lg mb-4">{error}</Text>
         <Pressable
           className="bg-emerald-500 py-3 px-6 rounded-xl"
-          onPress={() => isAuthenticated ? loadCharacterData() : setDefaultCharacterData()}
+          onPress={handleRetry}
         >
           <Text className="text-white font-bold">다시 시도</Text>
         </Pressable>
@@ -517,7 +587,7 @@ export default function CharacterScreen() {
               지금까지 {progress.completed}개의 약속을 완료했어요!
             </Text>
             <Text className="text-amber-700 mb-4 text-base">
-              다음 단계까지 {progress.nextGoal - progress.completed}개의 약속이 더 필요해요.
+              다음 단계까지 {Math.max(0, progress.nextGoal - progress.completed)}개의 약속이 더 필요해요.
             </Text>
             
             <View className="w-full h-4 bg-white rounded-full overflow-hidden shadow-inner">
