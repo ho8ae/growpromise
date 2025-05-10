@@ -30,4 +30,7 @@ module.exports = {
     },
   },
   plugins: [],
+  nativewind: {
+    styledComponents: ["LinearGradient"],
+  },
 };

@@ -201,7 +201,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: true, error: null });
       const code = await authApi.getParentConnectionCode();
       set({ isLoading: false });
-      return code;
+      return code.code;
     } catch (error: any) {
       set({
         error: error.response?.data?.message || '연결 코드 생성 중 오류가 발생했습니다.',

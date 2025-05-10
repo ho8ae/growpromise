@@ -1,26 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, Modal, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  Pressable, 
+  Modal, 
+  ActivityIndicator, 
+  RefreshControl,
+  Animated,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { BlurView } from 'expo-blur';
 import Colors from '../../constants/Colors';
 import { useAuthStore } from '../../stores/authStore';
-import promiseApi, { PromiseAssignment, PromiseStatus, PromiseTask } from '../../api/modules/promise';
-
-// 약속 유형별 아이콘과 색상
-const PROMISE_TYPES = {
-  study: { icon: 'book', color: '#60a5fa' }, // blue-400
-  chore: { icon: 'broom', color: '#a78bfa' }, // violet-400
-  reading: { icon: 'book-reader', color: '#34d399' }, // emerald-400
-  music: { icon: 'music', color: '#f87171' }, // red-400
-  exercise: { icon: 'running', color: '#fcd34d' }, // amber-300
-  health: { icon: 'tooth', color: '#f472b6' }, // pink-400
-  family: { icon: 'home', color: '#fb923c' }, // orange-400
-  default: { icon: 'check', color: '#9ca3af' }, // gray-400
-};
+import promiseApi, { PromiseAssignment, PromiseStatus } from '../../api/modules/promise';
+import CalendarHeader from '../../components/calendar/CalendarHeader';
+import CalendarBody from '../../components/calendar/CalendarBody';
+import CalendarLegend from '../../components/calendar/CalendarLegend';
+import CalendarStats from '../../components/calendar/CalendarStats';
+import { DateUtils, getPromiseType, getPromiseTypeName, PROMISE_TYPES } from '../../utils/calendarHelpers';
 
 // 약속 데이터 인터페이스
-interface PromiseData {
+export interface PromiseData {
   id: string;
   title: string;
   description?: string;
@@ -29,167 +32,170 @@ interface PromiseData {
   completed: boolean;
 }
 
-// 날짜 형식 변환 함수 (YYYY-MM-DD -> MM월 DD일)
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  return `${month}월 ${day}일`;
-};
-
-// 현재 날짜 가져오기
-const getCurrentYearMonth = () => {
-  const now = new Date();
-  return {
-    year: now.getFullYear(),
-    month: now.getMonth() + 1,
-  };
-};
-
-// 해당 월의 날짜 수 계산
-const getDaysInMonth = (year: number, month: number) => {
-  return new Date(year, month, 0).getDate();
-};
-
-// 해당 월의 첫 날 요일 계산
-const getFirstDayOfMonth = (year: number, month: number) => {
-  return new Date(year, month - 1, 1).getDay();
-};
-
-// 날짜 형식 변환 함수 (Date -> YYYY-MM-DD)
-const formatDateToString = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
 export default function CalendarScreen() {
-  const { isAuthenticated, user } = useAuthStore();
+  // 상태 관리
+  const { user } = useAuthStore();
   const [userType, setUserType] = useState<'PARENT' | 'CHILD' | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedPromises, setSelectedPromises] = useState<PromiseData[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [currentYearMonth, setCurrentYearMonth] = useState(getCurrentYearMonth());
+  const [currentYearMonth, setCurrentYearMonth] = useState(DateUtils.getCurrentYearMonth());
   const [promisesByDate, setPromisesByDate] = useState<Record<string, PromiseData[]>>({});
   const [monthStats, setMonthStats] = useState({ total: 0, completed: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // 애니메이션 값
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  
   // 사용자 타입 확인
   useEffect(() => {
-    const checkUserType = async () => {
-      try {
-        setUserType(user?.userType || null);
-      } catch (error) {
-        console.error('사용자 타입 확인 오류:', error);
-      }
-    };
-    
-    checkUserType();
-  }, [isAuthenticated, user]);
-  
-  // 약속 데이터 로드
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadPromises();
+    if (user?.userType) {
+      setUserType(user.userType);
     } else {
+      setUserType(null);
+    }
+  }, [user]);
+  
+  // 화면 마운트 시 애니메이션 실행
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    loadPromises();
+    
+    return () => {
+      // 화면에서 벗어날 때 정리 작업
+      fadeAnim.setValue(0);
+      slideAnim.setValue(20);
+    };
+  }, []);
+  
+  // 월이 변경될 때 데이터 다시 로드
+  useEffect(() => {
+    loadPromises();
+  }, [currentYearMonth, userType]);
+  
+  // 약속 데이터 로드 함수
+  const loadPromises = useCallback(async () => {
+    if (!user || !userType) {
       // 비인증 상태일 때는 빈 데이터 설정
       setPromisesByDate({});
       setMonthStats({ total: 0, completed: 0 });
       setIsLoading(false);
+      return;
     }
-  }, [isAuthenticated, currentYearMonth, userType]);
-  
-  // 약속 데이터 로드 함수
-  const loadPromises = async () => {
+    
     try {
       setIsLoading(true);
       setError(null);
       
-      // 월 시작일과 종료일 계산
-      const startDate = new Date(currentYearMonth.year, currentYearMonth.month - 1, 1);
-      const endDate = new Date(currentYearMonth.year, currentYearMonth.month, 0);
-      
       // 사용자 타입에 따라 다른 API 호출
       let promises: PromiseData[] = [];
       
-      if (userType === 'PARENT') {
-        // 부모의 경우 모든 약속 가져오기
-        const parentPromises = await promiseApi.getParentPromises();
-        
-        // 약속 데이터 변환
-        promises = parentPromises.flatMap(promise => {
-          // 각 할당마다 약속 생성
-          return promise.assignments?.map(assignment => {
-            const dueDate = assignment.dueDate;
-            // 해당 월의 데이터만 필터링
-            const dueMonth = new Date(dueDate).getMonth() + 1;
-            const dueYear = new Date(dueDate).getFullYear();
-            
-            if (dueYear === currentYearMonth.year && dueMonth === currentYearMonth.month) {
-              return {
-                id: assignment.id,
-                title: promise.title,
-                description: promise.description,
-                date: dueDate.split('T')[0], // 'T' 이후 시간 부분 제거
-                type: getPromiseType(promise.title),
-                completed: assignment.status === PromiseStatus.APPROVED
-              };
-            }
-            return null;
-          }).filter(Boolean) || [];
-        }) as PromiseData[];
-        
-      } else if (userType === 'CHILD') {
-        // 자녀의 경우 자신의 약속 할당 가져오기
-        const childPromises = await promiseApi.getChildPromises();
-        
-        // 약속 데이터 변환
-        promises = childPromises.map(assignment => {
-          const dueDate = assignment.dueDate;
-          // 해당 월의 데이터만 필터링
-          const dueMonth = new Date(dueDate).getMonth() + 1;
-          const dueYear = new Date(dueDate).getFullYear();
+      try {
+        if (userType === 'PARENT') {
+          // 부모의 경우 모든 약속 가져오기
+          const parentPromises = await promiseApi.getParentPromises();
           
-          if (dueYear === currentYearMonth.year && dueMonth === currentYearMonth.month) {
-            return {
-              id: assignment.id,
-              title: assignment.promise?.title || '제목 없음',
-              description: assignment.promise?.description,
-              date: dueDate.split('T')[0], // 'T' 이후 시간 부분 제거
-              type: getPromiseType(assignment.promise?.title || ''),
-              completed: assignment.status === PromiseStatus.APPROVED
-            };
+          // 약속 데이터 변환
+          promises = parentPromises.flatMap(promise => 
+            (promise.assignments?.map(assignment => {
+              try {
+                const dueDate = assignment.dueDate;
+                // 해당 월의 데이터만 필터링
+                const dueMonth = new Date(dueDate).getMonth() + 1;
+                const dueYear = new Date(dueDate).getFullYear();
+                
+                if (dueYear === currentYearMonth.year && dueMonth === currentYearMonth.month) {
+                  return {
+                    id: assignment.id,
+                    title: promise.title,
+                    description: promise.description,
+                    date: dueDate.split('T')[0], // 'T' 이후 시간 부분 제거
+                    type: getPromiseType(promise.title),
+                    completed: assignment.status === PromiseStatus.APPROVED
+                  };
+                }
+                return null;
+              } catch (err) {
+                console.error("Assignment 데이터 변환 오류:", err);
+                return null;
+              }
+            }) || []).filter(Boolean)
+          ) as PromiseData[];
+          
+        } else if (userType === 'CHILD') {
+          // 자녀의 경우 자신의 약속 할당 가져오기
+          const childPromises = await promiseApi.getChildPromises();
+          
+          // 약속 데이터 변환
+          promises = childPromises
+            .map(assignment => {
+              try {
+                const dueDate = assignment.dueDate;
+                // 해당 월의 데이터만 필터링
+                const dueMonth = new Date(dueDate).getMonth() + 1;
+                const dueYear = new Date(dueDate).getFullYear();
+                
+                if (dueYear === currentYearMonth.year && dueMonth === currentYearMonth.month) {
+                  return {
+                    id: assignment.id,
+                    title: assignment.promise?.title || '제목 없음',
+                    description: assignment.promise?.description,
+                    date: dueDate.split('T')[0], // 'T' 이후 시간 부분 제거
+                    type: getPromiseType(assignment.promise?.title || ''),
+                    completed: assignment.status === PromiseStatus.APPROVED
+                  };
+                }
+                return null;
+              } catch (err) {
+                console.error("Child 약속 데이터 변환 오류:", err);
+                return null;
+              }
+            })
+            .filter(Boolean) as PromiseData[];
+        }
+        
+        // 날짜별 약속 데이터 그룹화
+        const groupedPromises = promises.reduce((acc, promise) => {
+          if (!acc[promise.date]) {
+            acc[promise.date] = [];
           }
-          return null;
-        }).filter(Boolean) as PromiseData[];
+          acc[promise.date].push(promise);
+          return acc;
+        }, {} as Record<string, PromiseData[]>);
+        
+        setPromisesByDate(groupedPromises);
+        
+        // 월간 통계 계산
+        const total = promises.length;
+        const completed = promises.filter(p => p.completed).length;
+        setMonthStats({ total, completed });
+      } catch (err) {
+        console.error("API 데이터 로딩 오류:", err);
+        setError('약속 데이터를 불러오는 중 오류가 발생했습니다.');
       }
       
-      // 날짜별 약속 데이터 그룹화
-      const groupedPromises = promises.reduce((acc, promise) => {
-        if (!acc[promise.date]) {
-          acc[promise.date] = [];
-        }
-        acc[promise.date].push(promise);
-        return acc;
-      }, {} as Record<string, PromiseData[]>);
-      
-      setPromisesByDate(groupedPromises);
-      
-      // 월간 통계 계산
-      const total = promises.length;
-      const completed = promises.filter(p => p.completed).length;
-      setMonthStats({ total, completed });
-      
-      setIsLoading(false);
     } catch (error) {
       console.error('약속 데이터 로드 중 오류:', error);
       setError('약속 데이터를 불러오는 중 오류가 발생했습니다.');
+    } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentYearMonth.month, currentYearMonth.year, user, userType]);
 
   // 새로고침 처리
   const handleRefresh = async () => {
@@ -201,126 +207,80 @@ export default function CalendarScreen() {
     }
   };
   
-  // 약속 타입 결정 함수 (제목 기반)
-  const getPromiseType = (title: string): keyof typeof PROMISE_TYPES => {
-    const lowerTitle = title.toLowerCase();
-    
-    if (lowerTitle.includes('공부') || lowerTitle.includes('숙제') || lowerTitle.includes('학습')) {
-      return 'study';
-    } else if (lowerTitle.includes('청소') || lowerTitle.includes('정리') || lowerTitle.includes('설거지')) {
-      return 'chore';
-    } else if (lowerTitle.includes('책') || lowerTitle.includes('독서') || lowerTitle.includes('읽')) {
-      return 'reading';
-    } else if (lowerTitle.includes('음악') || lowerTitle.includes('연주') || lowerTitle.includes('피아노')) {
-      return 'music';
-    } else if (lowerTitle.includes('운동') || lowerTitle.includes('체육') || lowerTitle.includes('달리기')) {
-      return 'exercise';
-    } else if (lowerTitle.includes('건강') || lowerTitle.includes('양치') || lowerTitle.includes('병원')) {
-      return 'health';
-    } else if (lowerTitle.includes('가족') || lowerTitle.includes('부모님') || lowerTitle.includes('집')) {
-      return 'family';
-    }
-    
-    return 'default';
-  };
-  
   // 날짜 선택 핸들러
   const handleDateSelect = (day: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const formattedDate = `${currentYearMonth.year}-${String(currentYearMonth.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    setSelectedDate(formattedDate);
-    setSelectedPromises(promisesByDate[formattedDate] || []);
-    setModalVisible(true);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const formattedDate = `${currentYearMonth.year}-${String(currentYearMonth.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      setSelectedDate(formattedDate);
+      setSelectedPromises(promisesByDate[formattedDate] || []);
+      setModalVisible(true);
+    } catch (err) {
+      console.error("날짜 선택 오류:", err);
+    }
   };
   
   // 이전 달로 이동
   const goToPreviousMonth = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCurrentYearMonth(prev => {
-      if (prev.month === 1) {
-        return { year: prev.year - 1, month: 12 };
-      } else {
-        return { year: prev.year, month: prev.month - 1 };
-      }
-    });
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setCurrentYearMonth(prev => {
+        if (prev.month === 1) {
+          return { year: prev.year - 1, month: 12 };
+        } else {
+          return { year: prev.year, month: prev.month - 1 };
+        }
+      });
+    } catch (err) {
+      console.error("이전 달 이동 오류:", err);
+    }
   };
   
   // 다음 달로 이동
   const goToNextMonth = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCurrentYearMonth(prev => {
-      if (prev.month === 12) {
-        return { year: prev.year + 1, month: 1 };
-      } else {
-        return { year: prev.year, month: prev.month + 1 };
-      }
-    });
-  };
-  
-  // 달력 데이터 생성
-  const daysInMonth = getDaysInMonth(currentYearMonth.year, currentYearMonth.month);
-  const firstDayOfMonth = getFirstDayOfMonth(currentYearMonth.year, currentYearMonth.month);
-  
-  // 달력에 표시할 날짜 배열 생성
-  const calendarDays = [];
-  
-  // 첫 주의 빈 칸 채우기
-  for (let i = 0; i < firstDayOfMonth; i++) {
-    calendarDays.push(null);
-  }
-  
-  // 일자 채우기
-  for (let i = 1; i <= daysInMonth; i++) {
-    calendarDays.push(i);
-  }
-  
-  // 주별로 달력 데이터 그룹화
-  const weeks: (number | null)[][] = [];
-  let week: (number | null)[] = [];
-  
-  calendarDays.forEach((day, index) => {
-    week.push(day);
-    if ((index + 1) % 7 === 0 || index === calendarDays.length - 1) {
-      // 마지막 주는 남은 칸 채우기
-      while (week.length < 7) {
-        week.push(null);
-      }
-      weeks.push([...week]);
-      week = [];
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setCurrentYearMonth(prev => {
+        if (prev.month === 12) {
+          return { year: prev.year + 1, month: 1 };
+        } else {
+          return { year: prev.year, month: prev.month + 1 };
+        }
+      });
+    } catch (err) {
+      console.error("다음 달 이동 오류:", err);
     }
-  });
-  
-  // 요일 배열
-  const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+  };
   
   // 해당 날짜에 약속이 있는지 확인하는 함수
-  const hasPromisesOnDate = (day: number | null) => {
-    if (!day) return false;
-    const formattedDate = `${currentYearMonth.year}-${String(currentYearMonth.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return promisesByDate[formattedDate] && promisesByDate[formattedDate].length > 0;
-  };
+  const hasPromisesOnDate = useCallback((day: number | null) => {
+    try {
+      if (!day) return false;
+      const formattedDate = `${currentYearMonth.year}-${String(currentYearMonth.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      return promisesByDate[formattedDate] && promisesByDate[formattedDate].length > 0;
+    } catch (err) {
+      console.error("약속 확인 오류:", err);
+      return false;
+    }
+  }, [currentYearMonth.year, currentYearMonth.month, promisesByDate]);
   
   // 해당 날짜의 약속 완료 상태 계산
-  const getPromiseCompletionStatus = (day: number | null) => {
-    if (!day) return { total: 0, completed: 0 };
-    
-    const formattedDate = `${currentYearMonth.year}-${String(currentYearMonth.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const promises = promisesByDate[formattedDate] || [];
-    
-    const total = promises.length;
-    const completed = promises.filter(p => p.completed).length;
-    
-    return { total, completed };
-  };
-  
-  // 오늘 날짜인지 확인
-  const isToday = (day: number | null) => {
-    if (!day) return false;
-    const today = new Date();
-    return today.getFullYear() === currentYearMonth.year && 
-           today.getMonth() + 1 === currentYearMonth.month && 
-           today.getDate() === day;
-  };
+  const getPromiseCompletionStatus = useCallback((day: number | null) => {
+    try {
+      if (!day) return { total: 0, completed: 0 };
+      
+      const formattedDate = `${currentYearMonth.year}-${String(currentYearMonth.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const promises = promisesByDate[formattedDate] || [];
+      
+      const total = promises.length;
+      const completed = promises.filter(p => p.completed).length;
+      
+      return { total, completed };
+    } catch (err) {
+      console.error("약속 완료 상태 계산 오류:", err);
+      return { total: 0, completed: 0 };
+    }
+  }, [currentYearMonth.year, currentYearMonth.month, promisesByDate]);
   
   // 완료율 계산
   const completionRate = monthStats.total > 0 
@@ -331,7 +291,7 @@ export default function CalendarScreen() {
     <SafeAreaView className="flex-1 bg-slate-50">
       <ScrollView 
         className="flex-1" 
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -340,33 +300,24 @@ export default function CalendarScreen() {
             colors={["#10b981"]}
           />
         }
+        showsVerticalScrollIndicator={false}
       >
-        <Text className="text-2xl font-bold text-center my-4 text-emerald-700">
-          약속 달력
-        </Text>
-        
-        {/* 월 네비게이션 */}
-        <View className="flex-row items-center justify-between mb-4">
-          <Pressable
-            className="p-2"
-            onPress={goToPreviousMonth}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <FontAwesome5 name="chevron-left" size={20} color={Colors.light.leafGreen} />
-          </Pressable>
-          
-          <Text className="text-xl font-bold text-emerald-700">
-            {currentYearMonth.year}년 {currentYearMonth.month}월
+        <Animated.View 
+          style={{ 
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }}
+        >
+          <Text className="text-3xl font-bold text-center my-4 text-emerald-700">
+            약속 달력
           </Text>
           
-          <Pressable
-            className="p-2"
-            onPress={goToNextMonth}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <FontAwesome5 name="chevron-right" size={20} color={Colors.light.leafGreen} />
-          </Pressable>
-        </View>
+          <CalendarHeader 
+            currentYearMonth={currentYearMonth}
+            goToPreviousMonth={goToPreviousMonth}
+            goToNextMonth={goToNextMonth}
+          />
+        </Animated.View>
         
         {/* 로딩 상태 */}
         {isLoading ? (
@@ -375,218 +326,173 @@ export default function CalendarScreen() {
             <Text className="mt-3 text-emerald-700">달력 정보를 불러오는 중...</Text>
           </View>
         ) : error ? (
-          <View className="items-center justify-center py-10 bg-red-50 rounded-xl">
+          <View className="items-center justify-center py-10 bg-red-50 rounded-xl shadow-sm">
             <FontAwesome5 name="exclamation-circle" size={30} color="#ef4444" />
             <Text className="mt-3 text-gray-700">{error}</Text>
             <Pressable
-              className="bg-emerald-500 py-2 px-4 rounded-lg mt-4"
+              className="bg-gradient-to-r from-emerald-500 to-emerald-400 py-3 px-6 rounded-xl mt-4 shadow-sm active:opacity-90"
               onPress={loadPromises}
             >
-              <Text className="text-white">다시 시도</Text>
+              <Text className="text-white font-bold">다시 시도</Text>
             </Pressable>
           </View>
         ) : (
-          <>
-            {/* 요일 헤더 */}
-            <View className="flex-row bg-emerald-100 rounded-t-xl">
-              {weekdays.map((day, index) => (
-                <View key={index} className="flex-1 py-2 items-center">
-                  <Text className={`font-medium ${index === 0 ? 'text-red-500' : index === 6 ? 'text-blue-500' : 'text-emerald-700'}`}>
-                    {day}
-                  </Text>
-                </View>
-              ))}
+          <Animated.View 
+            style={{ 
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+          >
+            <CalendarBody 
+              currentYearMonth={currentYearMonth}
+              hasPromisesOnDate={hasPromisesOnDate}
+              getPromiseCompletionStatus={getPromiseCompletionStatus}
+              handleDateSelect={handleDateSelect}
+            />
+            
+            <CalendarLegend />
+            
+            <CalendarStats 
+              monthStats={monthStats}
+              completionRate={completionRate}
+            />
+          </Animated.View>
+        )}
+      </ScrollView>
+      
+      {/* 날짜 선택 시 표시되는 모달 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View className="flex-1 justify-end bg-black/30">
+          <BlurView intensity={20} tint="dark" className="absolute inset-0" />
+          <View className="bg-white rounded-t-3xl p-5">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-2xl font-bold text-emerald-700">
+                {selectedDate && DateUtils.formatDate(selectedDate)}
+              </Text>
+              <Pressable
+                className="bg-gray-100 p-2 rounded-full active:bg-gray-200"
+                onPress={() => setModalVisible(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <FontAwesome5 name="times" size={20} color="#64748b" />
+              </Pressable>
             </View>
             
-            {/* 달력 */}
-            <View className="border border-emerald-200 rounded-b-xl overflow-hidden mb-4">
-              {weeks.map((week, weekIndex) => (
-                <View key={weekIndex} className="flex-row">
-                  {week.map((day, dayIndex) => {
-                    const status = getPromiseCompletionStatus(day);
-                    const todayStyle = isToday(day) ? 'bg-emerald-50' : day ? 'bg-white' : 'bg-gray-50';
-                    return (
-                      <Pressable
-                        key={dayIndex}
-                        className={`flex-1 aspect-square border-t border-r border-emerald-100 ${todayStyle}`}
-                        onPress={() => day && handleDateSelect(day)}
-                        disabled={!day}
-                      >
-                        {day && (
-                          <View className="flex-1 p-1">
-                            <Text
-                              className={`text-right ${
-                                dayIndex === 0
-                                  ? 'text-red-500'
-                                  : dayIndex === 6
-                                  ? 'text-blue-500'
-                                  : 'text-gray-700'
-                              } ${hasPromisesOnDate(day) ? 'font-bold' : ''} ${
-                                isToday(day) ? 'font-bold' : ''
-                              }`}
-                            >
-                              {day}
+            {selectedPromises.length === 0 ? (
+              <View className="p-8 items-center">
+                <View className="bg-gray-100 p-6 rounded-full mb-4">
+                  <FontAwesome5 name="calendar-times" size={40} color="#94a3b8" />
+                </View>
+                <Text className="text-gray-600 text-center text-lg mb-4">
+                  이 날에는 약속이 없어요.
+                </Text>
+                <Pressable
+                  className="bg-emerald-100 py-3 px-5 rounded-xl active:opacity-90"
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setModalVisible(false);
+                  }}
+                >
+                  <Text className="text-emerald-700 text-center font-medium">
+                    확인
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <ScrollView className="max-h-[400]">
+                {selectedPromises.map(promise => {
+                  const { icon, color } = PROMISE_TYPES[promise.type] || PROMISE_TYPES.default;
+                  return (
+                    <View
+                      key={promise.id}
+                      className={`mb-3 p-4 rounded-2xl ${
+                        promise.completed
+                          ? 'border border-emerald-200 bg-emerald-50'
+                          : 'border border-gray-200 bg-white'
+                      } shadow-sm`}
+                    >
+                      <View className="flex-row items-center">
+                        <View
+                          className="w-12 h-12 rounded-full items-center justify-center mr-4"
+                          style={{ 
+                            backgroundColor: promise.completed ? Colors.light.leafGreen + '20' : color + '20',
+                            shadowColor: promise.completed ? Colors.light.leafGreen : color,
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.2,
+                            shadowRadius: 1.5,
+                          }}
+                        >
+                          <FontAwesome5 
+                            name={promise.completed ? 'check-circle' : icon} 
+                            size={20} 
+                            color={promise.completed ? Colors.light.leafGreen : color} 
+                          />
+                        </View>
+                        <View className="flex-1">
+                          <Text
+                            className={`text-lg font-bold ${
+                              promise.completed ? 'text-emerald-700' : 'text-gray-700'
+                            }`}
+                          >
+                            {promise.title}
+                          </Text>
+                          {promise.description && (
+                            <Text className="text-gray-500 mt-1">
+                              {promise.description}
                             </Text>
-                            
-                            {hasPromisesOnDate(day) && (
-                              <View className="flex-1 items-center justify-center">
-                                <View className="w-6 h-6 rounded-full bg-emerald-100 items-center justify-center">
-                                  <Text className="text-xs font-medium text-emerald-700">
-                                    {status.completed}/{status.total}
-                                  </Text>
-                                </View>
+                          )}
+                          <View className="flex-row items-center mt-2">
+                            <Text className={`text-xs font-medium ${promise.completed ? 'text-emerald-500' : 'text-amber-500'}`}>
+                              {promise.completed ? '완료됨' : '진행 중'}
+                            </Text>
+                            {promise.completed && (
+                              <View className="flex-row items-center ml-2">
+                                <FontAwesome5 name="star" size={10} color="#fbbf24" />
+                                <FontAwesome5 name="star" size={10} color="#fbbf24" style={{ marginLeft: 2 }} />
+                                <FontAwesome5 name="star" size={10} color="#fbbf24" style={{ marginLeft: 2 }} />
                               </View>
                             )}
                           </View>
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ))}
-            </View>
-            
-            {/* 약속 유형 범례 */}
-            <View className="bg-white rounded-xl p-4 mb-4 border border-emerald-200">
-              <Text className="font-medium text-emerald-700 mb-2">약속 유형</Text>
-              <View className="flex-row flex-wrap">
-                {Object.entries(PROMISE_TYPES).map(([key, { icon, color }]) => (
-                  <View key={key} className="flex-row items-center mr-4 mb-2">
-                    <View className="w-8 h-8 rounded-full items-center justify-center mr-1" style={{ backgroundColor: color + '20' }}>
-                      <FontAwesome5 name={icon} size={14} color={color} />
+                        </View>
+                        <View
+                          className={`p-3 rounded-full ${
+                            promise.completed
+                              ? 'bg-emerald-500'
+                              : 'bg-amber-400'
+                          }`}
+                        >
+                          <FontAwesome5
+                            name={promise.completed ? 'check' : 'clock'}
+                            size={14}
+                            color="white"
+                          />
+                        </View>
+                      </View>
                     </View>
-                    <Text className="text-xs text-gray-700">{
-                      key === 'study' ? '공부' :
-                      key === 'chore' ? '집안일' :
-                      key === 'reading' ? '독서' :
-                      key === 'music' ? '음악' :
-                      key === 'exercise' ? '운동' :
-                      key === 'health' ? '건강' :
-                      key === 'family' ? '가족' : '기타'
-                    }</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
+                  );
+                })}
+              </ScrollView>
+            )}
             
-            {/* 이번 달 통계 */}
-            <View className="bg-emerald-50 rounded-xl p-4 mb-4 border border-emerald-200">
-              <Text className="font-medium text-emerald-700 mb-2">이번 달 약속 통계</Text>
-              
-              <View className="flex-row justify-between mb-2">
-                <Text className="text-gray-700">전체 약속 수:</Text>
-                <Text className="font-medium text-emerald-700">{monthStats.total}개</Text>
-              </View>
-              <View className="flex-row justify-between mb-2">
-                <Text className="text-gray-700">완료한 약속:</Text>
-                <Text className="font-medium text-emerald-700">{monthStats.completed}개</Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text className="text-gray-700">완료율:</Text>
-                <Text className="font-medium text-emerald-700">{completionRate}%</Text>
-              </View>
-            </View>
-            
-            {/* 날짜 선택 시 표시되는 모달 */}
-            <Modal
-              animationType="slide"
-              transparent={true}
-              visible={modalVisible}
-              onRequestClose={() => setModalVisible(false)}
+            <Pressable
+              className="bg-gradient-to-r from-emerald-500 to-emerald-400 py-3.5 rounded-xl mt-4 shadow-sm active:opacity-90"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setModalVisible(false);
+              }}
             >
-              <View className="flex-1 justify-end bg-black/30">
-                <View className="bg-white rounded-t-2xl p-4">
-                  <View className="flex-row justify-between items-center mb-4">
-                    <Text className="text-xl font-bold text-emerald-700">
-                      {selectedDate && formatDate(selectedDate)}
-                    </Text>
-                    <Pressable
-                      className="p-2"
-                      onPress={() => setModalVisible(false)}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <FontAwesome5 name="times" size={20} color="#9ca3af" />
-                    </Pressable>
-                  </View>
-                  
-                  {selectedPromises.length === 0 ? (
-                    <View className="p-4 items-center">
-                      <FontAwesome5 name="calendar-times" size={40} color="#d1d5db" className="mb-2" />
-                      <Text className="text-gray-500 text-center">
-                        이 날에는 약속이 없어요.
-                      </Text>
-                    </View>
-                  ) : (
-                    <ScrollView className="max-h-[400]">
-                      {selectedPromises.map(promise => {
-                        const { icon, color } = PROMISE_TYPES[promise.type] || PROMISE_TYPES.default;
-                        return (
-                          <View
-                            key={promise.id}
-                            className={`mb-3 p-3 rounded-xl border ${
-                              promise.completed
-                                ? 'border-emerald-200 bg-emerald-50'
-                                : 'border-gray-200 bg-white'
-                            }`}
-                          >
-                            <View className="flex-row items-center">
-                              <View
-                                className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                                style={{ backgroundColor: color + '20' }}
-                              >
-                                <FontAwesome5 name={icon} size={16} color={color} />
-                              </View>
-                              <View className="flex-1">
-                                <Text
-                                  className={`text-lg font-medium ${
-                                    promise.completed ? 'text-emerald-700' : 'text-gray-700'
-                                  }`}
-                                >
-                                  {promise.title}
-                                </Text>
-                                {promise.description && (
-                                  <Text className="text-gray-500 text-sm">
-                                    {promise.description}
-                                  </Text>
-                                )}
-                              </View>
-                              <View
-                                className={`p-2 rounded-full ${
-                                  promise.completed
-                                    ? 'bg-emerald-500'
-                                    : 'bg-gray-300'
-                                }`}
-                              >
-                                <FontAwesome5
-                                  name={promise.completed ? 'check' : 'clock'}
-                                  size={12}
-                                  color="white"
-                                />
-                              </View>
-                            </View>
-                          </View>
-                        );
-                      })}
-                    </ScrollView>
-                  )}
-                  
-                  <Pressable
-                    className="bg-emerald-500 py-3 rounded-xl mt-3"
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setModalVisible(false);
-                    }}
-                  >
-                    <Text className="text-white text-center font-medium">
-                      확인
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            </Modal>
-          </>
-        )}
-      </ScrollView>
+              <Text className="text-white text-center font-bold">
+                확인
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

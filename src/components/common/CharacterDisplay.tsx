@@ -1,147 +1,219 @@
-// components/common/CharacterDisplay.tsx
-import React, { useEffect } from 'react';
-import { View, Text, Pressable, Animated } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { usePulseAnimation } from '../../utils/animations';
 import Colors from '../../constants/Colors';
 
 interface CharacterDisplayProps {
-  characterStage: number; // 1-4 사이의 성장 단계
+  characterStage: number;
   completedPromises: number;
   totalPromises: number;
-  userType: string;
+  userType: 'parent' | 'child';
 }
 
-export default function CharacterDisplay({
-  characterStage = 1,
-  completedPromises = 0,
-  totalPromises = 5,
-  userType = 'child',
-}: CharacterDisplayProps) {
-  const router = useRouter();
-  const { animation, startAnimation } = usePulseAnimation();
+const CharacterDisplay: React.FC<CharacterDisplayProps> = ({
+  characterStage,
+  completedPromises,
+  totalPromises,
+  userType,
+}) => {
+  // 애니메이션 값 설정
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
   
+  // 캐릭터 단계에 따른 크기
+  const getPlantSize = () => {
+    switch (characterStage) {
+      case 1: return { width: 60, height: 60 };
+      case 2: return { width: 70, height: 70 };
+      case 3: return { width: 80, height: 80 };
+      case 4: return { width: 90, height: 90 };
+      default: return { width: 100, height: 100 };
+    }
+  };
+  
+  // 캐릭터 단계에 따른 아이콘
+  const getPlantIcon = () => {
+    switch (characterStage) {
+      case 1: return 'seedling';
+      case 2: return 'spa';
+      case 3: return 'leaf';
+      case 4: return 'tree';
+      default: return 'apple-alt';
+    }
+  };
+  
+  // 애니메이션 효과
   useEffect(() => {
-    startAnimation();
+    // 부드러운 바운스 효과
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounceAnim, {
+          toValue: -8,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounceAnim, {
+          toValue: 0,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+    
+    // 미묘한 회전 효과
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 3000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(rotateAnim, {
+          toValue: -1,
+          duration: 3000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(rotateAnim, {
+          toValue: 0,
+          duration: 3000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+    
+    // 주기적인 팝 효과
+    const interval = setInterval(() => {
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.1,
+          duration: 200,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.ease),
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+          easing: Easing.in(Easing.ease),
+        }),
+      ]).start();
+    }, 10000); // 10초마다 실행
+    
+    return () => clearInterval(interval);
   }, []);
   
-  const getCharacterImage = () => {
-    // 실제 구현 시 각 단계별 이미지로 변경 필요
-    switch(characterStage) {
-      case 1: return require('../../assets/images/react-logo.png');
-      case 2: return require('../../assets/images/react-logo.png');
-      case 3: return require('../../assets/images/react-logo.png');
-      case 4: return require('../../assets/images/react-logo.png');
-      default: return require('../../assets/images/react-logo.png');
-    }
+  const rotate = rotateAnim.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ['-5deg', '5deg'],
+  });
+  
+  // 완료율에 따른 색상 그라데이션
+  const getProgressColor = () => {
+    const percentage = (completedPromises / totalPromises) * 100;
+    
+    if (percentage <= 20) return ['#fef3c7', '#fbbf24']; // amber-100 to amber-400
+    if (percentage <= 40) return ['#e9d5ff', '#c084fc']; // purple-200 to purple-400
+    if (percentage <= 60) return ['#bae6fd', '#38bdf8']; // light-blue-200 to light-blue-400
+    if (percentage <= 80) return ['#bbf7d0', '#4ade80']; // green-200 to green-400
+    return ['#a7f3d0', '#10b981']; // emerald-200 to emerald-500
   };
   
-  const getStageName = () => {
-    switch(characterStage) {
-      case 1: return '씨앗';
-      case 2: return '새싹';
-      case 3: return '어린 식물';
-      case 4: return '꽃';
-      default: return '씨앗';
-    }
-  };
-  
-  const handleCharacterPress = () => {
-    if (userType === 'child') {
-      router.push('/(child)');
-    } else {
-      router.push('/(parent)');
-    }
-  };
-  
-  const progressPercentage = totalPromises > 0 
-    ? (completedPromises / totalPromises) * 100 
-    : 0;
+  const progressColors = getProgressColor();
+  const plantSize = getPlantSize();
+  const plantIcon = getPlantIcon();
   
   return (
-    <View className="items-center justify-center py-6">
-      <Text className="text-lg font-medium text-center mb-3 text-amber-700">
-        내 식물 ({getStageName()})
-      </Text>
-      
-      <Pressable 
-        onPress={handleCharacterPress}
-        className="mb-5"
-      >
-        {/* 화분과 식물 효과 */}
-        <View className="items-center">
-          {/* 식물 */}
+    <View className="bg-gradient-to-b from-slate-50 to-white border border-gray-200 rounded-3xl p-6 shadow-md mb-2">
+      <View className="items-center justify-center">
+        {/* 식물 캐릭터 */}
+        <View>
           <Animated.View 
             style={{
-              transform: [{ scale: animation }],
+              transform: [
+                { translateY: bounceAnim },
+                { rotate },
+                { scale: scaleAnim }
+              ]
             }}
+            className="items-center justify-center"
           >
-            <Image
-              source={getCharacterImage()}
-              style={{ width: 160, height: 160 }}
-              contentFit="contain"
-            />
+            <View 
+              className="bg-gradient-to-br from-emerald-400/40 to-emerald-500/30 rounded-full mb-2 items-center justify-center"
+              style={{
+                width: plantSize.width + 16,
+                height: plantSize.height + 16,
+              }}
+            >
+              <FontAwesome5 
+                name={plantIcon} 
+                size={plantSize.width * 0.7} 
+                color={Colors.light.leafGreen} 
+              />
+            </View>
           </Animated.View>
           
-          {/* 화분 */}
-          <View className="bg-amber-200 w-[120] h-[60] rounded-t-full absolute bottom-[-15]" />
-          <View className="bg-amber-700 w-[140] h-[30] rounded-t-full absolute bottom-[-30]" />
-          
-          {/* 표정 효과 (캐릭터 단계에 따라 다르게 표현 가능) */}
-          {characterStage >= 2 && (
-            <>
-              <View className="absolute top-[80] left-[60] w-[12] h-[12] rounded-full bg-zinc-800" />
-              <View className="absolute top-[80] right-[60] w-[12] h-[12] rounded-full bg-zinc-800" />
-              <View className="absolute top-[100] left-[70] w-[20] h-[8] rounded-full bg-zinc-800" />
-            </>
-          )}
+          {/* 식물 화분 */}
+          <View className="items-center">
+            <View className="w-24 h-5 bg-gradient-to-r from-amber-700 to-amber-600 rounded-t-lg" />
+            <View className="w-20 h-12 bg-gradient-to-b from-amber-600 to-amber-500 rounded-b-xl" />
+          </View>
         </View>
-      </Pressable>
-      
-      {/* 진행도 표시 */}
-      <View className="w-full px-8">
-        <Text className="text-amber-700 mb-2 text-sm font-medium">성장 진행도</Text>
-        <View className="w-full h-5 bg-emerald-100 rounded-full overflow-hidden border border-emerald-200 shadow-sm">
-          <View 
-            className="h-full bg-emerald-400 rounded-full"
-            style={{ width: `${progressPercentage}%` }}
-          />
+        
+        {/* 진행 정보 */}
+        <View className="w-full mt-5">
+          <View className="flex-row justify-between mb-2">
+            <Text className="text-gray-600 font-medium">진행률</Text>
+            <Text className="text-emerald-600 font-bold">
+              {completedPromises}/{totalPromises}
+            </Text>
+          </View>
           
-          {/* 약속 성취 마일스톤 표시 */}
-          {[25, 50, 75].map(milestone => (
+          {/* 프로그레스 바 */}
+          <View className="h-5 bg-gray-100 rounded-full overflow-hidden">
             <View 
-              key={milestone}
-              className="absolute top-0 bottom-0 w-[2] bg-white"
-              style={{ left: `${milestone}%` }}
+              className="h-full rounded-full"
+              style={{
+                width: `${(completedPromises / totalPromises) * 100}%`,
+                backgroundColor: Colors.light.leafGreen,
+              }}
             />
-          ))}
+          </View>
+          
+          {/* 레벨 및 타입 정보 */}
+          <View className="flex-row justify-between mt-4 items-center">
+            <View className="flex-row items-center">
+              <View className="bg-amber-100 p-2 rounded-full mr-2">
+                <FontAwesome5 name="seedling" size={12} color="#92400e" />
+              </View>
+              <Text className="text-amber-700 font-bold">
+                레벨 {characterStage}
+              </Text>
+            </View>
+            
+            <View className="flex-row items-center">
+              <Text className="text-emerald-700 font-medium mr-2">
+                {userType === 'parent' ? '부모님 모드' : '어린이 모드'}
+              </Text>
+              <View className="bg-emerald-100 p-2 rounded-full">
+                <FontAwesome5 
+                  name={userType === 'parent' ? 'user-tie' : 'child'} 
+                  size={12} 
+                  color={Colors.light.leafGreen} 
+                />
+              </View>
+            </View>
+          </View>
         </View>
-        
-        <View className="flex-row justify-between mt-2">
-          <View className="items-center">
-            <FontAwesome5 name="seedling" size={14} color={Colors.light.leafGreen} />
-            <Text className="text-xs text-emerald-700 mt-1">씨앗</Text>
-          </View>
-          <View className="items-center">
-            <FontAwesome5 name="leaf" size={14} color={Colors.light.leafGreen} />
-            <Text className="text-xs text-emerald-700 mt-1">새싹</Text>
-          </View>
-          <View className="items-center">
-            <FontAwesome5 name="tree" size={14} color={Colors.light.leafGreen} />
-            <Text className="text-xs text-emerald-700 mt-1">식물</Text>
-          </View>
-          <View className="items-center">
-            <FontAwesome5 name="tree" size={14} color={Colors.light.flowerPink} />
-            <Text className="text-xs text-emerald-700 mt-1">꽃</Text>
-          </View>
-        </View>
-        
-        <Text className="text-center mt-3 text-emerald-700 font-medium">
-          {completedPromises}/{totalPromises} 약속 완료
-        </Text>
       </View>
     </View>
   );
-}
+};
+
+export default CharacterDisplay;
