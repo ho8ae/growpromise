@@ -5,6 +5,7 @@ import promise from './modules/promise';
 import reward from './modules/reward';
 import sticker from './modules/sticker';
 import notification from './modules/notification';
+import plant from './modules/plant'; // 식물 API 모듈 추가
 
 // API 클라이언트와 모든 모듈을 하나로 내보냄
 const api = {
@@ -15,6 +16,7 @@ const api = {
   reward,  // 보상 관련 API
   sticker, // 스티커 관련 API
   notification, // 알림 관련 API
+  plant,   // 식물 관련 API (추가됨)
 };
 
 export default api;

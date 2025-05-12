@@ -9,7 +9,7 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
 // API 클라이언트 생성
 const apiClient = axios.create({
   // 개발 환경에서는 로컬 IP, 프로덕션에서는 실제 서버 주소로 변경 필요
-  baseURL: 'http://172.30.1.85:3000/api',
+  baseURL: 'http://172.30.1.1:3000/api', //172.30.1.1(투썸)  172.30.1.85
   headers: {
     'Content-Type': 'application/json',
   },
