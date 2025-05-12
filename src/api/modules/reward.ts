@@ -15,13 +15,13 @@ export interface Reward {
       username: string;
     };
   };
-  stickers?: Sticker[];
 }
 
 // 자녀 보상 타입 (추가 필드 포함)
 export interface ChildReward extends Reward {
   availableStickers: number;
   progress: number;
+  isAchievable: boolean; // 달성 가능 여부 추가
 }
 
 // 보상 생성 요청 타입
@@ -30,6 +30,12 @@ export interface CreateRewardRequest {
   description?: string;
   requiredStickers: number;
   isActive?: boolean;
+}
+
+// 보상 달성 결과 타입
+export interface RewardAchievement {
+  reward: Reward;
+  usedStickers: number;
 }
 
 // 보상 API 함수들
@@ -94,10 +100,10 @@ const rewardApi = {
     }
   },
   
-  // 보상 달성 (자녀)
-  achieveReward: async (id: string): Promise<any> => {
+  // 보상 달성 (자녀) - 스티커 삭제 버전
+  achieveReward: async (id: string): Promise<RewardAchievement> => {
     try {
-      return await apiRequest<any>('post', `/rewards/${id}/achieve`, {});
+      return await apiRequest<RewardAchievement>('post', `/rewards/${id}/achieve`, {});
     } catch (error) {
       console.error('보상 달성 오류:', error);
       throw error;

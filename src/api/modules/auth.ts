@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import apiClient, { ApiResponse } from '../client';
+import apiClient, { ApiResponse, apiRequest } from '../client';
 
 // 인증 응답 타입
 export interface AuthResponse {
@@ -25,12 +25,14 @@ export interface ParentSignupRequest {
   username: string;
   email: string;
   password: string;
+  confirmPassword: string; // 비밀번호 확인 필드 추가
 }
 
 // 자녀 회원가입 요청 타입
 export interface ChildSignupRequest {
   username: string;
   password: string;
+  confirmPassword: string; // 비밀번호 확인 필드 추가
   birthDate?: string;
   parentCode?: string;
 }
@@ -39,6 +41,24 @@ export interface ChildSignupRequest {
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
+  confirmPassword: string; // 비밀번호 확인 필드 추가
+}
+
+// 아이디 찾기 요청 타입
+export interface FindUsernameRequest {
+  email: string;
+}
+
+// 비밀번호 재설정 요청 타입
+export interface RequestPasswordResetRequest {
+  email: string;
+}
+
+// 비밀번호 재설정 수행 타입
+export interface ResetPasswordRequest {
+  token: string;
+  password: string;
+  confirmPassword: string;
 }
 
 // 인증 관련 API 함수들
@@ -152,6 +172,48 @@ const authApi = {
       return response.data;
     } catch (error) {
       console.error('비밀번호 변경 오류:', error);
+      throw error;
+    }
+  },
+
+  // 아이디 찾기 (추가)
+  findUsername: async (data: FindUsernameRequest) => {
+    try {
+      const response = await apiClient.post<ApiResponse<{ username: string; userType: string }>>(
+        '/auth/find-username',
+        data,
+      );
+      return response.data;
+    } catch (error) {
+      console.error('아이디 찾기 오류:', error);
+      throw error;
+    }
+  },
+
+  // 비밀번호 재설정 요청 (추가)
+  requestPasswordReset: async (data: RequestPasswordResetRequest) => {
+    try {
+      const response = await apiClient.post<ApiResponse<any>>(
+        '/auth/request-password-reset',
+        data,
+      );
+      return response.data;
+    } catch (error) {
+      console.error('비밀번호 재설정 요청 오류:', error);
+      throw error;
+    }
+  },
+
+  // 비밀번호 재설정 (추가)
+  resetPassword: async (data: ResetPasswordRequest) => {
+    try {
+      const response = await apiClient.post<ApiResponse<any>>(
+        '/auth/reset-password',
+        data,
+      );
+      return response.data;
+    } catch (error) {
+      console.error('비밀번호 재설정 오류:', error);
       throw error;
     }
   },

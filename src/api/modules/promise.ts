@@ -223,11 +223,11 @@ const promiseApi = {
         formData.append('message', message);
       }
 
-      // 이미지 파일 준비
+      // 이미지 파일 준비 - 중요: 필드 이름을 'verificationImage'로 변경
       const uriParts = imageUri.split('.');
       const fileType = uriParts[uriParts.length - 1];
 
-      formData.append('image', {
+      formData.append('verificationImage', {
         uri: imageUri,
         name: `photo.${fileType}`,
         type: `image/${fileType}`,
@@ -250,24 +250,6 @@ const promiseApi = {
     }
   },
 
-  // 약속 인증 응답 (부모)
-  respondToVerification: async (
-    id: string,
-    approved: boolean,
-    rejectionReason?: string,
-  ): Promise<PromiseAssignment> => {
-    try {
-      return await apiRequest<PromiseAssignment>(
-        'post',
-        `/promises/verify/respond/${id}`,
-        { approved, rejectionReason },
-      );
-    } catch (error) {
-      console.error('약속 인증 응답 오류:', error);
-      throw error;
-    }
-  },
-
   // 승인 대기 중인 약속 인증 목록 조회 (부모)
   getPendingVerifications: async (): Promise<PromiseAssignment[]> => {
     try {
@@ -277,6 +259,29 @@ const promiseApi = {
       );
     } catch (error) {
       console.error('대기 중인 인증 목록 조회 오류:', error);
+      throw error;
+    }
+  },
+
+  // 약속 인증 응답 (부모)
+  respondToVerification: async (
+    id: string,
+    approved: boolean,
+    rejectionReason?: string,
+  ): Promise<{
+    promiseAssignment: PromiseAssignment;
+    experienceGained?: number; // 추가: 획득한 경험치 정보
+  }> => {
+    try {
+      return await apiRequest<{
+        promiseAssignment: PromiseAssignment;
+        experienceGained?: number;
+      }>('post', `/promises/verify/respond/${id}`, {
+        approved,
+        rejectionReason,
+      });
+    } catch (error) {
+      console.error('약속 인증 응답 오류:', error);
       throw error;
     }
   },
@@ -316,7 +321,8 @@ const promiseApi = {
 
   // 부모가 자녀 약속 통계 계산 (자녀의 약속 목록을 이용하여 통계 직접 계산)
   calculateChildPromiseStats: async (
-    childId: string,
+    childId: string, // 이것은 ChildProfile.id (child_profile 테이블의 ID)
+    childData?: any, // 선택적으로 이미 로드된 자녀 데이터 전달
   ): Promise<PromiseStats> => {
     try {
       // 1. 자녀 약속 목록 조회
@@ -333,14 +339,31 @@ const promiseApi = {
         (a) => a.status === 'PENDING' || a.status === 'SUBMITTED',
       ).length;
 
-      // 3. 자녀 프로필 정보 조회 (characterStage 정보용)
-      const childProfileInfo = await api.user.getUserById(childId);
-      const characterStage = childProfileInfo.childProfile?.characterStage || 1;
+      // 3. 캐릭터 단계 정보
+      // 이미 로드된 자녀 데이터가 있으면 그것을 사용
+      let characterStage = 1; // 기본값
+
+      if (childData && childData.characterStage) {
+        // 이미 로드된 데이터 사용
+        characterStage = childData.characterStage;
+      } else {
+        // 자녀 데이터를 직접 조회해 볼 수 있지만, 필수는 아님
+        try {
+          const childrenList = await api.user.getParentChildren();
+          const childInfo = childrenList.find((c) => c.childId === childId);
+          if (childInfo && childInfo.child) {
+            characterStage = childInfo.child.characterStage || 1;
+          }
+        } catch (profileError) {
+          console.warn('자녀 프로필 정보 추가 조회 실패:', profileError);
+          // 기본값 1 계속 사용
+        }
+      }
 
       // 4. 스티커 개수 (선택적)
       let stickerCount = 0;
       try {
-        // 스티커 정보가 있다면 가져오기 (없을 수도 있음)
+        // 스티커 정보가 있다면 가져오기
         const stickerStats = await apiRequest<{ totalStickers: number }>(
           'get',
           `/stickers/child/${childId}/count`,

@@ -29,6 +29,7 @@ export interface ChildProfile {
 // 부모-자녀 연결 타입
 export interface ChildParentConnection {
   id: string;
+  userId: string;
   childId: string;
   parentId: string;
   child?: {
