@@ -1,3 +1,4 @@
+// src/app/(parent)/approvals.tsx 수정
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +7,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
 import promiseApi, { PromiseAssignment } from '../../api/modules/promise';
 import * as Haptics from 'expo-haptics';
+import ExperienceGainAnimation from '../../components/plant/ExperienceGainAnimation';
 
 export default function ApprovalsScreen() {
   const router = useRouter();
@@ -15,6 +17,8 @@ export default function ApprovalsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showExperienceGain, setShowExperienceGain] = useState(false);
+  const [experienceGained, setExperienceGained] = useState(0);
   
   // 인증 요청 상세 정보 로드
   useEffect(() => {
@@ -31,7 +35,7 @@ export default function ApprovalsScreen() {
       
       // 이 API 엔드포인트가 구현되어 있지 않은 경우 getPendingVerifications에서 필터링하여 사용
       const pendingVerifications = await promiseApi.getPendingVerifications();
-      const verificationDetails = pendingVerifications.find(v => v.id === id);
+      const verificationDetails = pendingVerifications.find((v:any) => v.id === id);
       
       if (verificationDetails) {
         setVerification(verificationDetails);
@@ -91,15 +95,36 @@ export default function ApprovalsScreen() {
             try {
               setIsSubmitting(true);
               
-              await promiseApi.respondToVerification(id as string, true);
+              // API 호출 및 응답 받기
+              const response = await promiseApi.respondToVerification(id as string, true);
+              
+              // 경험치 획득 정보 처리
+              const gainedExp = response.experienceGained || 0;
               
               // 성공 처리
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert(
-                '성공',
-                '인증을 승인했습니다. 자녀에게 스티커가 지급되었습니다.',
-                [{ text: '확인', onPress: () => router.back() }]
-              );
+              
+              // 경험치 획득 애니메이션 표시
+              if (gainedExp > 0) {
+                setExperienceGained(gainedExp);
+                setShowExperienceGain(true);
+                
+                // 애니메이션 후 알림 표시
+                setTimeout(() => {
+                  setShowExperienceGain(false);
+                  Alert.alert(
+                    '성공',
+                    `인증을 승인했습니다. 자녀에게 스티커가 지급되었습니다.\n\n자녀의 식물이 ${gainedExp} 경험치를 획득했습니다!`,
+                    [{ text: '확인', onPress: () => router.back() }]
+                  );
+                }, 2000);
+              } else {
+                Alert.alert(
+                  '성공',
+                  '인증을 승인했습니다. 자녀에게 스티커가 지급되었습니다.',
+                  [{ text: '확인', onPress: () => router.back() }]
+                );
+              }
               
               setIsSubmitting(false);
             } catch (error) {
@@ -312,6 +337,11 @@ export default function ApprovalsScreen() {
               )}
             </View>
           </ScrollView>
+        )}
+        
+        {/* 경험치 획득 애니메이션 */}
+        {showExperienceGain && experienceGained > 0 && (
+          <ExperienceGainAnimation amount={experienceGained} />
         )}
       </View>
     </SafeAreaView>

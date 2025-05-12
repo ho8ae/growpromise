@@ -11,6 +11,7 @@ interface ActionCardProps {
   bgColor?: string;
   borderColor?: string;
   onPress: () => void;
+  disabled?: boolean;
 }
 
 const ActionCard = ({ 
@@ -22,11 +23,12 @@ const ActionCard = ({
   bgColor = '#ffffff',
   borderColor,
   onPress,
+  disabled = false,
 }: ActionCardProps) => {
   return (
     <TouchableOpacity 
-      activeOpacity={0.9}
-      onPress={onPress}
+      activeOpacity={disabled ? 1 : 0.9}
+      onPress={disabled ? undefined : onPress}
       style={{
         backgroundColor: bgColor,
         borderWidth: 1,
@@ -39,6 +41,7 @@ const ActionCard = ({
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 2,
+        opacity: disabled ? 0.7 : 1,
       }}
     >
       <View style={{ padding: 16 }}>
@@ -72,7 +75,7 @@ const ActionCard = ({
         </Text>
         
         <View style={{ 
-          backgroundColor: color, 
+          backgroundColor: disabled ? '#9ca3af' : color, 
           paddingVertical: 12, 
           borderRadius: 12, 
           alignItems: 'center' 

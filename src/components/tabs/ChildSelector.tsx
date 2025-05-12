@@ -1,5 +1,5 @@
 import React from 'react';
-import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
+import { Animated, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { ChildParentConnection } from '../../api/modules/user';
 
 interface ChildSelectorProps {
@@ -10,52 +10,66 @@ interface ChildSelectorProps {
   handleChildSelect: (childId: string) => void;
 }
 
-const ChildSelector = ({ 
-  fadeAnim, 
-  translateY, 
-  connectedChildren, 
-  selectedChildId, 
-  handleChildSelect 
-}: ChildSelectorProps) => {
+export default function ChildSelector({
+  fadeAnim,
+  translateY,
+  connectedChildren,
+  selectedChildId,
+  handleChildSelect,
+}: ChildSelectorProps) {
   return (
     <Animated.View
       style={{
         opacity: fadeAnim,
         transform: [{ translateY }],
-        marginBottom: 8,
       }}
+      className="mb-4"
     >
-      <View className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 p-3">
-        <Text className="text-gray-700 font-medium mb-2">자녀 선택</Text>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingRight: 20 }}
-        >
-          {connectedChildren.map((connection) => (
-            <Pressable
+      <Text className="text-sm font-medium text-gray-600 mb-2">
+        자녀 선택
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        className="flex-row"
+      >
+        {connectedChildren.map((connection) => {
+          const isSelected = connection.childId === selectedChildId;
+          const childName = connection.child?.user?.username || '자녀';
+          const profileImage = connection.child?.user?.profileImage;
+          
+          return (
+            <TouchableOpacity
               key={connection.childId}
               onPress={() => handleChildSelect(connection.childId)}
-              className={`mr-2 px-4 py-2 rounded-lg ${
-                selectedChildId === connection.childId 
-                  ? 'bg-emerald-100 border-emerald-300' 
-                  : 'bg-gray-100 border-gray-200'
-              } border`}
+              className={`mr-3 px-4 py-2 rounded-full flex-row items-center ${
+                isSelected ? 'bg-green-500' : 'bg-gray-200'
+              }`}
             >
-              <Text 
-                className={selectedChildId === connection.childId 
-                  ? 'text-emerald-700 font-medium' 
-                  : 'text-gray-700'
-                }
+              {/* 프로필 이미지가 있으면 표시, 없으면 기본 아이콘 */}
+              {profileImage ? (
+                <Image
+                  source={{ uri: profileImage }}
+                  className="w-6 h-6 rounded-full mr-2"
+                />
+              ) : (
+                <View className="w-6 h-6 rounded-full bg-gray-300 mr-2 items-center justify-center">
+                  <Text className="text-xs font-bold text-gray-500">
+                    {childName.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <Text
+                className={`text-sm font-medium ${
+                  isSelected ? 'text-white' : 'text-gray-700'
+                }`}
               >
-                {connection.child?.user.username || '자녀'}
+                {childName}
               </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </Animated.View>
   );
-};
-
-export default ChildSelector;
+}

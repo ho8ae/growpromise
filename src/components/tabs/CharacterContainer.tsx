@@ -1,6 +1,6 @@
 import React from 'react';
 import { Animated } from 'react-native';
-import CharacterDisplay from '../common/CharacterDisplay';
+import PlantContainer from './PlantContainer';
 
 interface CharacterContainerProps {
   fadeAnim: Animated.Value;
@@ -11,31 +11,26 @@ interface CharacterContainerProps {
   userType?: string;
   isLoading: boolean;
   onPress: () => void;
+  childId?: string;
 }
 
 const CharacterContainer = ({
   fadeAnim,
   translateY,
-  characterStage,
-  completedPromises,
-  totalPromises,
   userType,
   isLoading,
   onPress,
+  childId,
 }: CharacterContainerProps) => {
   return (
-    <Animated.View
-      style={{ opacity: fadeAnim, transform: [{ translateY }], marginBottom: 20 }}
-    >
-      <CharacterDisplay
-        characterStage={characterStage}
-        completedPromises={completedPromises}
-        totalPromises={totalPromises}
-        userType={userType === 'PARENT' ? 'parent' : 'child'}
-        isLoading={isLoading}
-        onPress={onPress}
-      />
-    </Animated.View>
+    <PlantContainer
+      fadeAnim={fadeAnim}
+      translateY={translateY}
+      userType={userType === 'parent' ? 'PARENT' : 'CHILD'}
+      isLoading={isLoading}
+      onPress={onPress}
+      childId={childId}
+    />
   );
 };
 
