@@ -17,7 +17,7 @@ export interface AuthResponse {
 export interface LoginRequest {
   username: string;
   password: string;
-  userType: 'PARENT' | 'CHILD';
+  // userType: 'PARENT' | 'CHILD'; 
 }
 
 // 부모 회원가입 요청 타입
