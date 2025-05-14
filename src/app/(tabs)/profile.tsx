@@ -97,11 +97,13 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      
       
       // 로그아웃 처리
       await logout();
-      
-      // 로그인 화면으로 이동
+
+      // 두번 처리 되는 로직 나중에 수정 필요
       router.replace('/(auth)/login');
     } catch (error) {
       console.error('로그아웃 오류:', error);
