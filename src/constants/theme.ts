@@ -1,5 +1,5 @@
 // constants/theme.ts
-// KidsPlan 앱의 디자인 시스템 정의
+// growpromise 앱의 디자인 시스템 정의
 
 import { Platform } from 'react-native';
 

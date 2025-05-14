@@ -1,90 +1,73 @@
-/**
- * 앱 전체에서 사용할 색상 상수를 정의합니다.
- */
-
+// constants/Colors.ts
 export default {
   light: {
     // 기본 색상
-    primary: '#10b981', // emerald-500
-    secondary: '#8b5cf6', // violet-500
-    tertiary: '#3b82f6', // blue-500
-    
-    // 테마 색상
-    leafGreen: '#10b981', // emerald-500 (주요 브랜드 색상)
-    leafLightGreen: '#a7f3d0', // emerald-200
-    stemBrown: '#d97706', // amber-600
-    sky: '#0ea5e9', // sky-500
-    amber: '#f59e0b', // amber-500
+    primary: '#58CC02', // 듀오링고 메인 그린
+    secondary: '#FFC800', // 자녀 노랑
+    tertiary: '#2B70C9', // 부모 블루
     
     // 의미 색상
-    success: '#10b981', // emerald-500
-    warning: '#f59e0b', // amber-500
-    error: '#ef4444', // red-500
-    info: '#3b82f6', // blue-500
+    success: '#58CC02', // 듀오링고 메인 그린
+    warning: '#FFC800', // 자녀 노랑
+    error: '#FF4B4B', // 듀오링고 오류 빨강
+    info: '#1CB0F6', // 듀오링고 정보 파랑
+    
+    // 테마 색상
+    accent: '#CE82FF', // 듀오링고 액센트 퍼플
+    disabled: '#E5E5E5', // 비활성화 회색
     
     // 중립 색상
-    background: '#f8fafc', // slate-50
-    card: '#ffffff', // white
-    text: '#1e293b', // slate-800
-    textSecondary: '#64748b', // slate-500
-    border: '#e2e8f0', // slate-200
-    placeholder: '#94a3b8', // slate-400
+    background: '#FFFFFF', // 흰색 배경
+    card: '#FFFFFF', // 카드 배경
+    cardBorder: '#E5E5E5', // 카드 테두리
+    text: '#4B4B4B', // 주요 텍스트
+    textSecondary: '#777777', // 보조 텍스트
     
     // 약속 유형 색상
     promise: {
-      study: '#60a5fa', // blue-400
-      chore: '#a78bfa', // violet-400
-      reading: '#34d399', // emerald-400
-      music: '#f87171', // red-400
-      exercise: '#fcd34d', // amber-300
-      health: '#f472b6', // pink-400
-      family: '#fb923c', // orange-400
-      default: '#9ca3af', // gray-400
+      study: '#1CB0F6', // 학습
+      chore: '#CE82FF', // 집안일
+      reading: '#58CC02', // 독서
+      music: '#FF4B4B', // 음악
+      exercise: '#FFC800', // 운동
+      health: '#FF9600', // 건강
+      family: '#2B70C9', // 가족
+      default: '#777777', // 기본
     },
-    
-    // 기존 색상 (이전 코드와의 호환성을 위해 유지)
-    gray: '#d1d5db',
   },
   dark: {
     // 기본 색상
-    primary: '#059669', // emerald-600
-    secondary: '#7c3aed', // violet-600
-    tertiary: '#2563eb', // blue-600
-    
-    // 테마 색상
-    leafGreen: '#059669', // emerald-600 (주요 브랜드 색상)
-    leafLightGreen: '#6ee7b7', // emerald-300
-    stemBrown: '#b45309', // amber-700
-    sky: '#0284c7', // sky-600
-    amber: '#d97706', // amber-600
+    primary: '#58CC02', // 듀오링고 메인 그린
+    secondary: '#FFC800', // 자녀 노랑
+    tertiary: '#2B70C9', // 부모 블루
     
     // 의미 색상
-    success: '#059669', // emerald-600
-    warning: '#d97706', // amber-600
-    error: '#dc2626', // red-600
-    info: '#2563eb', // blue-600
+    success: '#58CC02', // 듀오링고 메인 그린
+    warning: '#FFC800', // 자녀 노랑
+    error: '#FF4B4B', // 듀오링고 오류 빨강
+    info: '#1CB0F6', // 듀오링고 정보 파랑
+    
+    // 테마 색상
+    accent: '#CE82FF', // 듀오링고 액센트 퍼플
+    disabled: '#777777', // 비활성화 회색
     
     // 중립 색상
-    background: '#0f172a', // slate-900
-    card: '#1e293b', // slate-800
-    text: '#f8fafc', // slate-50
-    textSecondary: '#cbd5e1', // slate-300
-    border: '#334155', // slate-700
-    placeholder: '#64748b', // slate-500
+    background: '#121212', // 다크 모드 배경
+    card: '#1E1E1E', // 카드 배경
+    cardBorder: '#333333', // 카드 테두리
+    text: '#FFFFFF', // 주요 텍스트
+    textSecondary: '#BBBBBB', // 보조 텍스트
     
     // 약속 유형 색상
     promise: {
-      study: '#3b82f6', // blue-500
-      chore: '#8b5cf6', // violet-500
-      reading: '#10b981', // emerald-500
-      music: '#ef4444', // red-500
-      exercise: '#f59e0b', // amber-500
-      health: '#ec4899', // pink-500
-      family: '#f97316', // orange-500
-      default: '#6b7280', // gray-500
+      study: '#1CB0F6', // 학습
+      chore: '#CE82FF', // 집안일
+      reading: '#58CC02', // 독서
+      music: '#FF4B4B', // 음악
+      exercise: '#FFC800', // 운동
+      health: '#FF9600', // 건강
+      family: '#2B70C9', // 가족
+      default: '#BBBBBB', // 기본
     },
-    
-    // 기존 색상 (이전 코드와의 호환성을 위해 유지)
-    gray: '#6b7280',
-  },
+  }
 };

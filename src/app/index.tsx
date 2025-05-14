@@ -6,91 +6,97 @@ import { useRouter } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Colors from '../constants/Colors';
+import { StatusBar } from 'expo-status-bar';
 
 export default function SplashScreen() {
   const router = useRouter();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const translateYAnim = useRef(new Animated.Value(20)).current;
+  const logoScale = useRef(new Animated.Value(0.5)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const textOpacity = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
-    // 애니메이션 시작
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
+    // 로고 애니메이션
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(logoScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+      // 텍스트 애니메이션은 로고 애니메이션 후에 시작
+      Animated.timing(textOpacity, {
         toValue: 1,
-        duration: 1000,
+        duration: 500,
         useNativeDriver: true,
       }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateYAnim, {
-        toValue: 0,
-        duration: 800,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      })
     ]).start();
     
     // 일정 시간 후 다음 화면으로 이동
-    checkFirstLaunch();
+    checkAuthAndNavigate();
   }, []);
   
-  const checkFirstLaunch = async () => {
+  const checkAuthAndNavigate = async () => {
     try {
-      // 앱 최초 실행 여부 확인
       const isFirstLaunch = await AsyncStorage.getItem('isFirstLaunch');
+      const token = await AsyncStorage.getItem('auth_token');
       
-      // 딜레이 추가 (스플래시 화면 표시 시간)
+      // 타이머 설정 (2.5초 후 이동)
       setTimeout(() => {
         if (isFirstLaunch === null) {
           // 최초 실행 시 온보딩 화면으로 이동
           router.replace('/onboarding');
+        } else if (!token) {
+          // 로그인 상태가 아니면 인증 화면으로 이동
+          router.replace('/(auth)');
         } else {
-          // 이미 실행한 적이 있으면 메인 화면으로 이동
+          // 로그인된 상태면 메인 화면으로 이동
           router.replace('/(tabs)');
         }
       }, 2500);
     } catch (error) {
-      console.error('Error checking first launch:', error);
+      console.error('Navigation error:', error);
       router.replace('/onboarding');
     }
   };
   
   return (
-    <View className="flex-1 items-center justify-center bg-slate-50">
-      <Animated.View 
-        className="items-center"
-        style={{
-          opacity: fadeAnim,
-          transform: [
-            { scale: scaleAnim },
-            { translateY: translateYAnim }
-          ]
-        }}
-      >
-        <View className="items-center">
-          {/* 로고 (잎사귀와 화분) */}
-          <View className="relative mb-4">
-            <View className="bg-emerald-100 p-8 rounded-full">
-              <FontAwesome5 
-                name="seedling" 
-                size={80} 
-                color={Colors.light.leafGreen}
-              />
-            </View>
-            <View className="bg-amber-200 w-[80] h-[30] rounded-t-full absolute bottom-[-15] left-[20]" />
-            <View className="bg-amber-700 w-[100] h-[20] rounded-t-full absolute bottom-[-25] left-[10]" />
+    <View className="flex-1 items-center justify-center bg-white">
+      <StatusBar style="dark" />
+      
+      <View className="items-center">
+        {/* 로고 애니메이션 */}
+        <Animated.View
+          style={{
+            transform: [{ scale: logoScale }],
+            opacity: logoOpacity,
+          }}
+          className="mb-6"
+        >
+          <View className="bg-[#E6F4D7] p-8 rounded-full">
+            <FontAwesome5 
+              name="seedling" 
+              size={80} 
+              color={Colors.light.primary}
+            />
           </View>
-          
-          <Text className="text-3xl font-bold text-emerald-600 mb-1">쑥쑥약속</Text>
-          <Text className="text-xl font-medium text-emerald-400 mb-3">GrowPromise</Text>
-          <Text className="text-gray-500 text-lg">함께 약속하고 함께 자라요</Text>
-        </View>
-      </Animated.View>
+        </Animated.View>
+        
+        {/* 텍스트 애니메이션 */}
+        <Animated.View
+          style={{ opacity: textOpacity }}
+          className="items-center"
+        >
+          <Text className="text-3xl font-bold text-[#58CC02] mb-2">쑥쑥약속</Text>
+          <Text className="text-lg text-gray-500">함께 약속하고 함께 자라요</Text>
+        </Animated.View>
+      </View>
     </View>
   );
 }
