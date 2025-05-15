@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryProvider } from '../components/QueryProvider';
 import { useAuth } from '../hooks/useAuth';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -42,30 +43,33 @@ function AuthenticationManager({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   return (
-    <QueryProvider>
-      <StatusBar style="auto" />
-      <AuthenticationManager>
-        <Stack 
-          screenOptions={{ 
-            headerShown: false,
-            // 화면 전환 애니메이션 설정
-            animation: 'slide_from_right',
-            // iOS에서 제스처로 뒤로가기 활성화
-            gestureEnabled: true,
-            // 스택 간 전환 시 배경색
-            contentStyle: {
-              backgroundColor: '#FFFFFF',
-            },
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(child)" options={{ headerShown: false }} />
-          <Stack.Screen name="(parent)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        </Stack>
-      </AuthenticationManager>
-    </QueryProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryProvider>
+        <StatusBar style="auto" />
+        <AuthenticationManager>
+          
+          <Stack 
+            screenOptions={{ 
+              headerShown: false,
+              // 화면 전환 애니메이션 설정
+              animation: 'slide_from_right',
+              // iOS에서 제스처로 뒤로가기 활성화
+              gestureEnabled: true,
+              // 스택 간 전환 시 배경색
+              contentStyle: {
+                backgroundColor: '#FFFFFF',
+              },
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(child)" options={{ headerShown: false }} />
+            <Stack.Screen name="(parent)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          </Stack>
+        </AuthenticationManager>
+      </QueryProvider>
+    </GestureHandlerRootView>
   );
 }
