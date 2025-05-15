@@ -36,7 +36,7 @@ const AuthBanner = ({ fadeAnim, translateY }: AuthBannerProps) => {
                 전체 기능을 이용하시려면 로그인이 필요합니다.
               </Text>
               <LinearGradient
-                colors={[Colors.light.amber, Colors.light.stemBrown]}
+                colors={[Colors.light.primary, Colors.light.secondary]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 className="rounded-lg"

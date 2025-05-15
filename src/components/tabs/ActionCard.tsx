@@ -12,78 +12,65 @@ interface ActionCardProps {
   borderColor?: string;
   onPress: () => void;
   disabled?: boolean;
+  renderExtra?: () => React.ReactNode; // 추가 콘텐츠를 렌더링하는 함수
 }
 
-const ActionCard = ({ 
-  icon, 
-  title, 
-  description, 
-  actionText, 
-  color = Colors.light.leafGreen, 
+const ActionCard = ({
+  icon,
+  title,
+  description,
+  actionText,
+  color = Colors.light.primary,
   bgColor = '#ffffff',
   borderColor,
   onPress,
   disabled = false,
+  renderExtra,
 }: ActionCardProps) => {
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       activeOpacity={disabled ? 1 : 0.9}
       onPress={disabled ? undefined : onPress}
+      className={`rounded-2xl mb-4 overflow-hidden ${disabled ? 'opacity-70' : 'opacity-100'}`}
       style={{
         backgroundColor: bgColor,
         borderWidth: 1,
         borderColor: borderColor || `${color}30`,
-        borderRadius: 16,
-        marginBottom: 16,
-        overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 2,
-        opacity: disabled ? 0.7 : 1,
       }}
     >
-      <View style={{ padding: 16 }}>
-        <View style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          marginBottom: 12 
-        }}>
-          <View style={{ 
-            padding: 12, 
-            borderRadius: 9999, 
-            marginRight: 12, 
-            backgroundColor: `${color}15` 
-          }}>
+      <View className="p-4">
+        <View className="flex-row items-center mb-3">
+          <View 
+            className="p-3 rounded-full mr-3" 
+            style={{ backgroundColor: `${color}15` }}
+          >
             {icon}
           </View>
-          <Text style={{ 
-            fontSize: 18, 
-            fontWeight: 'bold', 
-            color: color 
-          }}>
+          <Text 
+            className="text-lg font-bold" 
+            style={{ color: color }}
+          >
             {title}
           </Text>
         </View>
         
-        <Text style={{ 
-          marginBottom: 12, 
-          color: '#4B5563' 
-        }}>
+        <Text className="text-gray-600 mb-3">
           {description}
         </Text>
         
-        <View style={{ 
-          backgroundColor: disabled ? '#9ca3af' : color, 
-          paddingVertical: 12, 
-          borderRadius: 12, 
-          alignItems: 'center' 
-        }}>
-          <Text style={{ 
-            color: 'white', 
-            fontWeight: '500' 
-          }}>
+        {/* 추가 콘텐츠가 있으면 여기에 렌더링 */}
+        {renderExtra && renderExtra()}
+        
+        <View 
+          className="py-3 rounded-xl items-center"
+          style={{ backgroundColor: disabled ? '#9ca3af' : color }}
+        >
+          <Text className="text-white font-medium">
             {actionText}
           </Text>
         </View>

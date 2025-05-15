@@ -1,75 +1,48 @@
-import React from 'react';
-import { Tabs } from 'expo-router';
-import { MaterialIcons } from '@expo/vector-icons';
+// src/app/(tabs)/_layout.tsx
+import { FontAwesome5 } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { View } from 'react-native';
-import Colors from '../../constants/Colors';
-import { useAuthStore } from '../../stores/authStore';
+import * as Haptics from 'expo-haptics';
+import { Tabs, useRouter } from 'expo-router';
+import React from 'react';
+import { Image, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Colors from '../../constants/Colors';
 
 export default function TabLayout() {
-  const { isAuthenticated } = useAuthStore();
   const insets = useSafeAreaInsets();
-  
-  // 안전한 아이콘 맵핑
-  const getIcon = (name: string, color: string, size: number) => {
-    switch (name) {
-      case 'home':
-        return <MaterialIcons name="home" size={size} color={color} />;
-      case 'calendar':
-        return <MaterialIcons name="calendar-today" size={size} color={color} />;
-      case 'character':
-        return <MaterialIcons name="eco" size={size} color={color} />;
-      case 'goals':
-        return <MaterialIcons name="star" size={size} color={color} />;
-      case 'settings':
-        return <MaterialIcons name="settings" size={size} color={color} />;
-      default:
-        return <MaterialIcons name="help" size={size} color={color} />;
-    }
-  };
-  
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.light.leafGreen,
-        tabBarInactiveTintColor: '#94a3b8', // slate-400
+        tabBarActiveTintColor: Colors.light.primary,
+        tabBarInactiveTintColor: '#94a3b8',
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
           borderTopWidth: 0,
           elevation: 0,
-          height: 54 + (insets.bottom > 0 ? insets.bottom : 10),
-          paddingTop: 8,
+          height: 60 + (insets.bottom > 0 ? insets.bottom : 10),
+          paddingTop: 10,
           paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
           backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-          shadowColor: "#000",
-          shadowOffset: {
-            width: 0,
-            height: -2,
-          },
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 3,
         },
         tabBarBackground: () => (
-          <BlurView intensity={40} tint="light" style={{ 
-            position: 'absolute', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-          }} />
+          <BlurView
+            intensity={40}
+            tint="light"
+            className="absolute inset-0 rounded-t-3xl"
+          />
         ),
-        tabBarItemStyle: {
-          paddingVertical: 5,
-        },
         tabBarLabelStyle: {
-          fontWeight: '500',
+          fontWeight: '600',
           fontSize: 12,
+          marginTop: 2,
         },
       }}
     >
@@ -77,75 +50,73 @@ export default function TabLayout() {
         name="index"
         options={{
           title: '홈',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ 
-              backgroundColor: focused ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-              borderRadius: 12,
-              padding: 4,
-            }}>
-              {getIcon('home', color, 22)}
+          tabBarIcon: ({ color,focused }) => (
+            <View className="p-2">
+              <Image
+                source={require('../../assets/images/icon/home_icon.png')}
+                className="w-9 h-9"
+                style={{
+                  opacity: focused ? 1 : 0.4,
+                }}
+              />
             </View>
           ),
         }}
       />
       <Tabs.Screen
-        name="calendar"
+        name="help"
         options={{
-          title: '캘린더',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ 
-              backgroundColor: focused ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-              borderRadius: 12,
-              padding: 4,
-            }}>
-              {getIcon('calendar', color, 22)}
+          title: '도움말',
+          tabBarIcon: ({ color,focused }) => (
+            <View className="p-2">
+              <Image
+                source={require('../../assets/images/icon/help_icon.png')}
+                className="w-7 h-7"
+                style={{
+                  opacity: focused ? 1 : 0.4,
+                  
+                }}
+              />
             </View>
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="store-tab"
+        options={{
+          title: '상점',
+          tabBarIcon: ({ color,focused }) => (
+            <View className="p-2">
+              <Image
+                source={require('../../assets/images/icon/shop_icon.png')}
+                className="w-8 h-8"
+                style={{
+                  opacity: focused ? 1 : 0.4,
+                  
+                }}
+              />
+            </View>
+          ),
+        }}
+      />
+
+      {/* 기존 탭들을 숨깁니다 */}
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen
         name="character"
         options={{
-          title: '캐릭터',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ 
-              backgroundColor: focused ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-              borderRadius: 12,
-              padding: 4,
-            }}>
-              {getIcon('character', color, 22)}
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="goals"
-        options={{
-          title: '목표',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ 
-              backgroundColor: focused ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-              borderRadius: 12,
-              padding: 4,
-            }}>
-              {getIcon('goals', color, 22)}
-            </View>
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: '설정',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ 
-              backgroundColor: focused ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-              borderRadius: 12,
-              padding: 4,
-            }}>
-              {getIcon('settings', color, 22)}
-            </View>
-          ),
+          href: null,
         }}
       />
     </Tabs>
