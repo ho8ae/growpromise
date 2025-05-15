@@ -1,6 +1,8 @@
+// src/app/(tabs)/index.tsx
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -13,19 +15,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 // API
 import api from '../../api';
-import { ChildParentConnection } from '../../api/modules/user';
 
 // Components
-import AppHeader from '../../components/tabs/AppHeader';
+import PlantContainer from '../../components/plant/PlantContainer'; // 새로운 경로로 업데이트
 import AuthBanner from '../../components/tabs/AuthBanner';
-import ChildSelector from '../../components/tabs/ChildSelector';
 import ConnectChildCard from '../../components/tabs/ConnectChildCard';
 import ErrorMessage from '../../components/tabs/ErrorMessage';
-import PlantContainer from '../../components/tabs/PlantContainer';
 import PromiseActionCard from '../../components/tabs/PromiseActionCard';
-import QuickActionGrid from '../../components/tabs/QuickActionGrid';
 import TipsCard from '../../components/tabs/TipsCard';
-import WateringCard from '../../components/tabs/WateringCard';
 
 // Stores
 import { useAuthStore } from '../../stores/authStore';
@@ -40,6 +37,10 @@ export default function TabsScreen() {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [selectedChildData, setSelectedChildData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // 경험치 획득 애니메이션 상태
+  const [showExperienceAnimation, setShowExperienceAnimation] = useState(false);
+  const [experienceGained, setExperienceGained] = useState(0);
 
   // 애니메이션 값 설정
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -102,7 +103,7 @@ export default function TabsScreen() {
           // 중요: 이미 로드된 자녀 데이터를 함께 전달
           return await api.promise.calculateChildPromiseStats(
             selectedChildId,
-            selectedChildData?.child || null
+            selectedChildData?.child || null,
           );
         } else if (user?.userType === 'CHILD') {
           // 자녀 계정인 경우 자신의 약속 통계
@@ -130,13 +131,15 @@ export default function TabsScreen() {
   // 자녀 선택 처리 (부모 계정용)
   const handleChildSelect = (childId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     // 선택된 자녀 ID 설정
     setSelectedChildId(childId);
-    
+
     // 선택된 자녀 데이터 찾기
     if (connectedChildren) {
-      const selectedChild = connectedChildren.find(child => child.childId === childId);
+      const selectedChild = connectedChildren.find(
+        (child) => child.childId === childId,
+      );
       if (selectedChild) {
         setSelectedChildData(selectedChild);
       }
@@ -229,28 +232,6 @@ export default function TabsScreen() {
     }
   };
 
-  // 자녀 선택 메뉴 렌더링 (부모 계정용)
-  const renderChildSelector = () => {
-    if (
-      !isAuthenticated ||
-      user?.userType !== 'PARENT' ||
-      !connectedChildren ||
-      connectedChildren.length <= 1
-    ) {
-      return null;
-    }
-
-    return (
-      <ChildSelector
-        fadeAnim={fadeAnim}
-        translateY={translateY}
-        connectedChildren={connectedChildren}
-        selectedChildId={selectedChildId}
-        handleChildSelect={handleChildSelect}
-      />
-    );
-  };
-
   // 새로고침 처리 함수
   const onRefresh = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -291,6 +272,7 @@ export default function TabsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
+      <StatusBar style="dark" />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -299,24 +281,18 @@ export default function TabsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#4CAF50" // 새로고침 아이콘 색상 (초록색으로 설정)
-            colors={['#4CAF50']} // Android용 색상
-            title="새로고침 중..." // iOS용 텍스트
-            titleColor="#4CAF50" // iOS용 텍스트 색상
+            tintColor="#4CAF50"
+            colors={['#4CAF50']}
+            title="새로고침 중..."
+            titleColor="#4CAF50"
           />
         }
       >
-        <View className="px-4 pt-4">
+        <View className="px-4">
           {/* 비인증 사용자 알림 배너 */}
           {!isAuthenticated && (
             <AuthBanner fadeAnim={fadeAnim} translateY={translateY} />
           )}
-
-          {/* 앱 타이틀 */}
-          <AppHeader fadeAnim={fadeAnim} translateY={translateY} />
-
-          {/* 자녀 선택기 (부모 계정용) */}
-          {renderChildSelector()}
 
           {/* 오류 메시지 */}
           <ErrorMessage
@@ -325,7 +301,7 @@ export default function TabsScreen() {
             translateY={translateY}
           />
 
-          {/* 식물 영역 */}
+          {/* 식물 영역 - 새로운 PlantContainer 컴포넌트 사용 */}
           <PlantContainer
             fadeAnim={fadeAnim}
             translateY={translateY}
@@ -334,15 +310,10 @@ export default function TabsScreen() {
             onPress={handlePlantPress}
             childId={selectedChildId || undefined}
             plant={currentPlant || undefined}
-          />
-
-          {/* 물주기 카드 - 새로 추가 */}
-          <WateringCard
-            handleAuthRequired={handleAuthRequired}
-            currentPlantId={currentPlant?.id}
-            lastWatered={currentPlant?.lastWatered}
-            isParent={user?.userType === 'PARENT'}
-            childId={selectedChildId}
+            connectedChildren={connectedChildren || []}
+            handleChildSelect={handleChildSelect}
+            showExperienceAnimation={showExperienceAnimation}
+            experienceGained={experienceGained}
           />
 
           {/* 약속 카드 */}
@@ -354,14 +325,15 @@ export default function TabsScreen() {
                 (promiseStats?.pendingPromises || 0) || 3
             }
             onPress={navigateToDashboard}
+            childId={selectedChildId || undefined}
           />
 
           {/* 빠른 액션 - 2열 그리드 */}
-          <QuickActionGrid
+          {/* <QuickActionGrid
             userType={user?.userType}
             handleAuthRequired={handleAuthRequired}
             childId={selectedChildId || undefined}
-          />
+          /> */}
 
           {/* 사용자 팁 카드 */}
           <TipsCard userType={user?.userType} />
