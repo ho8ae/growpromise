@@ -1,6 +1,6 @@
 import React from 'react';
 import { Animated } from 'react-native';
-import PlantContainer from './PlantContainer';
+import PlantContainer from '../plant/PlantContainer';
 
 interface CharacterContainerProps {
   fadeAnim: Animated.Value;

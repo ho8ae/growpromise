@@ -1,19 +1,17 @@
-// components/plant/PlantDisplayFootAction.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '../../constants/Colors';
 
-
-
 interface PlantActionProps {
-  userType: 'parent' | 'child';
+  userType: 'parent' | 'child' | 'PARENT' | 'CHILD';
   onWaterPress?: () => void;
   onFertilizePress?: () => void;
   onTalkPress?: () => void;
   onInfoPress?: () => void;
-  childId?: string;
+  childId?: string | undefined;
+
 }
 
 const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
@@ -26,10 +24,35 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
 }) => {
   const router = useRouter();
   
-  // 부모용 액션 버튼 렌더링
-  if (userType === 'parent') {
+  // 부모용 액션 버튼 렌더링 (대소문자 구분 없이 처리)
+  if (userType === 'parent' || userType === 'PARENT') {
+    const handleInfoPress = () => {
+      if (childId) {
+        console.log("Moving to child-plant-detail with childId:", childId);
+        
+        // 라우팅 시도
+        try {
+          router.push({
+            pathname: '/(parent)/child-plant-detail',
+            params: { childId }
+          });
+        } catch (error) {
+          console.error("Navigation error:", error);
+          
+          // 개발용 알림 (debugging)
+          Alert.alert(
+            "네비게이션 오류",
+            `경로: /(parent)/child-plant-detail\nchildId: ${childId}\n오류: ${error}`
+          );
+        }
+      } else {
+        console.warn("자녀 ID가 없습니다");
+        Alert.alert("오류", "자녀 ID를 찾을 수 없습니다.");
+      }
+    };
+    
     return (
-      <View className="flex-row gap-6 mt-4">
+      <View className="flex-row gap-6 mt-4 items-center justify-center">
         <ActionButton 
           icon="dashboard"
           label="대시보드"
@@ -55,7 +78,7 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
           icon="info"
           label="자세히"
           color={Colors.light.primary}
-          onPress={onInfoPress}
+          onPress={handleInfoPress}
         />
       </View>
     );
@@ -63,7 +86,7 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
   
   // 자녀용 액션 버튼 렌더링
   return (
-    <View className="mt-4 flex-row gap-6">
+    <View className="mt-4 flex-row gap-6 items-center justify-center">
       <ActionButton 
         icon="opacity"
         label="물주기"
@@ -86,7 +109,7 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
         icon="info"
         label="정보"
         color={Colors.light.tertiary}
-        onPress={onInfoPress}
+        onPress={() => router.push('/(child)/plant-detail')}
       />
     </View>
   );
@@ -111,7 +134,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({ icon, label, color, onPress
         className="w-20 h-20 rounded-xl items-center justify-center mb-1"
         style={{ backgroundColor: `${color}20` }} // 20% 투명도
       >
-        <MaterialIcons name={icon} size={38} color={color} />
+        <MaterialIcons name={icon} size={34} color={color} />
       </View>
       <Text className="text-xs text-gray-600">{label}</Text>
     </TouchableOpacity>

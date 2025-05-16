@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Pressable, FlatList, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -31,49 +31,79 @@ const PromiseActionCard = ({
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const [modalVisible, setModalVisible] = useState(false);
   
-  // 오늘의 약속 목록 조회
-  const { data: allPromiseAssignments, isLoading } = useQuery({
-    queryKey: ['promiseAssignments', userType, childId],
-    queryFn: async () => {
-      if (!isAuthenticated) return [];
-      
-      try {
-        // 전체 약속 목록 조회 (필터 없이)
-        if (userType === 'PARENT' && childId) {
-          // 부모가 자녀의 약속 목록 조회
-          return await api.promise.getPromiseAssignmentsByChild(childId);
-        } else if (userType === 'CHILD') {
-          // 자녀가 자신의 약속 목록 조회 - PENDING 상태인 것만 가져오기
-          return await api.promise.getChildPromises(PromiseStatus.PENDING);
-        }
-        return [];
-      } catch (error) {
-        console.error('약속 조회 오류:', error);
-        return [];
+  // 오늘의 약속 목록 조회 - 쿼리 함수 최적화
+  const fetchPromiseAssignments = useCallback(async () => {
+    if (!isAuthenticated) return [];
+    
+    try {
+      // 부모가 자녀의 약속 목록 조회 - 오늘 날짜로 필터링
+      if (userType === 'PARENT' && childId) {
+        // 부모 화면에서는 오늘의 PENDING 상태 약속만 가져오도록 수정
+        const assignments = await api.promise.getPromiseAssignmentsByChild(childId);
+        return assignments.filter(assignment => {
+          if (!assignment.dueDate) return false;
+          const dueDate = assignment.dueDate.split('T')[0];
+          return dueDate === todayStr && assignment.status === PromiseStatus.PENDING;
+        });
+      } 
+      // 자녀가 자신의 약속 목록 조회 - PENDING 상태인 것만 가져오기
+      else if (userType === 'CHILD') {
+        const assignments = await api.promise.getChildPromises(PromiseStatus.PENDING);
+        return assignments.filter(assignment => {
+          if (!assignment.dueDate) return false;
+          const dueDate = assignment.dueDate.split('T')[0];
+          return dueDate === todayStr;
+        });
       }
-    },
+      return [];
+    } catch (error) {
+      console.error('약속 조회 오류:', error);
+      return [];
+    }
+  }, [isAuthenticated, userType, childId, todayStr]);
+  
+  // 부모 화면에서 승인 대기 중(SUBMITTED)인 약속 목록 조회
+  const fetchPendingApprovals = useCallback(async () => {
+    if (!isAuthenticated || userType !== 'PARENT' || !childId) return [];
+    
+    try {
+      const assignments = await api.promise.getPromiseAssignmentsByChild(childId);
+      return assignments.filter(assignment => {
+        if (!assignment.dueDate) return false;
+        const dueDate = assignment.dueDate.split('T')[0];
+        return dueDate === todayStr && assignment.status === PromiseStatus.SUBMITTED;
+      });
+    } catch (error) {
+      console.error('승인 대기 약속 조회 오류:', error);
+      return [];
+    }
+  }, [isAuthenticated, userType, childId, todayStr]);
+  
+  // 오늘의 PENDING 약속 쿼리
+  const { 
+    data: todayPendingPromises = [], 
+    isLoading: isPendingLoading 
+  } = useQuery({
+    queryKey: ['todayPendingPromises', userType, childId, todayStr],
+    queryFn: fetchPromiseAssignments,
     enabled: isAuthenticated && (userType === 'CHILD' || (userType === 'PARENT' && !!childId))
   });
   
-  // 오늘의 약속 중 PENDING 상태인 것만 필터링
-  const todayPendingPromises = React.useMemo(() => {
-    if (!allPromiseAssignments) return [];
-    
-    // 오늘 날짜의 약속만 필터링
-    return allPromiseAssignments.filter(assignment => {
-      // dueDate가 없으면 제외
-      if (!assignment.dueDate) return false;
-      
-      // 날짜 부분만 추출 (시간 제외)
-      const dueDate = assignment.dueDate.split('T')[0];
-      
-      // 오늘 날짜인 약속만 반환 (이미 PENDING 상태만 불러옴)
-      return dueDate === todayStr;
-    });
-  }, [allPromiseAssignments, todayStr]);
+  // 승인 대기 중인 약속 쿼리
+  const { 
+    data: pendingApprovals = [], 
+    isLoading: isApprovalsLoading 
+  } = useQuery({
+    queryKey: ['pendingApprovals', childId, todayStr],
+    queryFn: fetchPendingApprovals,
+    enabled: isAuthenticated && userType === 'PARENT' && !!childId
+  });
   
   // 오늘의 PENDING 약속 개수
   const pendingPromisesCount = todayPendingPromises.length;
+  
+  // 승인 대기 중인 약속 개수
+  const pendingApprovalCount = pendingApprovals.length;
   
   // 인증 화면으로 이동하는 함수
   const navigateToVerify = (assignmentId: string) => {
@@ -98,6 +128,9 @@ const PromiseActionCard = ({
       onPress();
     }
   };
+  
+  // 로딩 상태 통합
+  const isLoading = isPendingLoading || isApprovalsLoading;
   
   // 아이콘과 메시지 설정
   const getStatusIcon = () => {
@@ -140,27 +173,21 @@ const PromiseActionCard = ({
     return userType === 'PARENT' ? "약속 확인하기" : "지금 인증하기";
   };
   
-  // 부모인 경우 승인 대기 중(SUBMITTED)인 약속 개수
-  const pendingApprovalCount = React.useMemo(() => {
-    if (!allPromiseAssignments || userType !== 'PARENT') return 0;
-    
-    return allPromiseAssignments.filter(assignment => {
-      if (!assignment.dueDate) return false;
-      const dueDate = assignment.dueDate.split('T')[0];
-      return dueDate === todayStr && assignment.status === PromiseStatus.SUBMITTED;
-    }).length;
-  }, [allPromiseAssignments, todayStr, userType]);
-  
   // 디버깅 로그
   useEffect(() => {
-    if (allPromiseAssignments) {
-      console.log(`All assignments: ${allPromiseAssignments.length}, Today's PENDING assignments: ${pendingPromisesCount}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[PromiseActionCard] User Type: ${userType}`);
+      console.log(`[PromiseActionCard] Today's PENDING assignments: ${pendingPromisesCount}`);
+      
+      if (userType === 'PARENT') {
+        console.log(`[PromiseActionCard] Pending approval assignments: ${pendingApprovalCount}`);
+      }
       
       todayPendingPromises.forEach(a => {
-        console.log(`Today PENDING assignment: ${a.id}, Title: ${a.promise?.title}`);
+        console.log(`[PromiseActionCard] Assignment ID: ${a.id}, Title: ${a.promise?.title}, Status: ${a.status}`);
       });
     }
-  }, [allPromiseAssignments, todayPendingPromises]);
+  }, [todayPendingPromises, pendingPromisesCount, pendingApprovalCount, userType]);
   
   // 날짜 포맷 함수
   const formatDate = (dateString: string) => {
@@ -182,28 +209,26 @@ const PromiseActionCard = ({
         color={pendingPromisesCount > 0 ? Colors.light.warning : Colors.light.primary}
         onPress={handleCardPress}
         renderExtra={() => (
-          pendingPromisesCount > 0 && (
-            <View className="mt-2 mb-1">
-              {/* 자녀 계정일 때 인증 안내 메시지 */}
-              {userType === 'CHILD' && (
-                <View className="p-2 bg-amber-50 rounded-lg mb-2 border border-amber-200">
-                  <Text className="text-amber-700 text-xs">
-                    약속을 인증하고 식물을 성장시켜보세요!
-                  </Text>
-                </View>
-              )}
-              
-              {/* 부모 계정이고 승인 대기 중인 약속이 있는 경우 알림 표시 */}
-              {userType === 'PARENT' && pendingApprovalCount > 0 && (
-                <View className="mt-2 flex-row items-center">
-                  <MaterialIcons name="notifications-active" size={16} color={Colors.light.warning} />
-                  <Text className="text-xs text-warning ml-1">
-                    {pendingApprovalCount}개의 약속 승인 대기 중
-                  </Text>
-                </View>
-              )}
-            </View>
-          )
+          <View className="mt-2 mb-1">
+            {/* 자녀 계정일 때 인증 안내 메시지 */}
+            {userType === 'CHILD' && pendingPromisesCount > 0 && (
+              <View className="p-2 bg-amber-50 rounded-lg mb-2 border border-amber-200">
+                <Text className="text-amber-700 text-xs">
+                  약속을 인증하고 식물을 성장시켜보세요!
+                </Text>
+              </View>
+            )}
+            
+            {/* 부모 계정이고 승인 대기 중인 약속이 있는 경우 알림 표시 */}
+            {userType === 'PARENT' && pendingApprovalCount > 0 && (
+              <View className="mt-2 flex-row items-center">
+                <MaterialIcons name="notifications-active" size={16} color={Colors.light.warning} />
+                <Text className="text-xs text-warning ml-1">
+                  {pendingApprovalCount}개의 약속 승인 대기 중
+                </Text>
+              </View>
+            )}
+          </View>
         )}
       />
       
@@ -227,40 +252,42 @@ const PromiseActionCard = ({
             </View>
             
             {/* 약속 목록 */}
-            {todayPendingPromises.map((assignment) => (
-              <Pressable
-                key={assignment.id}
-                className="mb-3 p-4 rounded-xl border border-gray-200 bg-white shadow-sm"
-                onPress={() => navigateToVerify(assignment.id)}
-              >
-                <View className="flex-row justify-between items-start mb-1">
-                  <Text className="text-lg font-medium text-gray-800">
-                    {assignment.promise?.title || '제목 없음'}
-                  </Text>
-                </View>
-                
-                <Text className="text-gray-600 mb-2">
-                  기한: {formatDate(assignment.dueDate)}
-                </Text>
-                
-                <View className="flex-row justify-end">
+            {todayPendingPromises.length > 0 ? (
+              <FlatList
+                data={todayPendingPromises}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item: assignment }) => (
                   <Pressable
-                    className="bg-emerald-500 py-2 px-4 rounded-lg"
+                    className="mb-3 p-4 rounded-xl border border-gray-200 bg-white shadow-sm"
                     onPress={() => navigateToVerify(assignment.id)}
                   >
-                    <Text className="text-white font-medium">인증하기</Text>
+                    <View className="flex-row justify-between items-start mb-1">
+                      <Text className="text-lg font-medium text-gray-800">
+                        {assignment.promise?.title || '제목 없음'}
+                      </Text>
+                    </View>
+                    
+                    <Text className="text-gray-600 mb-2">
+                      기한: {formatDate(assignment.dueDate)}
+                    </Text>
+                    
+                    <View className="flex-row justify-end">
+                      <Pressable
+                        className="bg-emerald-500 py-2 px-4 rounded-lg"
+                        onPress={() => navigateToVerify(assignment.id)}
+                      >
+                        <Text className="text-white font-medium">인증하기</Text>
+                      </Pressable>
+                    </View>
                   </Pressable>
-                </View>
-              </Pressable>
-            ))}
-            
-            {todayPendingPromises.length > 0 && (
-              <Text className="text-gray-600 text-center mt-2 text-sm">
-                인증하고 싶은 약속을 선택하세요
-              </Text>
-            )}
-            
-            {todayPendingPromises.length === 0 && (
+                )}
+                ListFooterComponent={() => (
+                  <Text className="text-gray-600 text-center mt-2 text-sm">
+                    인증하고 싶은 약속을 선택하세요
+                  </Text>
+                )}
+              />
+            ) : (
               <View className="items-center justify-center py-10">
                 <MaterialIcons name="event-available" size={40} color="#d1d5db" />
                 <Text className="mt-2 text-gray-700">인증할 약속이 없습니다</Text>
@@ -273,4 +300,4 @@ const PromiseActionCard = ({
   );
 };
 
-export default PromiseActionCard;
+export default React.memo(PromiseActionCard);

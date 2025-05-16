@@ -1,13 +1,13 @@
 // components/plant/PlantContainer.tsx
+import { MaterialIcons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import React from 'react';
 import { ActivityIndicator, Animated, Text, View } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import api from '../../api';
 import Colors from '../../constants/Colors';
 import ChildPlantDisplay from './ChildPlantDisplay';
 import ParentPlantDisplay from './ParentPlantDisplay';
-import { useQuery } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
-import api from '../../api';
 
 interface PlantContainerProps {
   fadeAnim: Animated.Value;
@@ -41,8 +41,8 @@ const PlantContainer: React.FC<PlantContainerProps> = ({
   const [isTalking, setIsTalking] = React.useState(false);
 
   // 현재 식물 정보 가져오기
-  const { 
-    data: currentPlant, 
+  const {
+    data: currentPlant,
     isLoading: isLoadingPlant,
     refetch: refetchPlant,
   } = useQuery({
@@ -62,19 +62,16 @@ const PlantContainer: React.FC<PlantContainerProps> = ({
         return null;
       }
     },
-    enabled: (!!childId || userType === 'CHILD'),
+    enabled: !!childId || userType === 'CHILD',
   });
 
   // 식물 타입 정보 가져오기
-  const { 
-    data: plantType,
-    isLoading: isLoadingPlantType
-  } = useQuery({
+  const { data: plantType, isLoading: isLoadingPlantType } = useQuery({
     queryKey: ['plantType', (externalPlant || currentPlant)?.plantTypeId],
     queryFn: async () => {
       const plantTypeId = (externalPlant || currentPlant)?.plantTypeId;
       if (!plantTypeId) return null;
-      
+
       try {
         return await api.plant.getPlantTypeById(plantTypeId);
       } catch (error) {
@@ -97,13 +94,13 @@ const PlantContainer: React.FC<PlantContainerProps> = ({
 
       // 물주기 API 호출
       await api.plant.waterPlant(currentPlant.id);
-      
+
       // 식물 상태 갱신
       await refetchPlant();
-      
+
       // 성공 메시지
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
+
       return true;
     } catch (error) {
       console.error('물주기 실패:', error);
@@ -125,16 +122,16 @@ const PlantContainer: React.FC<PlantContainerProps> = ({
 
       // 영양제 주기 API 호출 (구현 필요)
       // await api.plant.fertilizePlant(currentPlant.id);
-      
+
       // 테스트용 지연 (실제 API가 없으므로)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // 식물 상태 갱신
       await refetchPlant();
-      
+
       // 성공 메시지
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
+
       return true;
     } catch (error) {
       console.error('영양제 주기 실패:', error);
@@ -156,16 +153,16 @@ const PlantContainer: React.FC<PlantContainerProps> = ({
 
       // 대화하기 API 호출 (구현 필요)
       // await api.plant.talkToPlant(currentPlant.id);
-      
+
       // 테스트용 지연 (실제 API가 없으므로)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // 식물 상태 갱신
       await refetchPlant();
-      
+
       // 성공 메시지
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
+
       return true;
     } catch (error) {
       console.error('대화하기 실패:', error);
@@ -187,11 +184,11 @@ const PlantContainer: React.FC<PlantContainerProps> = ({
   // 로딩 상태 표시
   if (isLoading) {
     return (
-      <Animated.View 
-        style={{ 
+      <Animated.View
+        style={{
           opacity: fadeAnim,
           transform: [{ translateY }],
-          marginBottom: 20
+          marginBottom: 20,
         }}
       >
         <View className="bg-white rounded-xl p-5 items-center justify-center border border-primary/20 min-h-[250px] shadow-md">
@@ -217,11 +214,11 @@ const PlantContainer: React.FC<PlantContainerProps> = ({
 
   // 사용자 유형에 따라 다른 컴포넌트 표시
   return (
-    <Animated.View 
-      style={{ 
+    <Animated.View
+      style={{
         opacity: fadeAnim,
         transform: [{ translateY }],
-        marginBottom: 20
+        marginBottom: 20,
       }}
     >
       {userType === 'PARENT' ? (
@@ -238,12 +235,7 @@ const PlantContainer: React.FC<PlantContainerProps> = ({
       ) : (
         // 자녀용 식물 컴포넌트
         <ChildPlantDisplay
-          plant={displayPlant}
-          plantType={plantType || null}
           onPress={onPress}
-          onWaterPress={handleWaterPlant}
-          onFertilizePress={handleFertilizePlant}
-          onTalkPress={handleTalkToPlant}
           onInfoPress={handlePlantInfo}
           showExperienceAnimation={showExperienceAnimation}
           experienceGained={experienceGained}

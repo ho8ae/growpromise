@@ -10,7 +10,12 @@ export interface PlantType {
   category: 'FLOWER' | 'TREE' | 'VEGETABLE' | 'FRUIT' | 'OTHER';
   unlockRequirement?: number;
   imagePrefix: string;
+  rarity?: 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';
   createdAt: string;
+  
+  // 이미지 URL (서버에서 추가됨)
+  imageUrls?: string[];
+  previewImageUrl?: string;
 }
 
 // 물주기 로그 타입
@@ -35,10 +40,13 @@ export interface Plant {
   completedAt?: string;
   plantType?: PlantType;
   wateringLogs?: WateringLog[];
-  experience?: number | undefined;
-  experienceToGrow?: number | undefined;
+  experience?: number;
+  experienceToGrow?: number;
   canGrow?: boolean;
   
+  // 이미지 URL (서버에서 추가됨)
+  imageUrl?: string;
+  allStageImageUrls?: string[];
 }
 
 // 물주기 결과 타입
@@ -59,6 +67,29 @@ export interface GrowthResult {
 export interface PlantCollectionGroup {
   plantType: PlantType;
   plants: Plant[];
+}
+
+// 카드팩 타입
+export enum PackType {
+  BASIC = 'BASIC',
+  PREMIUM = 'PREMIUM',
+  SPECIAL = 'SPECIAL'
+}
+
+// 식물 뽑기 결과 타입
+export interface DrawResult {
+  plantType: PlantType;
+  isDuplicate: boolean;
+  experienceGained?: number;
+}
+
+// 인벤토리 식물 타입
+export interface PlantInventoryItem {
+  id: string;
+  childId: string;
+  plantTypeId: string;
+  acquiredAt: string;
+  plantType: PlantType;
 }
 
 // 식물 관련 API 함수들
@@ -197,6 +228,7 @@ const plantApi = {
     category: 'FLOWER' | 'TREE' | 'VEGETABLE' | 'FRUIT' | 'OTHER';
     unlockRequirement?: number;
     imagePrefix: string;
+    rarity?: 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';
   }): Promise<PlantType> => {
     try {
       return await apiRequest<PlantType>('post', '/plants/types', plantTypeData);
@@ -205,6 +237,69 @@ const plantApi = {
       throw error;
     }
   },
+  
+  
+  
+  // 식물 뽑기 (카드팩 오픈)
+  drawPlant: async (packType: PackType): Promise<DrawResult> => {
+    try {
+      return await apiRequest<DrawResult>('post', '/plants/draw', {
+        packType: packType
+      });
+    } catch (error) {
+      console.error('식물 뽑기 오류:', error);
+      throw error;
+    }
+  },
+  
+  // 보유한 식물 유형 목록 조회 (인벤토리)
+  getPlantInventory: async (): Promise<PlantInventoryItem[]> => {
+    try {
+      return await apiRequest<PlantInventoryItem[]>('get', '/plants/inventory');
+    } catch (error) {
+      console.error('식물 인벤토리 조회 오류:', error);
+      throw error;
+    }
+  },
+  
+  // 자녀의 보유한 식물 유형 목록 조회 (부모용)
+  getChildPlantInventory: async (childId: string): Promise<PlantInventoryItem[]> => {
+    try {
+      return await apiRequest<PlantInventoryItem[]>(
+        'get',
+        `/plants/children/${childId}/inventory`
+      );
+    } catch (error) {
+      console.error('자녀 식물 인벤토리 조회 오류:', error);
+      throw error;
+    }
+  },
+  
+  // 카드팩 가격 정보 조회
+  getPackPrices: async (): Promise<Record<PackType, number>> => {
+    try {
+      return await apiRequest<Record<PackType, number>>('get', '/plants/packs/prices');
+    } catch (error) {
+      console.error('카드팩 가격 정보 조회 오류:', error);
+      throw error;
+    }
+  },
+  
+  // 식물 이미지 URL 헬퍼 함수
+  getPlantImageUrl: (imagePrefix: string, stage: number): string => {
+    return `https://growpromise-uploads.s3.ap-northeast-2.amazonaws.com/plant/${imagePrefix}_${stage}.png`;
+  },
+  
+  // 로컬에서 식물 성장 단계별 이미지 URL 생성
+  getPlantStageImages: (plantType: PlantType): string[] => {
+    const urls: string[] = [];
+    
+    for (let stage = 1; stage <= plantType.growthStages; stage++) {
+      urls.push(plantApi.getPlantImageUrl(plantType.imagePrefix, stage));
+    }
+    
+    return urls;
+  }
 };
 
 export default plantApi;

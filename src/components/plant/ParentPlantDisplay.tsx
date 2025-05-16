@@ -14,7 +14,10 @@ import { FlatList } from 'react-native-gesture-handler';
 import Colors from '../../constants/Colors';
 import PlantDisplayFootAction from './PlantDisplayFootAction';
 import PlantHeader from '../tabs/PlantHeader';
-
+import PlantCardSkeleton from './PlantCardSkeleton';
+import FooterActionSkeleton from './FooterActionSkeleton';
+import plantApi from '../../api/modules/plant';
+import stickerApi from '../../api/modules/sticker';
 
 const { width } = Dimensions.get('window');
 
@@ -32,13 +35,32 @@ interface ChildParentConnection {
   child?: ChildInfo;
 }
 
+// API와 컴포넌트 간의 Plant 인터페이스 통합
 interface Plant {
+  id?: string;
   name?: string;
+  imageUrl?: string;
+  plantTypeId?: string;
+  plantType?: PlantType;
   experience: number;
   experienceToGrow: number;
   currentStage: number;
   health: number;
   canGrow: boolean;
+}
+
+// API 응답 타입
+interface ApiPlant {
+  id?: string;
+  name?: string;
+  imageUrl?: string;
+  plantTypeId?: string;
+  plantType?: PlantType;
+  experience?: number;
+  experienceToGrow?: number;
+  currentStage?: number;
+  health?: number;
+  canGrow?: boolean;
 }
 
 interface PlantType {
@@ -47,9 +69,15 @@ interface PlantType {
   growthStages: number;
 }
 
+// 스티커 개수 정보
+interface StickerCount {
+  totalStickers: number;
+  availableStickers: number;
+}
+
 interface ParentPlantDisplayProps {
-  plant: Plant | null;
-  plantType: PlantType | null;
+  plant?: Plant | null;
+  plantType?: PlantType | null;
   onPress?: () => void;
   onInfoPress?: () => void;
   connectedChildren: ChildParentConnection[];
@@ -59,8 +87,6 @@ interface ParentPlantDisplayProps {
 }
 
 const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
-  plant,
-  plantType,
   onPress,
   onInfoPress,
   connectedChildren,
@@ -68,6 +94,19 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
   handleChildSelect,
   childId
 }) => {
+  // 로딩 및 오류 상태
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  
+  // 식물 데이터 상태
+  const [plant, setPlant] = useState<Plant | null>(null);
+  const [plantType, setPlantType] = useState<PlantType | null>(null);
+  
+  // 스티커 정보 상태
+  const [stickerCounts, setStickerCounts] = useState<Record<string, StickerCount>>({});
+  const [isLoadingStickers, setIsLoadingStickers] = useState(false);
+  
   // 경험치 퍼센트 상태
   const [progressPercent, setProgressPercent] = useState(0);
 
@@ -81,24 +120,104 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
   const cardSpacing = 30; // 카드 간격 제거
   const cardWidth = width - 32 - cardSpacing; // 좌우 16px 패딩 제외
 
-  // 경험치 계산 및 업데이트
-  useEffect(() => {
-    if (plant) {
-      const experience = plant.experience ?? 0;
-      const experienceToGrow = plant.experienceToGrow ?? 100;
+  // API 응답을 내부 Plant 타입으로 변환하는 함수
+  const convertApiPlantToPlant = (apiPlant: ApiPlant | null): Plant | null => {
+    if (!apiPlant) return null;
+    
+    return {
+      id: apiPlant.id,
+      name: apiPlant.name,
+      imageUrl: apiPlant.imageUrl,
+      plantTypeId: apiPlant.plantTypeId,
+      plantType: apiPlant.plantType,
+      experience: apiPlant.experience ?? 0,
+      experienceToGrow: apiPlant.experienceToGrow ?? 100,
+      currentStage: apiPlant.currentStage ?? 1,
+      health: apiPlant.health ?? 100,
+      canGrow: apiPlant.canGrow ?? false
+    };
+  };
 
-      if (experienceToGrow > 0) {
-        const percent = Math.min((experience / experienceToGrow) * 100, 100);
-        setProgressPercent(percent);
+  // 식물 데이터 로드
+  const loadPlantData = async () => {
+    if (!selectedChildId) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // 선택된 자녀의 식물 데이터 가져오기
+      const childPlantData = await plantApi.getChildCurrentPlant(selectedChildId);
+      
+      // API 응답을 내부 Plant 타입으로 변환
+      const childPlant = convertApiPlantToPlant(childPlantData);
+      setPlant(childPlant);
+      
+      // 식물 타입 정보가 없으면 별도로 가져오기
+      if (childPlant && childPlantData?.plantType) {
+        setPlantType(childPlantData.plantType);
+      } else if (childPlant && childPlantData?.plantTypeId) {
+        const typeData = await plantApi.getPlantTypeById(childPlantData.plantTypeId);
+        setPlantType(typeData);
       } else {
-        setProgressPercent(0);
+        setPlantType(null);
       }
+      
+      // 경험치 퍼센트 계산
+      if (childPlant) {
+        const experience = childPlant.experience;
+        const experienceToGrow = childPlant.experienceToGrow;
+        
+        if (experienceToGrow > 0) {
+          const percent = Math.min((experience / experienceToGrow) * 100, 100);
+          setProgressPercent(percent);
+        } else {
+          setProgressPercent(0);
+        }
+      }
+      
+      setInitialLoadComplete(true);
+    } catch (err) {
+      console.error('자녀 식물 데이터 로드 오류:', err);
+      setError('자녀의 식물 정보를 불러오는 중 오류가 발생했습니다.');
+      setPlant(null);
+      setPlantType(null);
+    } finally {
+      setIsLoading(false);
     }
-  }, [plant]);
+  };
+
+  // 각 자녀의 스티커 개수 로드 (새로 추가)
+  const loadStickerCounts = async () => {
+    if (!connectedChildren || connectedChildren.length === 0) return;
+    
+    try {
+      setIsLoadingStickers(true);
+      const countsMap: Record<string, StickerCount> = {};
+      
+      // 각 자녀별로 스티커 개수 조회
+      for (const child of connectedChildren) {
+        try {
+          const stickerCount = await stickerApi.getChildStickerCount(child.childId);
+          countsMap[child.childId] = stickerCount;
+        } catch (err) {
+          console.error(`자녀 ${child.childId}의 스티커 개수 조회 실패:`, err);
+          // 오류 발생 시 기본값 설정
+          countsMap[child.childId] = { totalStickers: 0, availableStickers: 0 };
+        }
+      }
+      
+      setStickerCounts(countsMap);
+    } catch (err) {
+      console.error('스티커 개수 로드 오류:', err);
+    } finally {
+      setIsLoadingStickers(false);
+    }
+  };
 
   // 플랜트 바운스 애니메이션
   useEffect(() => {
-    Animated.loop(
+    const animationSequence = Animated.loop(
       Animated.sequence([
         Animated.timing(bounceAnim, {
           toValue: 1,
@@ -111,19 +230,28 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
           useNativeDriver: true,
         }),
       ]),
-    ).start();
+    );
+    
+    animationSequence.start();
+    
+    return () => {
+      animationSequence.stop();
+      bounceAnim.setValue(0);
+    };
   }, []);
 
-  // 선택된 자녀 인덱스 찾기
+  // 선택된 자녀 인덱스 찾기 및 스크롤 처리
   useEffect(() => {
     if (connectedChildren?.length > 0 && selectedChildId) {
       const index = connectedChildren.findIndex(
         (child) => child.childId === selectedChildId,
       );
+      
       if (index !== -1) {
         setCurrentChildIndex(index);
-        // 선택된 자녀로 스크롤 (일단 타이머로 지연시켜 리스트가 렌더링된 후 실행)
-        setTimeout(() => {
+        
+        // 타이머 대신 requestAnimationFrame 사용하여 성능 개선
+        requestAnimationFrame(() => {
           try {
             flatListRef.current?.scrollToOffset({
               offset: index * cardWidth,
@@ -132,10 +260,24 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
           } catch (err) {
             console.log('스크롤 오류:', err);
           }
-        }, 300);
+        });
       }
     }
   }, [selectedChildId, connectedChildren, cardWidth]);
+  
+  // 선택된 자녀가 변경될 때마다 식물 데이터 로드
+  useEffect(() => {
+    if (selectedChildId) {
+      loadPlantData();
+    }
+  }, [selectedChildId]);
+  
+  // 자녀 목록이 변경되거나 컴포넌트가 마운트될 때 스티커 개수 로드 (새로 추가)
+  useEffect(() => {
+    if (connectedChildren.length > 0) {
+      loadStickerCounts();
+    }
+  }, [connectedChildren]);
 
   // 이미지 가져오기
   const getPlantImage = () => {
@@ -147,20 +289,21 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
         Math.min(plant.currentStage, plantType.growthStages || 5),
       );
       
-      switch (imageStage) {
-        case 1:
-          return require('../../assets/images/character/level_1.png');
-        case 2:
-          return require('../../assets/images/character/level_2.png');
-        case 3:
-          return require('../../assets/images/character/level_3.png');
-        case 4:
-          return require('../../assets/images/character/level_4.png');
-        case 5:
-          return require('../../assets/images/character/level_5.png');
-        default:
-          return require('../../assets/images/character/level_1.png');
+      // API에서 이미지 URL을 제공하는 경우
+      if (plant.imageUrl) {
+        return { uri: plant.imageUrl };
       }
+      
+      // 로컬 이미지 사용 - 메모이제이션을 위한 객체 매핑
+      const plantImages = {
+        1: require('../../assets/images/character/level_1.png'),
+        2: require('../../assets/images/character/level_2.png'),
+        3: require('../../assets/images/character/level_3.png'),
+        4: require('../../assets/images/character/level_4.png'),
+        5: require('../../assets/images/character/level_5.png'),
+      };
+      
+      return plantImages[imageStage as keyof typeof plantImages] || plantImages[1];
     } catch (e) {
       console.error('식물 이미지 로드 실패:', e);
       return require('../../assets/images/character/level_1.png');
@@ -170,16 +313,15 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
   // 자녀 식물 카드 렌더링
   const renderChildPlantCard = ({ item, index }: { item: ChildParentConnection; index: number }) => {
     const childName = item.child?.user?.username || '자녀';
-    
-    // 대표 식물 이미지
     const plantImage = getPlantImage();
     
-    // 스티커 개수 (예시값 - 실제로는 API에서 가져와야 함)
-    const stickerCount = 15; // 예시 값
+    // 현재 자녀의 스티커 정보 가져오기
+    const childStickers = stickerCounts[item.childId] || { totalStickers: 0, availableStickers: 0 };
+    // 총 스티커 개수 표시
+    const stickerCount = childStickers.availableStickers || 0;
     
     return (
       <View style={{ width: cardWidth }}>
-
         <PlantHeader />
         <Pressable 
           className="mx-auto bg-white rounded-xl shadow-md overflow-hidden border-2 border-gray-200"
@@ -300,6 +442,77 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
     );
   };
 
+  // 성능 최적화를 위한 메모이제이션된 아이템 렌더러
+  const memoizedRenderChildPlantCard = React.useCallback(renderChildPlantCard, [
+    plant, 
+    plantType, 
+    progressPercent, 
+    stickerCounts // 스티커 개수 변경 시에도 리렌더링
+  ]);
+
+  // 로딩 중일 때 스켈레톤 UI 표시
+  if (isLoading && !initialLoadComplete) {
+    if (connectedChildren.length <= 1) {
+      // 자녀가 한 명인 경우 단일 스켈레톤 표시
+      return (
+        <View className="bg-gray-50 rounded-xl p-4">
+          <PlantCardSkeleton />
+          <FooterActionSkeleton />
+        </View>
+      );
+    } else {
+      // 자녀가 여러 명인 경우 스크롤 가능한 스켈레톤 표시
+      return (
+        <View className="bg-gray-50 rounded-xl p-4">
+          <FlatList
+            data={[0, 1]} // 두 개 정도의 스켈레톤 표시
+            renderItem={() => <PlantCardSkeleton width={cardWidth - 16} />}
+            keyExtractor={(_, index) => `skeleton-${index}`}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 0 }}
+            ItemSeparatorComponent={() => <View style={{ width: 20 }} />}
+          />
+          
+          {/* 페이지 인디케이터 스켈레톤 */}
+          <View className="flex-row justify-center mt-4 mb-2">
+            {[0, 1].map((_, i) => (
+              <View
+                key={i}
+                className="w-2 h-2 rounded-full mx-1 bg-gray-300"
+              />
+            ))}
+          </View>
+          
+          <FooterActionSkeleton />
+        </View>
+      );
+    }
+  }
+  
+  // 오류 발생 시 오류 메시지 표시
+  if (error) {
+    return (
+      <View className="bg-white rounded-xl p-4 shadow-sm mt-4">
+        <View className="items-center py-6">
+          <MaterialIcons name="error-outline" size={36} color={Colors.light.error} />
+          <Text className="text-lg font-bold text-error mt-2 mb-2">
+            오류가 발생했습니다
+          </Text>
+          <Text className="text-gray-500 text-center px-6 mb-4">
+            {error}
+          </Text>
+          <TouchableOpacity
+            className="bg-primary px-4 py-2 rounded-lg"
+            onPress={loadPlantData}
+          >
+            <Text className="text-white font-medium">다시 시도</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   // 식물이 없는 경우
   if (!plant) {
     return (
@@ -329,7 +542,7 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
   if (connectedChildren.length <= 1) {
     return (
       <View className="bg-gray-50 rounded-xl p-4 ">
-        {renderChildPlantCard({ 
+        {memoizedRenderChildPlantCard({ 
           item: connectedChildren[0], 
           index: 0 
         })}
@@ -343,6 +556,33 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
     );
   }
 
+  // 리스트 아이템 레이아웃 계산을 위한 getItemLayout 함수
+  const getItemLayout = (_: any, index: number) => ({
+    length: cardWidth,
+    offset: cardWidth * index,
+    index,
+  });
+
+  // 스크롤 실패 시 처리하는 함수
+  const handleScrollToIndexFailed = (info: { index: number; highestMeasuredFrameIndex: number; averageItemLength: number }) => {
+    const wait = new Promise(resolve => setTimeout(resolve, 100));
+    wait.then(() => {
+      flatListRef.current?.scrollToOffset({ 
+        offset: info.index * cardWidth,
+        animated: false
+      });
+      
+      // 스크롤이 안정화된 후 애니메이션 활성화
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ 
+          offset: info.index * cardWidth,
+          animated: true
+        });
+      }, 50);
+    });
+  };
+
+
   // 자녀가 여러 명일 때 스와이프 카드 표시
   return (
     <View className="bg-gray-50 rounded-xl p-4">
@@ -350,7 +590,7 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
       <FlatList
         ref={flatListRef}
         data={connectedChildren}
-        renderItem={renderChildPlantCard}
+        renderItem={memoizedRenderChildPlantCard}
         keyExtractor={(item) => item.childId}
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -358,20 +598,8 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
         snapToInterval={cardWidth} // 카드 너비만큼 스크롤
         snapToAlignment="center"
         decelerationRate="fast"
-        getItemLayout={(data, index) => ({
-          length: cardWidth,
-          offset: cardWidth * index,
-          index,
-        })}
-        onScrollToIndexFailed={(info) => {
-          const wait = new Promise(resolve => setTimeout(resolve, 500));
-          wait.then(() => {
-            flatListRef.current?.scrollToOffset({ 
-              offset: info.index * cardWidth,
-              animated: true
-            });
-          });
-        }}
+        getItemLayout={getItemLayout}
+        onScrollToIndexFailed={handleScrollToIndexFailed}
         onMomentumScrollEnd={(event) => {
           const index = Math.round(
             event.nativeEvent.contentOffset.x / cardWidth
@@ -388,6 +616,10 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
           [{ nativeEvent: { contentOffset: { x: scrollX } } }],
           { useNativeDriver: false }
         )}
+        removeClippedSubviews={true} // 화면 밖 항목 메모리에서 해제
+        initialNumToRender={2} // 초기 렌더링 항목 수 제한
+        maxToRenderPerBatch={2} // 배치당 최대 렌더링 항목 수
+        windowSize={3} // 렌더링 윈도우 크기
       />
       
       {/* 페이지 인디케이터 */}
@@ -418,10 +650,10 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
       <PlantDisplayFootAction
         userType="parent"
         onInfoPress={onInfoPress}
-        childId={childId}
+        childId={selectedChildId || undefined}
       />
     </View>
   );
 };
 
-export default ParentPlantDisplay;
+export default React.memo(ParentPlantDisplay);

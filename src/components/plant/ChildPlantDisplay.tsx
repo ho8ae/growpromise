@@ -1,8 +1,9 @@
 // components/plant/ChildPlantDisplay.tsx
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
+    ActivityIndicator,
   Animated,
   Pressable,
   Text,
@@ -11,70 +12,73 @@ import {
 import Colors from '../../constants/Colors';
 import PlantDisplayFootAction from './PlantDisplayFootAction';
 import AppHeader from '../tabs/PlantHeader';
+import { usePlant } from '../../hooks/usePlant';
+import stickerApi from '../../api/modules/sticker';
 
-interface Plant {
-  name?: string;
-  experience: number;
-  experienceToGrow: number;
-  currentStage: number;
-  health: number;
-  canGrow: boolean;
-}
-
-interface PlantType {
-  name?: string;
-  category?: string;
-  growthStages: number;
+// 스티커 통계 타입
+interface StickerStats {
+  totalStickers: number;
+  availableStickers: number;
 }
 
 interface ChildPlantDisplayProps {
-  plant: Plant | null;
-  plantType: PlantType | null ;
   onPress?: () => void;
-  onWaterPress?: () => void;
-  onFertilizePress?: () => void;
-  onTalkPress?: () => void;
   onInfoPress?: () => void;
   showExperienceAnimation?: boolean;
   experienceGained?: number;
 }
 
 const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
-  plant,
-  plantType,
   onPress,
-  onWaterPress,
-  onFertilizePress,
-  onTalkPress,
   onInfoPress,
   showExperienceAnimation = false,
   experienceGained = 0,
 }) => {
-  // 경험치 퍼센트 상태
-  const [progressPercent, setProgressPercent] = useState(0);
+  // 커스텀 훅 사용
+  const {
+    plant,
+    plantType,
+    isLoading,
+    error,
+    progressPercent,
+    plantImage,
+    waterPlant,
+    growPlant
+  } = usePlant({ isParent: false });
+
+  // 스티커 개수 상태 관리
+  const [stickerStats, setStickerStats] = useState<StickerStats>({
+    totalStickers: 0,
+    availableStickers: 0
+  });
+  const [isLoadingStickers, setIsLoadingStickers] = useState(false);
+
+  // 스티커 개수 로드
+  const loadStickerStats = async () => {
+    try {
+      setIsLoadingStickers(true);
+      const stats = await stickerApi.getChildStickerStats();
+      setStickerStats(stats);
+    } catch (err) {
+      console.error('스티커 통계 로드 실패:', err);
+      // 오류 발생 시 기본값 유지
+    } finally {
+      setIsLoadingStickers(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 스티커 개수 로드
+  useEffect(() => {
+    loadStickerStats();
+  }, []);
 
   // 애니메이션 값
   const experienceAnim = useRef(new Animated.Value(0)).current;
   const experienceOpacity = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
 
-  // 경험치 계산 및 업데이트
-  useEffect(() => {
-    if (plant) {
-      const experience = plant.experience ?? 0;
-      const experienceToGrow = plant.experienceToGrow ?? 100;
-
-      if (experienceToGrow > 0) {
-        const percent = Math.min((experience / experienceToGrow) * 100, 100);
-        setProgressPercent(percent);
-      } else {
-        setProgressPercent(0);
-      }
-    }
-  }, [plant]);
-
   // 경험치 애니메이션 실행
-  useEffect(() => {
+  React.useEffect(() => {
     if (showExperienceAnimation && experienceGained > 0) {
       Animated.sequence([
         Animated.timing(experienceOpacity, {
@@ -98,7 +102,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
   }, [showExperienceAnimation, experienceGained]);
 
   // 플랜트 바운스 애니메이션
-  useEffect(() => {
+  React.useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(bounceAnim, {
@@ -115,35 +119,47 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     ).start();
   }, []);
 
-  // 이미지 가져오기
-  const getPlantImage = () => {
-    if (!plant || !plantType) return null;
-
+  // 물주기 핸들러
+  const handleWaterPress = async () => {
     try {
-      const imageStage = Math.max(
-        1,
-        Math.min(plant.currentStage, plantType.growthStages || 5),
-      );
-      
-      switch (imageStage) {
-        case 1:
-          return require('../../assets/images/character/level_1.png');
-        case 2:
-          return require('../../assets/images/character/level_2.png');
-        case 3:
-          return require('../../assets/images/character/level_3.png');
-        case 4:
-          return require('../../assets/images/character/level_4.png');
-        case 5:
-          return require('../../assets/images/character/level_5.png');
-        default:
-          return require('../../assets/images/character/level_1.png');
-      }
-    } catch (e) {
-      console.error('식물 이미지 로드 실패:', e);
-      return require('../../assets/images/character/level_1.png');
+      await waterPlant();
+      // 물주기 성공 로직 (예: 토스트 메시지 표시)
+    } catch (err) {
+      // 오류 처리 로직
+      console.error('물주기 실패:', err);
     }
   };
+
+  // 식물 성장 핸들러
+  const handleGrowPress = async () => {
+    try {
+      await growPlant();
+      // 성장 성공 로직 (예: 축하 애니메이션)
+    } catch (err) {
+      // 오류 처리 로직
+      console.error('성장 실패:', err);
+    }
+  };
+
+  // 로딩 상태 표시
+  if (isLoading) {
+    return (
+      <View className="bg-white rounded-xl p-6 shadow-sm items-center justify-center">
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+        <Text className="mt-4 text-gray-500">식물 정보를 불러오는 중...</Text>
+      </View>
+    );
+  }
+
+  // 오류 상태 표시
+  if (error) {
+    return (
+      <View className="bg-white rounded-xl p-6 shadow-sm items-center justify-center">
+        <MaterialIcons name="error-outline" size={48} color={Colors.light.error} />
+        <Text className="mt-4 text-gray-500">{error}</Text>
+      </View>
+    );
+  }
 
   // 식물이 없는 경우
   if (!plant) {
@@ -168,8 +184,9 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     );
   }
 
-  // 스티커 개수 (예시값 - 실제로는 API에서 가져와야 함)
-  const stickerCount = 10; // 자녀의 스티커 개수
+  // 사용 가능한 스티커 개수
+  const stickerCount = isLoadingStickers ? '...' : stickerStats.availableStickers;
+  
   const experience = plant.experience ?? 0;
   const experienceToGrow = plant.experienceToGrow ?? 100;
   const canGrow = plant.canGrow ?? false;
@@ -194,7 +211,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
             </View>
           </View>
           
-          {/* 스티커 개수 표시 */}
+          {/* 스티커 개수 표시 - API에서 가져온 데이터 사용 */}
           <View className="flex-row items-center">
             <MaterialIcons name="star" size={16} color="#FFD700" style={{ marginRight: 4 }} />
             <Text className="text-sm font-bold text-yellow-600">{stickerCount}</Text>
@@ -202,7 +219,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
         </View>
         
         {/* 배경 영역 - 포켓몬 카드 느낌의 배경 */}
-        <View className="w-full h-[50%] items-center justify-center bg-blue-50">
+        <View className="w-full h-[50%] items-center justify-center bg-blue-50 ">
           {/* 식물 이미지 */}
           <Animated.View
             style={{
@@ -216,9 +233,9 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
               ],
             }}
           >
-            {getPlantImage() ? (
+            {plantImage ? (
               <Image
-                source={getPlantImage()}
+                source={plantImage}
                 style={{ width: 150, height: 150 }}
                 contentFit="contain"
               />
@@ -333,9 +350,9 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
       {/* 액션 버튼 영역 */}
       <PlantDisplayFootAction
         userType="child"
-        onWaterPress={onWaterPress}
-        onFertilizePress={onFertilizePress}
-        onTalkPress={onTalkPress}
+        onWaterPress={handleWaterPress}
+        onFertilizePress={handleGrowPress}
+        onTalkPress={() => {}}
         onInfoPress={onInfoPress}
       />
     </View>
