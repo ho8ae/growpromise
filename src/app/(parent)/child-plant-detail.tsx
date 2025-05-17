@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ExperienceGainAnimation from '../../components/plant/ExperienceGainAnimation';
 import Colors from '../../constants/Colors';
 import { usePlant } from '../../hooks/usePlant';
@@ -26,6 +26,7 @@ export default function ParentChildPlantDetailScreen() {
   const [isWatering, setIsWatering] = useState(false);
   const [showExperienceAnimation, setShowExperienceAnimation] = useState(false);
   const [experienceGained, setExperienceGained] = useState(10);
+  const insets = useSafeAreaInsets();
 
   // 애니메이션 값
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -257,8 +258,8 @@ export default function ParentChildPlantDetailScreen() {
         }}
       />
 
-      <SafeAreaView className="flex-1 bg-gray-50">
-        <ScrollView className="flex-1">
+      <View className="flex-1 bg-gray-50">
+        <ScrollView style={{ paddingTop: insets.top }} className="flex-1">
           <Animated.View
             style={{
               opacity: fadeAnim,
@@ -691,7 +692,7 @@ export default function ParentChildPlantDetailScreen() {
             </View>
           </View>
         </Modal>
-      </SafeAreaView>
+      </View>
     </>
   );
 }

@@ -1,7 +1,9 @@
 import { FontAwesome5 } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,13 +15,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { FlatList } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import rewardApi, {
   CreateRewardRequest,
   Reward,
-  RewardHistoryItem,
 } from '../../api/modules/reward';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function SetRewardsScreen() {
   const router = useRouter();
@@ -29,6 +30,7 @@ export default function SetRewardsScreen() {
   const [stickerGoal, setStickerGoal] = useState('10');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filterType, setFilterType] = useState('active'); // 'active', 'achieved', 'all'
+  const [stickerPickerVisible, setStickerPickerVisible] = useState(false);
 
   // 수정 모달 상태
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -36,6 +38,14 @@ export default function SetRewardsScreen() {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editStickerGoal, setEditStickerGoal] = useState('');
+
+  // FlatList 참조 생성
+  const stickerFlatListRef = useRef<FlatList>(null);
+
+  // 가능한 스티커 수 옵션 배열
+  const stickerOptions = Array.from({ length: 20 }, (_, i) =>
+    (i + 1).toString(),
+  );
 
   // 데이터 쿼리
   const {
@@ -59,10 +69,10 @@ export default function SetRewardsScreen() {
   });
 
   // 달성된 보상 ID 목록
-  const achievedRewardIds = rewardHistory.map(history => history.rewardId);
+  const achievedRewardIds = rewardHistory.map((history) => history.rewardId);
 
   // 필터링된 보상 목록
-  const filteredRewards = rewards.filter(reward => {
+  const filteredRewards = rewards.filter((reward) => {
     if (filterType === 'active') {
       return !achievedRewardIds.includes(reward.id);
     } else if (filterType === 'achieved') {
@@ -72,18 +82,17 @@ export default function SetRewardsScreen() {
   });
 
   // 에러 처리
-  const error = rewardsError || historyError ? 
-    '보상 정보를 불러오는 중 오류가 발생했습니다.' : null;
+  const error =
+    rewardsError || historyError
+      ? '보상 정보를 불러오는 중 오류가 발생했습니다.'
+      : null;
 
   // 로딩 상태
   const isLoading = isRewardsLoading || isHistoryLoading;
 
   // 새로고침 처리
   const handleRefresh = async () => {
-    await Promise.all([
-      refetchRewards(),
-      refetchHistory(),
-    ]);
+    await Promise.all([refetchRewards(), refetchHistory()]);
   };
 
   // 보상 생성 함수
@@ -177,23 +186,23 @@ export default function SetRewardsScreen() {
   const toggleRewardActive = async (reward: Reward) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
+
       const updateData: Partial<CreateRewardRequest> = {
         isActive: !reward.isActive,
       };
-      
+
       await rewardApi.updateReward(reward.id, updateData);
-      
+
       // 성공 처리
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
+
       // 상태에 따른 알림 메시지
-      const message = reward.isActive ? 
-        '보상이 비활성화되었습니다. 자녀의 보상 목록에서 보이지 않습니다.' : 
-        '보상이 활성화되었습니다. 자녀가 이제 이 보상을 달성할 수 있습니다.';
-      
+      const message = reward.isActive
+        ? '보상이 비활성화되었습니다. 자녀의 보상 목록에서 보이지 않습니다.'
+        : '보상이 활성화되었습니다. 자녀가 이제 이 보상을 달성할 수 있습니다.';
+
       Alert.alert('성공', message);
-      
+
       // 목록 새로고침
       handleRefresh();
     } catch (error) {
@@ -222,12 +231,12 @@ export default function SetRewardsScreen() {
           } catch (error: any) {
             console.error('보상 삭제 중 오류:', error);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            
+
             // 연결된 스티커가 있는 경우 삭제 불가 메시지
             if (error.response?.status === 400) {
               Alert.alert(
                 '삭제 불가',
-                '이 보상에 연결된 스티커가 있습니다. 자녀가 이미 받은 보상은 삭제할 수 없습니다.\n\n대신 보상을 비활성화하여 더 이상 새로운 달성이 불가능하게 할 수 있습니다.'
+                '이 보상에 연결된 스티커가 있습니다. 자녀가 이미 받은 보상은 삭제할 수 없습니다.\n\n대신 보상을 비활성화하여 더 이상 새로운 달성이 불가능하게 할 수 있습니다.',
               );
             } else {
               Alert.alert('오류', '보상 삭제 중 문제가 발생했습니다.');
@@ -242,37 +251,44 @@ export default function SetRewardsScreen() {
   const viewRewardAchievements = (rewardId: string) => {
     // 특정 보상의 달성 이력 필터링
     const achievements = rewardHistory.filter(
-      history => history.rewardId === rewardId
+      (history) => history.rewardId === rewardId,
     );
-    
+
     if (achievements.length === 0) {
       Alert.alert('정보', '이 보상의 달성 이력이 없습니다.');
       return;
     }
-    
+
     // 가장 최근 달성 이력 가져오기
     const latestAchievement = achievements.sort(
-      (a, b) => new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime()
+      (a, b) =>
+        new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime(),
     )[0];
-    
+
     // 달성 날짜 포맷팅
     const date = new Date(latestAchievement.achievedAt);
-    const formattedDate = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
-    
+    const formattedDate = `${date.getFullYear()}년 ${
+      date.getMonth() + 1
+    }월 ${date.getDate()}일`;
+
     // 달성 정보 표시
     Alert.alert(
       '보상 달성 정보',
-      `이 보상은 "${latestAchievement.child?.user.username || '자녀'}"님이 ${formattedDate}에 달성했습니다.\n\n사용된 스티커: ${latestAchievement.stickerCount}개`,
+      `이 보상은 "${
+        latestAchievement.child?.user.username || '자녀'
+      }"님이 ${formattedDate}에 달성했습니다.\n\n사용된 스티커: ${
+        latestAchievement.stickerCount
+      }개`,
       [
-        { 
-          text: '확인', 
-          style: 'default' 
+        {
+          text: '확인',
+          style: 'default',
         },
-        { 
-          text: '전체 이력 보기', 
-          onPress: () => router.push('/(parent)/reward-history')
-        }
-      ]
+        {
+          text: '전체 이력 보기',
+          onPress: () => router.push('/(parent)/reward-history'),
+        },
+      ],
     );
   };
 
@@ -310,7 +326,7 @@ export default function SetRewardsScreen() {
             </Pressable>
           </View>
 
-          <View className="bg-blue-50 rounded-xl p-4 mb-6">
+          <View className="bg-gray-50 rounded-xl p-4 mb-6">
             <Text className="text-lg font-medium mb-2">새 보상 만들기</Text>
             <View className="mb-3">
               <Text className="text-gray-700 mb-1">보상 이름</Text>
@@ -337,59 +353,15 @@ export default function SetRewardsScreen() {
 
             <View className="mb-3">
               <Text className="text-gray-700 mb-1">필요한 스티커 수</Text>
-              <View className="flex-row border border-gray-300 rounded-xl overflow-hidden">
-                <Pressable
-                  className={`flex-1 py-3 items-center ${
-                    stickerGoal === '5' ? 'bg-blue-500' : 'bg-gray-200'
-                  }`}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setStickerGoal('5');
-                  }}
-                >
-                  <Text
-                    className={
-                      stickerGoal === '5' ? 'text-white' : 'text-gray-700'
-                    }
-                  >
-                    5개
-                  </Text>
-                </Pressable>
-                <Pressable
-                  className={`flex-1 py-3 items-center ${
-                    stickerGoal === '10' ? 'bg-blue-500' : 'bg-gray-200'
-                  }`}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setStickerGoal('10');
-                  }}
-                >
-                  <Text
-                    className={
-                      stickerGoal === '10' ? 'text-white' : 'text-gray-700'
-                    }
-                  >
-                    10개
-                  </Text>
-                </Pressable>
-                <Pressable
-                  className={`flex-1 py-3 items-center ${
-                    stickerGoal === '15' ? 'bg-blue-500' : 'bg-gray-200'
-                  }`}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setStickerGoal('15');
-                  }}
-                >
-                  <Text
-                    className={
-                      stickerGoal === '15' ? 'text-white' : 'text-gray-700'
-                    }
-                  >
-                    15개
-                  </Text>
-                </Pressable>
-              </View>
+              <Pressable
+                className="border border-gray-300 rounded-xl p-3 flex-row justify-between items-center bg-white"
+                onPress={() => setStickerPickerVisible(true)}
+              >
+                <Text className="text-gray-800 font-medium">
+                  {stickerGoal}개
+                </Text>
+                <FontAwesome5 name="chevron-down" size={14} color="#9ca3af" />
+              </Pressable>
             </View>
 
             <Pressable
@@ -418,6 +390,87 @@ export default function SetRewardsScreen() {
               )}
             </Pressable>
           </View>
+
+          {/* 스티커 수 선택 모달 - 이 부분은 기존 코드의 return문 끝부분 직전에 추가하세요 */}
+          <Modal
+            visible={stickerPickerVisible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setStickerPickerVisible(false)}
+          >
+            <View className="flex-1 justify-end bg-black/30">
+              <BlurView
+                intensity={20}
+                tint="dark"
+                className="absolute inset-0"
+              />
+
+              <Pressable
+                className="absolute inset-0"
+                onPress={() => setStickerPickerVisible(false)}
+              />
+
+              <View className="bg-white rounded-t-3xl">
+                <View className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-2" />
+
+                <View className="px-5 py-4">
+                  <View className="flex-row justify-between items-center mb-4">
+                    <Text className="text-lg font-bold text-gray-800">
+                      필요한 스티커 수
+                    </Text>
+                    <Pressable
+                      className="p-2"
+                      onPress={() => setStickerPickerVisible(false)}
+                    >
+                      <Text className="text-emerald-600 font-medium">완료</Text>
+                    </Pressable>
+                  </View>
+
+                  <View className="h-52">
+                    <FlatList
+                      ref={stickerFlatListRef}
+                      data={stickerOptions}
+                      keyExtractor={(item) => item}
+                      renderItem={({ item }) => (
+                        <Pressable
+                          className={`py-4 px-3 ${
+                            stickerGoal === item ? 'bg-emerald-50' : 'bg-white'
+                          }`}
+                          onPress={() => {
+                            Haptics.impactAsync(
+                              Haptics.ImpactFeedbackStyle.Light,
+                            );
+                            setStickerGoal(item);
+                            setStickerPickerVisible(false);
+                          }}
+                        >
+                          <Text
+                            className={`text-center text-lg ${
+                              stickerGoal === item
+                                ? 'text-emerald-600 font-bold'
+                                : 'text-gray-700'
+                            }`}
+                          >
+                            {item}개
+                          </Text>
+                        </Pressable>
+                      )}
+                      showsVerticalScrollIndicator={false}
+                      decelerationRate="fast"
+                      snapToInterval={56} // 각 아이템의 높이
+                      snapToAlignment="center"
+                      contentContainerStyle={{
+                        paddingVertical: 88, // 위아래 여백 (화면 중앙 정렬용)
+                      }}
+                    />
+
+                    {/* 선택 인디케이터 */}
+                    <View className="absolute top-1/2 left-0 right-0 h-14 -mt-7 border-t border-b border-gray-200 pointer-events-none" />
+                  </View>
+                </View>
+              </View>
+            </View>
+          </Modal>
 
           {/* 보상 목록 필터 */}
           <View className="flex-row justify-between items-center mb-4">
@@ -540,16 +593,16 @@ export default function SetRewardsScreen() {
             filteredRewards.map((reward) => {
               // 이미 달성된 보상인지 확인
               const isAchieved = achievedRewardIds.includes(reward.id);
-              
+
               return (
                 <View
                   key={reward.id}
                   className={`mb-4 p-4 rounded-xl border ${
-                    isAchieved 
-                      ? 'border-purple-300 bg-purple-50' 
-                      : reward.isActive 
-                        ? 'border-emerald-300 bg-white' 
-                        : 'border-gray-300 bg-gray-50'
+                    isAchieved
+                      ? 'border-purple-300 bg-purple-50'
+                      : reward.isActive
+                      ? 'border-emerald-300 bg-white'
+                      : 'border-gray-300 bg-gray-50'
                   }`}
                 >
                   <View className="flex-row">
@@ -573,18 +626,20 @@ export default function SetRewardsScreen() {
                           </View>
                         )}
                       </View>
-                      
+
                       {reward.description && (
                         <Text className="text-gray-500 mb-1">
                           {reward.description}
                         </Text>
                       )}
                       <View className="flex-row items-center">
-                        <Text className={`py-1 px-2 ${
-                            isAchieved 
-                              ? 'bg-purple-100 text-purple-800' 
+                        <Text
+                          className={`py-1 px-2 ${
+                            isAchieved
+                              ? 'bg-purple-100 text-purple-800'
                               : 'bg-emerald-100 text-emerald-800'
-                          } rounded-full text-xs`}>
+                          } rounded-full text-xs`}
+                        >
                           필요 스티커: {reward.requiredStickers}개
                         </Text>
                       </View>
@@ -594,7 +649,7 @@ export default function SetRewardsScreen() {
                       {isAchieved ? (
                         // 달성된 보상은 상세 정보 버튼만 표시
                         <Pressable
-                          className="p-2 bg-purple-200 rounded-full"
+                          className="p-2 rounded-full"
                           onPress={() => viewRewardAchievements(reward.id)}
                           hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                         >
@@ -604,29 +659,37 @@ export default function SetRewardsScreen() {
                         // 아직 달성되지 않은 보상은 모든 기능 제공
                         <>
                           <Pressable
-                            className="mr-2 p-2 bg-gray-200 rounded-full"
+                            className="mr-2 p-2 rounded-full justify-center"
                             onPress={() => openEditModal(reward)}
                             hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                           >
-                            <FontAwesome5 name="edit" size={16} color="#4b5563" />
-                          </Pressable>
-                          <Pressable
-                            className="mr-2 p-2 bg-yellow-100 rounded-full"
-                            onPress={() => toggleRewardActive(reward)}
-                            hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                          >
-                            <FontAwesome5 
-                              name={reward.isActive ? "eye-slash" : "eye"} 
-                              size={16} 
-                              color="#d97706" 
+                            <FontAwesome5
+                              name="edit"
+                              size={16}
+                              color="#4b5563"
                             />
                           </Pressable>
                           <Pressable
-                            className="p-2 bg-red-100 rounded-full"
+                            className="mr-2 p-2 rounded-full justify-center"
+                            onPress={() => toggleRewardActive(reward)}
+                            hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                          >
+                            <FontAwesome5
+                              name={reward.isActive ? 'eye-slash' : 'eye'}
+                              size={16}
+                              color="#d97706"
+                            />
+                          </Pressable>
+                          <Pressable
+                            className="p-2 rounded-full justify-center"
                             onPress={() => handleDelete(reward.id)}
                             hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                           >
-                            <FontAwesome5 name="trash" size={16} color="#ef4444" />
+                            <FontAwesome5
+                              name="trash"
+                              size={16}
+                              color="#ef4444"
+                            />
                           </Pressable>
                         </>
                       )}
@@ -742,27 +805,27 @@ export default function SetRewardsScreen() {
               </Pressable>
 
               <Pressable
-               className="flex-1 py-3 bg-emerald-500 rounded-xl ml-2"
-               onPress={handleSubmitEdit}
-               disabled={isSubmitting}
-             >
-               {isSubmitting ? (
-                 <View className="flex-row justify-center items-center">
-                   <ActivityIndicator size="small" color="white" />
-                   <Text className="text-white font-medium ml-2">
-                     처리 중...
-                   </Text>
-                 </View>
-               ) : (
-                 <Text className="text-white text-center font-medium">
-                   저장하기
-                 </Text>
-               )}
-             </Pressable>
-           </View>
-         </View>
-       </View>
-     </Modal>
-   </SafeAreaView>
- );
+                className="flex-1 py-3 bg-emerald-500 rounded-xl ml-2"
+                onPress={handleSubmitEdit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <View className="flex-row justify-center items-center">
+                    <ActivityIndicator size="small" color="white" />
+                    <Text className="text-white font-medium ml-2">
+                      처리 중...
+                    </Text>
+                  </View>
+                ) : (
+                  <Text className="text-white text-center font-medium">
+                    저장하기
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
 }

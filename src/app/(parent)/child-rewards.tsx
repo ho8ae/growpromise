@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,7 +14,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // API
 import rewardApi from '../../api/modules/reward';
@@ -38,6 +38,7 @@ export default function ChildRewardsScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
 
+  const insets = useSafeAreaInsets();
   // 자녀 데이터 및 부모-자녀 연결 정보 조회
   const {
     data: connectionData,
@@ -169,14 +170,14 @@ export default function ChildRewardsScreen() {
     router.push('/(parent)/set-rewards');
   };
 
-  // 보상 상세 화면으로 이동
-  const navigateToRewardDetail = (rewardId: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push({
-      pathname: '/(parent)/reward-detail',
-      params: { id: rewardId },
-    });
-  };
+  // 보상 상세 화면으로 이동 아직 구현 X
+  // const navigateToRewardDetail = (rewardId: string) => {
+  //   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  //   router.push({
+  //     pathname: '/(parent)/reward-detail',
+  //     params: { id: rewardId },
+  //   });
+  // };
 
   // 스티커 생성일 포맷
   const formatDate = (dateString: string) => {
@@ -193,23 +194,13 @@ export default function ChildRewardsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <View className="flex-1 bg-white">
+      <Stack.Screen
+        options={{
+          headerShown: false,
+        }}
+      />
       <View className="flex-1 px-4 pt-2">
-        {/* 헤더 */}
-        <View className="flex-row items-center justify-between mb-4">
-          <Pressable
-            onPress={() => router.back()}
-            className="p-2"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <FontAwesome5 name="arrow-left" size={20} color="#10b981" />
-          </Pressable>
-          <Text className="text-2xl font-bold text-emerald-700">
-            자녀 스티커 및 보상
-          </Text>
-          <View style={{ width: 30 }} />
-        </View>
-
         {/* 로딩 상태 */}
         {isLoading && (
           <View className="flex-1 justify-center items-center">
@@ -221,6 +212,7 @@ export default function ChildRewardsScreen() {
         {/* 데이터 표시 */}
         {!isLoading && (
           <ScrollView
+            style={{ paddingTop: insets.top }}
             className="flex-1"
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -243,15 +235,36 @@ export default function ChildRewardsScreen() {
                 </Text>
               </View>
             )}
+            {/* 헤더 */}
+            <View className="flex-row items-center justify-between mb-4">
+              <Pressable
+                onPress={() => router.back()}
+                className="p-2"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <FontAwesome5 name="arrow-left" size={20} color="#10b981" />
+              </Pressable>
+              <Text className="text-2xl font-bold text-emerald-700">
+                자녀 스티커 및 보상
+              </Text>
+
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: '/(parent)/reward-history',
+                    params: { childId },
+                  })
+                }
+                className="px-2 py-2 rounded-lg"
+              >
+                {/* 보상 이력 icon */}
+                <FontAwesome5 name="history" size={20} color="green" />
+              </Pressable>
+            </View>
 
             {/* 자녀 기본 정보 */}
             <View className="mb-4 overflow-hidden rounded-xl">
-              <LinearGradient
-                colors={['#d1fae5', '#ecfdf5']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                className="p-4 rounded-xl"
-              >
+              <View className="p-4 rounded-xl border border-gray-200">
                 <View className="flex-row items-center">
                   <Image
                     source={
@@ -283,32 +296,11 @@ export default function ChildRewardsScreen() {
                     </View>
 
                     <View className="mb-4 overflow-hidden rounded-xl">
-                      <LinearGradient
-                        colors={['#d1fae5', '#ecfdf5']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        className="p-4 rounded-xl"
-                      >
-                        <View className="flex-row items-center justify-between">
-                          <Pressable
-                            onPress={() =>
-                              router.push({
-                                pathname: '/(parent)/reward-history',
-                                params: { childId },
-                              })
-                            }
-                            className="bg-emerald-500 px-3 py-1 rounded-lg"
-                          >
-                            <Text className="text-white font-medium text-sm">
-                              보상 이력
-                            </Text>
-                          </Pressable>
-                        </View>
-                      </LinearGradient>
+                      <View className="p-4 rounded-xl"></View>
                     </View>
                   </View>
                 </View>
-              </LinearGradient>
+              </View>
             </View>
 
             {/* 스티커 섹션 */}
@@ -376,7 +368,7 @@ export default function ChildRewardsScreen() {
                   className="bg-emerald-500 px-3 py-1 rounded-lg"
                 >
                   <Text className="text-white font-medium text-sm">
-                    + 보상 추가
+                    보상 관리
                   </Text>
                 </Pressable>
               </View>
@@ -397,7 +389,7 @@ export default function ChildRewardsScreen() {
                     <Pressable
                       key={reward.id}
                       className="bg-white border border-gray-200 rounded-xl p-4 mb-3 active:bg-gray-50"
-                      onPress={() => navigateToRewardDetail(reward.id)}
+                      // onPress={() => navigateToRewardDetail(reward.id)}
                     >
                       <View className="flex-row items-center">
                         <View className="h-12 w-12 bg-emerald-100 rounded-full items-center justify-center mr-3">
@@ -440,6 +432,6 @@ export default function ChildRewardsScreen() {
           </ScrollView>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }

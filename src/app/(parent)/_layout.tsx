@@ -23,7 +23,7 @@ export default function ParentLayout() {
         name="manage-promises"
         options={{
           title: '약속 관리',
-          animation: 'slide_from_right',
+          headerShown: false,
         }}
       />
       <Stack.Screen
@@ -38,6 +38,7 @@ export default function ParentLayout() {
         options={{
           title: '보상 설정',
           animation: 'slide_from_right',
+          headerShown: false,
         }}
       />
 
