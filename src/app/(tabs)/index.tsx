@@ -11,8 +11,7 @@ import {
   ScrollView,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // API
 import api from '../../api';
 
@@ -22,6 +21,7 @@ import AuthBanner from '../../components/tabs/AuthBanner';
 import ConnectChildCard from '../../components/tabs/ConnectChildCard';
 import ErrorMessage from '../../components/tabs/ErrorMessage';
 import PromiseActionCard from '../../components/tabs/PromiseActionCard';
+import PlantHeader from '../../components/tabs/TabsHeader';
 import TipsCard from '../../components/tabs/TipsCard';
 
 // Stores
@@ -30,6 +30,7 @@ import { useAuthStore } from '../../stores/authStore';
 export default function TabsScreen() {
   const router = useRouter();
   const { isAuthenticated, user } = useAuthStore();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -271,9 +272,11 @@ export default function TabsScreen() {
   }, [isAuthenticated, selectedChildId, queryClient]);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <StatusBar style="dark" />
+    <View className="flex-1 bg-gray-50">
+      <StatusBar translucent backgroundColor="transparent" style="dark" hidden={true}/>
+
       <ScrollView
+        style={{ paddingTop: insets.top }}
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
@@ -288,6 +291,7 @@ export default function TabsScreen() {
           />
         }
       >
+        <PlantHeader />
         <View className="px-4">
           {/* 비인증 사용자 알림 배너 */}
           {!isAuthenticated && (
@@ -348,6 +352,6 @@ export default function TabsScreen() {
           />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
