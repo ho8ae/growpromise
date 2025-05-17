@@ -72,7 +72,11 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
           icon="opacity"
           label="물주기"
           color={Colors.light.info}
-          onPress={onWaterPress}
+          // onPress={onWaterPress}
+          onPress={() => {
+            Alert.alert("현재 물주기는 자녀만 가능합니다.");
+            // TODO: 물주기 로직 추가
+          }}
         />
         <ActionButton 
           icon="info"
@@ -97,13 +101,21 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
         icon="eco"
         label="영양제"
         color={Colors.light.primary}
-        onPress={onFertilizePress}
+        // onPress={onFertilizePress}
+        onPress={() => {
+          Alert.alert("영양제 기능은 출시 예정입니다.");
+          // TODO: 영양제 로직 추가
+        }}
       />
       <ActionButton 
         icon="chat"
         label="대화하기"
         color={Colors.light.secondary}
-        onPress={onTalkPress}
+        // onPress={onTalkPress}
+        onPress={() => {
+          Alert.alert("대화하기 기능은 출시 예정입니다.");
+          // TODO: 대화하기 로직 추가
+        }}
       />
       <ActionButton 
         icon="info"

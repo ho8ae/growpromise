@@ -1,19 +1,19 @@
 // components/plant/ChildPlantDisplay.tsx
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
+  ActivityIndicator,
   Animated,
   Pressable,
   Text,
   View,
 } from 'react-native';
-import Colors from '../../constants/Colors';
-import PlantDisplayFootAction from './PlantDisplayFootAction';
-import AppHeader from '../tabs/PlantHeader';
-import { usePlant } from '../../hooks/usePlant';
 import stickerApi from '../../api/modules/sticker';
+import Colors from '../../constants/Colors';
+import { usePlant } from '../../hooks/usePlant';
+
+import PlantDisplayFootAction from './PlantDisplayFootAction';
 
 // 스티커 통계 타입
 interface StickerStats {
@@ -43,13 +43,13 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     progressPercent,
     plantImage,
     waterPlant,
-    growPlant
+    growPlant,
   } = usePlant({ isParent: false });
 
   // 스티커 개수 상태 관리
   const [stickerStats, setStickerStats] = useState<StickerStats>({
     totalStickers: 0,
-    availableStickers: 0
+    availableStickers: 0,
   });
   const [isLoadingStickers, setIsLoadingStickers] = useState(false);
 
@@ -155,7 +155,11 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
   if (error) {
     return (
       <View className="bg-white rounded-xl p-6 shadow-sm items-center justify-center">
-        <MaterialIcons name="error-outline" size={48} color={Colors.light.error} />
+        <MaterialIcons
+          name="error-outline"
+          size={48}
+          color={Colors.light.error}
+        />
         <Text className="mt-4 text-gray-500">{error}</Text>
       </View>
     );
@@ -165,7 +169,6 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
   if (!plant) {
     return (
       <View className="bg-white rounded-xl p-4 shadow-sm mt-4">
-        <AppHeader />
         <Pressable className="items-center" onPress={onPress}>
           <View className="w-20 h-20 bg-primary/10 rounded-full items-center justify-center mb-4 mt-4">
             <MaterialIcons name="eco" size={36} color={Colors.light.primary} />
@@ -185,17 +188,17 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
   }
 
   // 사용 가능한 스티커 개수
-  const stickerCount = isLoadingStickers ? '...' : stickerStats.availableStickers;
-  
+  const stickerCount = isLoadingStickers
+    ? '...'
+    : stickerStats.availableStickers;
+
   const experience = plant.experience ?? 0;
   const experienceToGrow = plant.experienceToGrow ?? 100;
   const canGrow = plant.canGrow ?? false;
 
   return (
     <View className="bg-gray-50 rounded-xl p-3">
-      <AppHeader />
-
-      <Pressable 
+      <Pressable
         className="mx-auto bg-white rounded-xl shadow-md overflow-hidden border-2 border-gray-200"
         style={{ aspectRatio: 0.7 }} // 포켓몬 카드 비율
         onPress={onPress}
@@ -210,14 +213,21 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
               <Text className="text-xs font-medium text-yellow-800">기본</Text>
             </View>
           </View>
-          
+
           {/* 스티커 개수 표시 - API에서 가져온 데이터 사용 */}
           <View className="flex-row items-center">
-            <MaterialIcons name="star" size={16} color="#FFD700" style={{ marginRight: 4 }} />
-            <Text className="text-sm font-bold text-yellow-600">{stickerCount}</Text>
+            <MaterialIcons
+              name="star"
+              size={16}
+              color="#FFD700"
+              style={{ marginRight: 4 }}
+            />
+            <Text className="text-sm font-bold text-yellow-600">
+              {stickerCount}
+            </Text>
           </View>
         </View>
-        
+
         {/* 배경 영역 - 포켓몬 카드 느낌의 배경 */}
         <View className="w-full h-[50%] items-center justify-center bg-blue-50 ">
           {/* 식물 이미지 */}
@@ -287,21 +297,22 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
             </Animated.View>
           )}
         </View>
-        
+
         {/* 식물 정보 영역 - 포켓몬 카드 스타일 */}
         <View className="p-3 bg-white border-t border-gray-200">
           {/* 식물 정보 */}
           <View className="mb-2 pb-2 border-b border-gray-100">
             <Text className="text-sm text-gray-500">
-              {plantType?.category || '씨앗 타입'} • Lv.{plant.currentStage || 1}
+              {plantType?.category || '씨앗 타입'} • Lv.
+              {plant.currentStage || 1}
             </Text>
           </View>
-          
+
           {/* 식물 이름 및 능력 */}
           <Text className="text-base font-bold text-gray-800 mb-1">
             {plant.name || plantType?.name || '내 식물'}
           </Text>
-          
+
           {/* HP 바 - 포켓몬 카드 스타일 */}
           <View className="mt-4 mb-2">
             <View className="flex-row items-center justify-between mb-1">
@@ -310,7 +321,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
                 {plant.health || 100}/100
               </Text>
             </View>
-            
+
             {/* HP 진행 바 */}
             <View className="h-2 bg-gray-100 rounded-full overflow-hidden ">
               <View
@@ -319,7 +330,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
               />
             </View>
           </View>
-          
+
           {/* 경험치 진행 바 - 포켓몬 카드의 에너지 바 느낌 */}
           <View className="mt-2 mb-1">
             <View className="flex-row justify-between mb-1">
@@ -337,7 +348,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
               />
             </View>
           </View>
-          
+
           {/* 식물 상태 메시지 */}
           <Text className="text-xs text-center mt-1 text-gray-500">
             {canGrow

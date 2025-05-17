@@ -13,7 +13,6 @@ import {
 import { FlatList } from 'react-native-gesture-handler';
 import Colors from '../../constants/Colors';
 import PlantDisplayFootAction from './PlantDisplayFootAction';
-import PlantHeader from '../tabs/PlantHeader';
 import PlantCardSkeleton from './PlantCardSkeleton';
 import FooterActionSkeleton from './FooterActionSkeleton';
 import plantApi from '../../api/modules/plant';
@@ -322,7 +321,6 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
     
     return (
       <View style={{ width: cardWidth }}>
-        <PlantHeader />
         <Pressable 
           className="mx-auto bg-white rounded-xl shadow-md overflow-hidden border-2 border-gray-200"
           style={{ width: cardWidth - 16, aspectRatio: 0.7 }} // 포켓몬 카드 비율
