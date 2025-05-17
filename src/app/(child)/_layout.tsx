@@ -10,6 +10,7 @@ export default function ChildLayout() {
         options={{
           title: '아이 대시보드',
           animation: 'slide_from_right',
+          headerShown: false,
         }}
       />
       <Stack.Screen

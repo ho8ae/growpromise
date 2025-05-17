@@ -1,42 +1,40 @@
 // src/app/(child)/rewards.tsx
 import { Image } from 'expo-image';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ScrollView, Text, View, Animated, ActivityIndicator, Pressable, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import rewardApi, { ChildReward, RewardHistoryItem } from '../../api/modules/reward';
 import stickerApi, { Sticker, StickerStats } from '../../api/modules/sticker';
-
-// 슬라이드인 애니메이션 훅
-const useSlideInAnimation = (initialValue = 100, duration = 500) => {
-  const animation = React.useRef(new Animated.Value(initialValue)).current;
-
-  const startAnimation = () => {
-    Animated.timing(animation, {
-      toValue: 0,
-      duration,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  useEffect(() => {
-    startAnimation();
-    return () => {
-      animation.stopAnimation();
-    };
-  }, []);
-
-  return { animation, startAnimation };
-};
+import Colors from '../../constants/Colors';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function RewardsScreen() {
-  const { animation, startAnimation } = useSlideInAnimation();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // 애니메이션 값
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
   
   // 데이터 쿼리
   const { data: rewards = [], isLoading: isRewardsLoading } = useQuery({
@@ -65,6 +63,7 @@ export default function RewardsScreen() {
   
   // 보상 이력 화면으로 이동
   const navigateToHistory = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push('/(child)/reward-history');
   };
   
@@ -102,6 +101,7 @@ export default function RewardsScreen() {
   // 보상 달성 가능 여부 확인 및 요청 처리
   const confirmAchieveReward = (reward: ChildReward) => {
     if (stickerStats && stickerStats.availableStickers >= reward.requiredStickers) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       Alert.alert(
         '보상 달성',
         `정말로 "${reward.title}" 보상을 달성하시겠습니까? ${reward.requiredStickers}개의 스티커가 사용됩니다.`,
@@ -123,7 +123,7 @@ export default function RewardsScreen() {
     const month = date.getMonth() + 1;
     const day = date.getDate();
     
-    return `${year}년 ${month}월 ${day}일`;
+    return `${year}. ${month}. ${day}`;
   };
 
   // 이미지 소스 처리
@@ -137,248 +137,433 @@ export default function RewardsScreen() {
   // 사용 가능한 스티커 (보상에 사용되지 않은 스티커)
   const availableStickers = stickers.filter(sticker => !sticker.rewardId);
   
+  // 홈으로 이동 버튼
+  const navigateToHome = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/(tabs)');
+  };
+  
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <View className="px-4 pt-4 flex-1">
-        <Text className="text-2xl font-bold text-center my-4 text-emerald-700">
-          내 스티커와 보상
-        </Text>
+      <Stack.Screen options={{ headerShown: false }} />
+      
+      <View className="flex-1">
+        {/* 커스텀 헤더 */}
+        <View className="px-5 py-3 flex-row items-center justify-between border-b border-gray-100">
+          <Pressable 
+            onPress={() => router.back()} 
+            className="w-10 h-10 items-center justify-center rounded-full active:bg-gray-50"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialIcons name="arrow-back" size={20} color={Colors.light.text} />
+          </Pressable>
+          
+          <Text className="text-lg font-bold" style={{ color: Colors.light.text }}>
+            내 스티커와 보상
+          </Text>
+          
+          <Pressable 
+            onPress={navigateToHistory}
+            className="w-10 h-10 items-center justify-center rounded-full active:bg-gray-50"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialIcons name="history" size={20} color={Colors.light.text} />
+          </Pressable>
+        </View>
 
+        {/* 로딩 상태 */}
         {isLoading && !isRefreshing ? (
           <View className="flex-1 justify-center items-center">
-            <ActivityIndicator size="large" color="#10b981" />
-            <Text className="mt-3 text-emerald-700">보상 정보를 불러오는 중...</Text>
+            <ActivityIndicator size="large" color={Colors.light.primary} />
+            <Text className="mt-3" style={{ color: Colors.light.textSecondary }}>
+              보상 정보를 불러오는 중...
+            </Text>
           </View>
         ) : (
           <ScrollView 
             className="flex-1"
+            contentContainerStyle={{ 
+              
+              flexGrow: 1
+            }}
             refreshControl={
               <RefreshControl
                 refreshing={isRefreshing}
                 onRefresh={handleRefresh}
-                tintColor="#10b981"
-                colors={["#10b981"]}
+                tintColor={Colors.light.primary}
+                colors={[Colors.light.primary]}
               />
             }
           >
-            {/* 스티커 현황 카드 */}
-            <Animated.View 
-              className="bg-emerald-50 rounded-xl p-4 mb-4 border border-emerald-200 shadow-sm"
-              style={{
-                opacity: animation.interpolate({
-                  inputRange: [0, 100],
-                  outputRange: [1, 0]
-                }),
-                transform: [{ translateY: animation }]
-              }}
-            >
-              <View className="flex-row items-center justify-between mb-2">
-                <View className="flex-row items-center">
-                  <FontAwesome name="star" size={18} color="#10b981" style={{ marginRight: 8 }} />
-                  <Text className="text-lg font-medium text-emerald-700">내 스티커</Text>
-                </View>
-                <Text className="text-emerald-700 font-semibold">
-                  총 {stickerStats?.totalStickers || 0}개 (사용가능: {stickerStats?.availableStickers || 0}개)
-                </Text>
-              </View>
-              
-              {availableStickers.length > 0 ? (
-                <View className="flex-row flex-wrap">
-                  {availableStickers.slice(0, Math.min(availableStickers.length, 10)).map((sticker) => (
-                    <View key={sticker.id} className="p-1">
-                      <Image
-                        source={sticker.imageUrl ? 
-                          { uri: sticker.imageUrl } : 
-                          require('../../assets/images/react-logo.png')
-                        }
-                        style={{ width: 40, height: 40 }}
-                        contentFit="contain"
-                      />
-                    </View>
-                  ))}
-                  {availableStickers.length > 10 && (
-                    <View className="p-1 items-center justify-center">
-                      <Text className="text-emerald-700">+{availableStickers.length - 10}개 더</Text>
-                    </View>
-                  )}
-                </View>
-              ) : (
-                <View className="flex-row flex-wrap">
-                  {Array(5)
-                    .fill(0)
-                    .map((_, i) => (
-                      <View key={i} className="p-1">
-                        <View className="w-[40px] h-[40px] border-2 border-dashed border-emerald-300 rounded-full items-center justify-center">
-                          <FontAwesome5 name="question" size={14} color="#10b981" />
-                        </View>
-                      </View>
-                    ))}
-                </View>
-              )}
-              
-              <Text className="mt-2 text-emerald-800">
-                {availableStickers.length > 0 
-                  ? `${availableStickers.length}개의 스티커를 모았어요!` 
-                  : '아직 모은 스티커가 없어요. 약속을 완료하고 스티커를 모아보세요!'}
-              </Text>
-            </Animated.View>
-
-            {/* 진행 중인 보상 섹션 */}
-            <View className="flex-row items-center justify-between mb-2">
-              <View className="flex-row items-center">
-                <FontAwesome name="gift" size={18} color="#10b981" style={{ marginRight: 8 }} />
-                <Text className="text-lg font-medium text-emerald-700">진행 중인 보상</Text>
-              </View>
-              
-              {/* 보상 이력 버튼 */}
-              {rewardHistory.length > 0 && (
-                <Pressable 
-                  className="flex-row items-center bg-emerald-100 rounded-full px-3 py-1"
-                  onPress={navigateToHistory}
+            <View className="px-5 pt-4 flex-1 flex flex-col justify-between">
+              <View className="flex-1">
+                {/* 스티커 현황 카드 */}
+                <Animated.View 
+                  className="mb-6"
+                  style={{
+                    opacity: fadeAnim,
+                    transform: [{ translateY: slideAnim }],
+                  }}
                 >
-                  <FontAwesome5 name="history" size={12} color="#059669" style={{ marginRight: 4 }} />
-                  <Text className="text-emerald-700 text-xs font-medium">받은 보상</Text>
-                </Pressable>
-              )}
-            </View>
-            
-            {rewards.length === 0 ? (
-              <View className="items-center justify-center p-8 bg-gray-50 rounded-xl mb-4">
-                <FontAwesome name="gift" size={40} color="#d1d5db" />
-                <Text className="text-gray-400 mt-4 text-center">
-                  진행 중인 보상이 없습니다
-                </Text>
-                <Text className="text-gray-400 text-center">
-                  부모님께 스티커를 모으면 받을 수 있는 보상을 만들어 달라고 요청해보세요!
-                </Text>
-              </View>
-            ) : (
-              rewards.map((reward) => {
-                // 보상 진행률 계산 (최대 100%)
-                const progress = Math.min(
-                  ((stickerStats?.availableStickers || 0) / reward.requiredStickers) * 100, 
-                  100
-                );
-                
-                // 달성 가능 여부
-                const canAchieve = (stickerStats?.availableStickers || 0) >= reward.requiredStickers;
+                  <View 
+                    className="rounded-2xl p-5 border-green-100 overflow-hidden"
+                    style={{ backgroundColor: 'rgba(88, 204, 2, 0.08)', borderWidth: 1 }}
+                  >
+                    <View className="flex-row justify-between items-start mb-4">
+                      <View>
+                        <View className="flex-row items-center">
+                          <MaterialIcons name="star" size={20} color={Colors.light.secondary} style={{ marginRight: 6 }} />
+                          <Text className="text-lg font-bold" style={{ color: Colors.light.text }}>
+                            내 스티커
+                          </Text>
+                        </View>
+                        <Text style={{ color: Colors.light.textSecondary }}>
+                          전체 {stickerStats?.totalStickers || 0}개 보유
+                        </Text>
+                      </View>
+                      
+                      <View 
+                        className="px-3 py-1 rounded-lg"
+                        style={{ backgroundColor: 'rgba(255, 200, 0, 0.15)' }}
+                      >
+                        <Text 
+                          className="font-medium"
+                          style={{ color: Colors.light.secondary }}
+                        >
+                          {stickerStats?.availableStickers || 0}개 사용 가능
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    {availableStickers.length > 0 ? (
+                      <View className="flex-row flex-wrap">
+                        {availableStickers.slice(0, Math.min(availableStickers.length, 9)).map((sticker, index) => (
+                          <View 
+                            key={sticker.id} 
+                            style={{ 
+                              width: '33.333%', 
+                              padding: 4
+                            }}
+                          >
+                            <View 
+                              className="aspect-square rounded-lg items-center justify-center bg-white border border-gray-100"
+                            >
+                              <Image
+                                source={getImageSource(sticker.imageUrl)}
+                                style={{ width: '70%', height: '70%' }}
+                                contentFit="contain"
+                              />
+                            </View>
+                          </View>
+                        ))}
+                        {availableStickers.length > 9 && (
+                          <View 
+                            style={{ width: '33.333%', padding: 4 }}
+                          >
+                            <View 
+                              className="aspect-square rounded-lg items-center justify-center"
+                              style={{ backgroundColor: 'rgba(255, 200, 0, 0.15)' }}
+                            >
+                              <Text 
+                                className="font-bold"
+                                style={{ color: Colors.light.secondary }}
+                              >
+                                +{availableStickers.length - 9}
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    ) : (
+                      <View className="flex-row flex-wrap">
+                        {Array(6)
+                          .fill(0)
+                          .map((_, i) => (
+                            <View key={i} style={{ width: '33.333%', padding: 4 }}>
+                              <View className="aspect-square border-2 border-dashed rounded-lg items-center justify-center"
+                                style={{ borderColor: 'rgba(88, 204, 2, 0.3)' }}
+                              >
+                                <MaterialIcons name="help-outline" size={20} color={Colors.light.primary} />
+                              </View>
+                            </View>
+                          ))}
+                      </View>
+                    )}
+                    
+                    {availableStickers.length === 0 && (
+                      <Text 
+                        className="mt-3 text-center text-sm"
+                        style={{ color: Colors.light.textSecondary }}
+                      >
+                        아직 모은 스티커가 없어요. 약속을 완료하고 스티커를 모아보세요!
+                      </Text>
+                    )}
+                  </View>
+                </Animated.View>
 
-                return (
-                  <Animated.View
-                    key={reward.id}
+                {/* 진행 중인 보상 섹션 */}
+                <Animated.View 
+                  className="mb-3"
+                  style={{
+                    opacity: fadeAnim,
+                    transform: [{ translateY: slideAnim }],
+                  }}
+                >
+                  <View className="flex-row items-center">
+                    <MaterialIcons name="card-giftcard" size={20} color={Colors.light.text} style={{ marginRight: 6 }} />
+                    <Text className="text-lg font-bold" style={{ color: Colors.light.text }}>
+                      진행 중인 보상
+                    </Text>
+                  </View>
+                </Animated.View>
+                
+                {rewards.length === 0 ? (
+                  <Animated.View 
+                    className="mb-6"
                     style={{
-                      opacity: animation.interpolate({
-                        inputRange: [0, 100],
-                        outputRange: [1, 0]
-                      }),
-                      transform: [{ translateY: animation }]
+                      opacity: fadeAnim,
+                      transform: [{ translateY: slideAnim }],
                     }}
                   >
-                    <Pressable 
-                        className={`mb-4 p-4 rounded-xl border ${
-                          canAchieve 
-                            ? 'border-emerald-400 bg-emerald-50' 
-                            : 'border-gray-300 bg-white'
-                        } shadow-sm`}
-                        onPress={() => confirmAchieveReward(reward)}
+                    <View className="items-center justify-center py-8 px-4 rounded-xl"
+                      style={{ backgroundColor: 'rgba(88, 204, 2, 0.05)' }}
+                    >
+                      <View 
+                        className="w-16 h-16 rounded-full mb-4 items-center justify-center"
+                        style={{ backgroundColor: 'rgba(88, 204, 2, 0.1)' }}
                       >
-                        <View className="flex-row">
-                          <View className="mr-3 bg-white rounded-lg p-2 border border-emerald-100">
-                            <FontAwesome name="gift" size={34} color="#10b981" />
-                          </View>
-                          <View className="flex-1">
-                            <Text className="text-lg font-medium text-emerald-800">{reward.title}</Text>
-                            <Text className="text-gray-500 mb-1">
-                              {stickerStats?.availableStickers || 0}/{reward.requiredStickers} 스티커
-                            </Text>
-                            <View className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <MaterialIcons name="card-giftcard" size={32} color={Colors.light.primary} />
+                      </View>
+                      <Text 
+                        className="text-lg font-bold text-center mb-2"
+                        style={{ color: Colors.light.text }}
+                      >
+                        진행 중인 보상이 없어요
+                      </Text>
+                      <Text 
+                        className="text-center"
+                        style={{ color: Colors.light.textSecondary }}
+                      >
+                        부모님께 스티커를 모으면 받을 수 있는 보상을 
+                        {"\n"}만들어 달라고 요청해보세요!
+                      </Text>
+                    </View>
+                  </Animated.View>
+                ) : (
+                  <Animated.View 
+                    className="mb-6"
+                    style={{
+                      opacity: fadeAnim,
+                      transform: [{ translateY: slideAnim }],
+                    }}
+                  >
+                    {rewards.map((reward, index) => {
+                      // 보상 진행률 계산 (최대 100%)
+                      const progress = Math.min(
+                        ((stickerStats?.availableStickers || 0) / reward.requiredStickers) * 100, 
+                        100
+                      );
+                      
+                      // 달성 가능 여부
+                      const canAchieve = (stickerStats?.availableStickers || 0) >= reward.requiredStickers;
+                      
+                      // 임의로 아이콘 선택 (실제로는 보상 타입에 따라 달라질 수 있음)
+                      const icons = ['card-giftcard', 'toys', 'sports-esports', 'movie', 'fastfood', 'shopping-bag'];
+                      const icon = icons[index % icons.length];
+
+                      return (
+                        <Pressable 
+                          key={reward.id}
+                          className={`mb-3 rounded-xl border overflow-hidden active:opacity-90 ${
+                            canAchieve 
+                              ? 'border-green-300' 
+                              : 'border-gray-200'
+                          }`}
+                          onPress={() => confirmAchieveReward(reward)}
+                        >
+                          <View
+                            className="p-4"
+                          >
+                            <View className="flex-row mb-2">
+                              <View 
+                                className={`mr-3 w-12 h-12 rounded-full items-center justify-center ${
+                                  canAchieve 
+                                    ? 'bg-green-100' 
+                                    : 'bg-gray-100'
+                                }`}
+                              >
+                                <MaterialIcons 
+                                  name={icon as any} 
+                                  size={24} 
+                                  color={canAchieve ? Colors.light.primary : Colors.light.textSecondary} 
+                                />
+                              </View>
+                              <View className="flex-1">
+                                <Text 
+                                  className="text-base font-bold"
+                                  style={{ color: Colors.light.text }}
+                                >
+                                  {reward.title}
+                                </Text>
+                                
+                                <View className="flex-row items-center justify-between">
+                                  <Text 
+                                    className="text-sm"
+                                    style={{ color: Colors.light.textSecondary }}
+                                  >
+                                    {stickerStats?.availableStickers || 0}/{reward.requiredStickers} 스티커
+                                  </Text>
+                                  {canAchieve && (
+                                    <View 
+                                      className="px-2 py-0.5 rounded-full"
+                                      style={{ backgroundColor: 'rgba(88, 204, 2, 0.15)' }}
+                                    >
+                                      <Text 
+                                        className="text-xs font-medium"
+                                        style={{ color: Colors.light.primary }}
+                                      >
+                                        달성 가능
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+                              </View>
+                            </View>
+                            
+                            {/* 진행 바 */}
+                            <View className="h-2 bg-gray-100 rounded-full overflow-hidden mt-1 mb-2">
                               <View
-                                className={`h-full ${
-                                  canAchieve ? 'bg-emerald-500' : 'bg-emerald-300'
-                                } rounded-full`}
-                                style={{ width: `${progress}%` }}
+                                className="h-full rounded-full"
+                                style={{ 
+                                  width: `${progress}%`,
+                                  backgroundColor: canAchieve ? Colors.light.primary : 'rgba(88, 204, 2, 0.4)',
+                                }}
                               />
                             </View>
                             
-                            {canAchieve && (
-                              <Text className="text-emerald-600 text-xs mt-1 font-medium">
-                                달성 가능! 터치하여 보상 받기
+                            {reward.description && (
+                              <Text 
+                                className="text-sm"
+                                style={{ color: Colors.light.textSecondary }}
+                              >
+                                {reward.description}
                               </Text>
                             )}
                           </View>
-                        </View>
-                        
-                        {reward.description && (
-                          <Text className="text-gray-600 mt-2 text-sm">
-                            {reward.description}
-                          </Text>
-                        )}
-                      </Pressable>
-                    </Animated.View>
-                  );
-                })
-              )}
+                        </Pressable>
+                      );
+                    })}
+                  </Animated.View>
+                )}
 
-              {/* 최근 달성한 보상 섹션 (미리보기) */}
-              {rewardHistory.length > 0 && (
-                <View className="mt-4 mb-6">
-                  <View className="flex-row items-center justify-between my-2">
-                    <View className="flex-row items-center">
-                      <FontAwesome name="check-circle" size={18} color="#10b981" style={{ marginRight: 8 }} />
-                      <Text className="text-lg font-medium text-emerald-700">최근 받은 보상</Text>
+                {/* 최근 달성한 보상 섹션 (미리보기) */}
+                {rewardHistory.length > 0 && (
+                  <Animated.View 
+                    className="mb-6"
+                    style={{
+                      opacity: fadeAnim,
+                      transform: [{ translateY: slideAnim }],
+                    }}
+                  >
+                    <View className="flex-row justify-between items-center mb-3">
+                      <View className="flex-row items-center">
+                        <MaterialIcons name="check-circle" size={20} color={Colors.light.text} style={{ marginRight: 6 }} />
+                        <Text className="text-lg font-bold" style={{ color: Colors.light.text }}>
+                          받은 보상
+                        </Text>
+                      </View>
+                      {/* <Pressable 
+                        className="flex-row items-center"
+                        onPress={navigateToHistory}
+                      >
+                        <Text 
+                          className="text-sm mr-1"
+                          style={{ color: Colors.light.primary }}
+                        >
+                          전체보기
+                        </Text>
+                        <MaterialIcons name="chevron-right" size={16} color={Colors.light.primary} />
+                      </Pressable> */}
                     </View>
-                    <Pressable 
-                      className="flex-row items-center"
-                      onPress={navigateToHistory}
-                    >
-                      <Text className="text-emerald-600 text-sm mr-1">더보기</Text>
-                      <FontAwesome5 name="chevron-right" size={12} color="#059669" />
-                    </Pressable>
-                  </View>
-                  
-                  {/* 최근 3개만 표시 */}
-                  {rewardHistory.slice(0, 3).map((historyItem) => (
-                    <Animated.View
-                      key={historyItem.id}
-                      style={{
-                        opacity: animation.interpolate({
-                          inputRange: [0, 100],
-                          outputRange: [1, 0]
-                        }),
-                        transform: [{ translateY: animation }]
-                      }}
-                    >
+                    
+                    {/* 최근 3개만 표시 */}
+                    {rewardHistory.slice(0, 3).map((historyItem) => (
                       <View
-                        className="mb-3 p-4 rounded-xl border border-emerald-300 bg-emerald-50 shadow-sm"
+                        key={historyItem.id}
+                        className="mb-3 p-4 rounded-xl border overflow-hidden"
+                        style={{ borderColor: 'rgba(88, 204, 2, 0.3)', backgroundColor: 'rgba(88, 204, 2, 0.05)' }}
                       >
                         <View className="flex-row items-center">
-                          <View className="h-12 w-12 bg-emerald-100 rounded-full items-center justify-center mr-3">
-                            <FontAwesome5 name="gift" size={24} color="#10b981" />
+                          <View 
+                            className="h-12 w-12 rounded-full items-center justify-center mr-3"
+                            style={{ backgroundColor: 'rgba(88, 204, 2, 0.15)' }}
+                          >
+                            <MaterialIcons name="emoji-events" size={24} color={Colors.light.primary} />
                           </View>
                           <View className="flex-1">
-                            <Text className="text-lg text-emerald-800">{historyItem.reward?.title || '보상'}</Text>
-                            <Text className="text-gray-500">{formatDate(historyItem.achievedAt)}</Text>
+                            <Text 
+                              className="text-base font-bold"
+                              style={{ color: Colors.light.text }}
+                            >
+                              {historyItem.reward?.title || '보상'}
+                            </Text>
+                            <Text style={{ color: Colors.light.textSecondary }}>
+                              {formatDate(historyItem.achievedAt)}
+                            </Text>
                           </View>
-                          <View className="bg-emerald-500 p-2 rounded-full">
-                            <FontAwesome name="check" size={14} color="#ffffff" />
+                          <View 
+                            className="h-8 w-8 rounded-full items-center justify-center"
+                            style={{ backgroundColor: 'rgba(88, 204, 2, 0.15)' }}
+                          >
+                            <MaterialIcons name="check" size={18} color={Colors.light.primary} />
                           </View>
                         </View>
                       </View>
-                    </Animated.View>
-                  ))}
-                </View>
-              )}
+                    ))}
+                  </Animated.View>
+                )}
+                
+                {rewards.length === 0 && rewardHistory.length === 0 && (
+                  <Animated.View 
+                    className="items-center justify-center py-6"
+                    style={{
+                      opacity: fadeAnim,
+                      transform: [{ translateY: slideAnim }],
+                    }}
+                  >
+                    <Text 
+                      className="text-center text-sm"
+                      style={{ color: Colors.light.textSecondary }}
+                    >
+                      약속을 완료하여 스티커를 모으면 부모님께서 설정한 보상을 받을 수 있어요!
+                    </Text>
+                  </Animated.View>
+                )}
+              </View>
               
-              {rewards.length === 0 && rewardHistory.length === 0 && (
-                <View className="items-center justify-center mt-4 p-8">
-                  <Text className="text-gray-400 text-center">
-                    약속을 완료하여 스티커를 모으면 부모님께서 설정한 보상을 받을 수 있어요!
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
-          )}
-        </View>
-      </SafeAreaView>
-    );
+              {/* 하단 버튼 */}
+              <View className="mb-4 ">
+                <Animated.View
+                  style={{
+                    opacity: fadeAnim,
+                    transform: [{ translateY: slideAnim }],
+                  }}
+                >
+                  <Pressable
+                    className="py-3.5 rounded-xl active:opacity-90"
+                    style={{ backgroundColor: Colors.light.primary }}
+                    onPress={navigateToHome}
+                  >
+                    <Text className="text-white text-center font-bold">
+                      홈으로 가기
+                    </Text>
+                  </Pressable>
+                </Animated.View>
+              </View>
+            </View>
+          </ScrollView>
+        )}
+      </View>
+    </SafeAreaView>
+  );
 }

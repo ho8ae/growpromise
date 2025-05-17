@@ -1,8 +1,8 @@
-import { FontAwesome } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,32 +11,282 @@ import {
   RefreshControl,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../api';
+import { PromiseStatus, PromiseStats } from '../../api/modules/promise';
+import Colors from '../../constants/Colors';
 import { useNetwork } from '../../hooks/useNetwork';
 import { useAuthStore } from '../../stores/authStore';
-import { useSlideInAnimation } from '../../utils/animations';
 import { NotificationHelper } from '../../utils/notificationHelper';
 import { OfflineStorage } from '../../utils/offlineStorage';
-import { PromiseStatus } from '../../api/modules/promise';
+
+
+interface PromiseGroupProps {
+  title: string;
+  promises: any[];
+  onPromisePress: (promiseId: string) => void;
+  isOfflineMode: boolean;
+}
+
+
+
+
+// 날짜 포맷 함수
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+};
+
+// 남은 일수 계산
+const getDaysLeft = (dueDateString: string) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const dueDate = new Date(dueDateString);
+  dueDate.setHours(0, 0, 0, 0);
+
+  const diffTime = dueDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  return diffDays;
+};
+
+// 약속 그룹 컴포넌트
+const PromiseGroup = ({ title, promises, onPromisePress, isOfflineMode }: PromiseGroupProps) => {
+  const [expanded, setExpanded] = useState(false);
+  const animatedHeight = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  const rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
+
+  // 아이콘과 색상 결정 (임의로 결정 - 실제로는 카테고리에 따라 결정)
+  const getIconAndColor = () => {
+    // 제목에 따라 간단히 아이콘/색상 결정
+    const titleLower = title.toLowerCase();
+
+    if (
+      titleLower.includes('공부') ||
+      titleLower.includes('학습') ||
+      titleLower.includes('책')
+    ) {
+      return { icon: 'menu-book', color: Colors.light.promise.study };
+    } else if (
+      titleLower.includes('집안') ||
+      titleLower.includes('청소') ||
+      titleLower.includes('정리')
+    ) {
+      return { icon: 'cleaning-services', color: Colors.light.promise.chore };
+    } else if (titleLower.includes('운동') || titleLower.includes('체육')) {
+      return { icon: 'directions-run', color: Colors.light.primary };
+    } else if (titleLower.includes('건강') || titleLower.includes('양치')) {
+      return { icon: 'healing', color: Colors.light.promise.health };
+    } else if (titleLower.includes('음악') || titleLower.includes('악기')) {
+      return { icon: 'music-note', color: Colors.light.promise.music };
+    } else if (titleLower.includes('가족') || titleLower.includes('부모님')) {
+      return { icon: 'people', color: Colors.light.promise.family };
+    } else {
+      return { icon: 'assignment', color: Colors.light.textSecondary };
+    }
+  };
+
+  const { icon, color } = getIconAndColor();
+
+  useEffect(() => {
+    Animated.timing(animatedHeight, {
+      toValue: expanded ? 1 : 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+
+    Animated.timing(rotateAnim, {
+      toValue: expanded ? 1 : 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [expanded]);
+
+  if (!promises || promises.length === 0) return null;
+
+  return (
+    <View className="mb-4">
+      <TouchableOpacity
+        className="rounded-xl overflow-hidden active:opacity-90 border border-gray-100"
+        style={{ backgroundColor: color + '08' }}
+        onPress={() => setExpanded(!expanded)}
+      >
+        <View className="p-4 flex-row items-center justify-between">
+          <View className="flex-row items-center">
+            <View
+              className="w-10 h-10 rounded-full items-center justify-center mr-3"
+              style={{ backgroundColor: color + '15' }}
+            >
+              <MaterialIcons name={icon as any} size={20} color={color} />
+            </View>
+            <View>
+              <Text
+                className="text-base font-bold"
+                style={{ color: Colors.light.text }}
+                numberOfLines={1}
+              >
+                {title}
+              </Text>
+              <Text
+                className="text-sm"
+                style={{ color: Colors.light.textSecondary }}
+              >
+                {promises.length}개의 약속
+              </Text>
+            </View>
+          </View>
+
+          <View className="flex-row items-center">
+            {!expanded && promises.some((p) => getDaysLeft(p.dueDate) <= 1) && (
+              <View
+                className="px-2.5 py-1 rounded-full mr-2"
+                style={{ backgroundColor: 'rgba(255, 75, 75, 0.15)' }}
+              >
+                <Text
+                  className="text-xs font-medium"
+                  style={{ color: Colors.light.error }}
+                >
+                  긴급
+                </Text>
+              </View>
+            )}
+            <Animated.View style={{ transform: [{ rotate }] }}>
+              <MaterialIcons
+                name="keyboard-arrow-down"
+                size={24}
+                color={Colors.light.textSecondary}
+              />
+            </Animated.View>
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      <Animated.View
+        style={{
+          maxHeight: animatedHeight.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 500],
+          }),
+          opacity: animatedHeight,
+          overflow: 'hidden',
+        }}
+      >
+        <View className="mt-2 pl-5 pr-2">
+          {promises.map((assignment: any) => (
+            <Pressable
+              key={assignment.id}
+              className="mb-2 p-3 rounded-xl border border-gray-100 bg-white active:opacity-90"
+              onPress={() => onPromisePress(assignment.id)}
+              disabled={isOfflineMode}
+            >
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1 mr-3">
+                  <Text
+                    className="text-base font-medium mb-1"
+                    style={{ color: Colors.light.text }}
+                    numberOfLines={1}
+                  >
+                    {assignment.promise?.title || '제목 없음'}
+                  </Text>
+
+                  <View className="flex-row items-center">
+                    <MaterialIcons
+                      name="event"
+                      size={12}
+                      color={Colors.light.textSecondary}
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text
+                      className="text-xs mr-2"
+                      style={{ color: Colors.light.textSecondary }}
+                    >
+                      {formatDate(assignment.dueDate)}
+                    </Text>
+
+                    {getDaysLeft(assignment.dueDate) <= 1 ? (
+                      <View
+                        className="px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: 'rgba(255, 75, 75, 0.15)' }}
+                      >
+                        <Text
+                          className="text-xs font-medium"
+                          style={{ color: Colors.light.error }}
+                        >
+                          {getDaysLeft(assignment.dueDate) <= 0
+                            ? '오늘 마감'
+                            : '내일 마감'}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View
+                        className="px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: 'rgba(88, 204, 2, 0.15)' }}
+                      >
+                        <Text
+                          className="text-xs font-medium"
+                          style={{ color: Colors.light.primary }}
+                        >
+                          D-{getDaysLeft(assignment.dueDate)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                <View
+                  className="w-9 h-9 rounded-full items-center justify-center"
+                  style={{ backgroundColor: color + '10' }}
+                >
+                  <MaterialIcons name="camera-alt" size={18} color={color} />
+                </View>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </Animated.View>
+    </View>
+  );
+};
 
 export default function ChildDashboard() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const { animation, startAnimation } = useSlideInAnimation();
   const { isConnected } = useNetwork();
   const [isOfflineMode, setIsOfflineMode] = useState(false);
+
+  // 애니메이션 값
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
 
   // 알림 권한 설정
   useEffect(() => {
     NotificationHelper.requestPermissionsAsync();
   }, []);
 
+  // 애니메이션 시작
   useEffect(() => {
-    startAnimation();
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
     // 오프라인 상태 확인 및 처리
     if (!isConnected) {
@@ -85,7 +335,9 @@ export default function ChildDashboard() {
       try {
         if (isConnected) {
           // 온라인 모드: API 호출
-          const promises = await api.promise.getChildPromises(PromiseStatus.PENDING);
+          const promises = await api.promise.getChildPromises(
+            PromiseStatus.PENDING,
+          );
           // 오프라인 모드를 위해 캐시
           await OfflineStorage.saveData('child_pending_promises', promises);
           return promises || [];
@@ -156,9 +408,9 @@ export default function ChildDashboard() {
     data: stats,
     isLoading: isStatsLoading,
     refetch: refetchStats,
-  } = useQuery({
+  } = useQuery<PromiseStats>({
     queryKey: ['childStats'],
-    queryFn: async () => {
+    queryFn:async () => {
       try {
         if (isConnected) {
           // 온라인 모드: API 호출
@@ -176,7 +428,7 @@ export default function ChildDashboard() {
           );
         } else {
           // 오프라인 모드: 캐시된 데이터 사용
-          const cachedStats = await OfflineStorage.getData('child_stats');
+          const cachedStats = await OfflineStorage.getData<PromiseStats>('child_stats');
           return (
             cachedStats || {
               totalPromises: 0,
@@ -190,7 +442,7 @@ export default function ChildDashboard() {
       } catch (error) {
         console.error('통계 데이터 로드 실패:', error);
         // 오류 발생시 오프라인 캐시 시도
-        const cachedStats = await OfflineStorage.getData('child_stats');
+        const cachedStats = await OfflineStorage.getData<PromiseStats>('child_stats');
         if (cachedStats) {
           return cachedStats;
         }
@@ -236,215 +488,356 @@ export default function ChildDashboard() {
     });
   };
 
+  // 약속을 제목별로 그룹화하는 함수
+  const getPromisesByTitle = () => {
+    if (!pendingPromises || pendingPromises.length === 0) return {};
+
+    const groupedPromises: { [key: string]: any[] } = {};
+
+    pendingPromises.forEach((promise) => {
+      const title = promise.promise?.title || '제목 없음';
+
+      if (!groupedPromises[title]) {
+        groupedPromises[title] = [];
+      }
+
+      groupedPromises[title].push(promise);
+    });
+
+    return groupedPromises;
+  };
+
+  // 제목별로 그룹화된 약속
+  const groupedPromises = getPromisesByTitle();
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView
         className="flex-1"
+        contentContainerStyle={{ 
+          paddingBottom: 10, // 하단 여백 추가
+          flexGrow: 1 // 컨텐츠가 적어도 화면 전체를 채우도록 설정
+        }}
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={refetchAll} />
         }
       >
-        <View className="px-4 pt-4 flex-1">
-          <Text className="text-2xl font-bold text-center my-4 text-emerald-700">
-            {user?.username || '내'} 약속 관리
-          </Text>
-
-          {/* 오프라인 모드 표시 */}
-          {isOfflineMode && (
-            <View className="bg-amber-100 rounded-xl p-3 mb-4 border border-amber-200">
-              <Text className="text-amber-800 text-center font-medium">
-                오프라인 모드
-              </Text>
-              <Text className="text-amber-700 text-center text-sm">
-                인터넷 연결이 복구되면 자동으로 동기화됩니다.
-              </Text>
-            </View>
-          )}
-
-          {isLoading ? (
-            <View className="items-center justify-center py-10">
-              <ActivityIndicator size="large" color="#10b981" />
-              <Text className="mt-3 text-emerald-700">
-                정보를 불러오는 중...
-              </Text>
-            </View>
-          ) : (
-            <>
-              <Animated.View
-                className="bg-emerald-50 rounded-xl p-4 mb-4 border border-emerald-200 shadow-sm"
-                style={{
-                  opacity: animation.interpolate({
-                    inputRange: [0, 300],
-                    outputRange: [1, 0],
-                  }),
-                  transform: [
-                    {
-                      translateX: animation.interpolate({
-                        inputRange: [0, 300],
-                        outputRange: [0, 300],
-                      }),
-                    },
-                  ],
-                }}
-              >
-                <View className="flex-row items-center mb-2">
-                  <FontAwesome
-                    name="rocket"
-                    size={18}
-                    color="#10b981"
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text className="text-lg font-medium text-emerald-700">
-                    오늘의 미션
+        <View className="px-5 pt-4 flex flex-1 flex-col justify-between">
+          {/* 상단 컨텐츠를 포함하는 View */}
+          <View className="flex-1">
+            <Animated.View 
+              style={{
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              }}
+            >
+              {/* 프로필 및 인사말 */}
+              <View className="flex-row justify-between items-center mb-6">
+                <View>
+                  <Text className="text-2xl font-bold" style={{ color: Colors.light.text }}>
+                    안녕하세요, {user?.username || '친구'}!
+                  </Text>
+                  <Text style={{ color: Colors.light.textSecondary }}>
+                    오늘의 약속을 확인해보세요 💚
                   </Text>
                 </View>
-
-                {pendingPromises && pendingPromises.length > 0 ? (
-                  <Text className="text-emerald-800">
-                    {pendingPromises.length}개의 약속이 남았어요!
-                  </Text>
-                ) : (
-                  <Text className="text-emerald-800">
-                    남은 약속이 없어요. 모든 약속을 완료했어요! 👏
-                  </Text>
-                )}
-              </Animated.View>
-
-              <View className="flex-row items-center my-3">
-                <FontAwesome
-                  name="list-ul"
-                  size={18}
-                  color="#10b981"
-                  style={{ marginRight: 8 }}
-                />
-                <Text className="text-lg font-medium text-emerald-700">
-                  약속 목록
-                </Text>
+                
+                <TouchableOpacity 
+                  className="w-12 h-12 rounded-full bg-gray-100 items-center justify-center"
+                  onPress={() => router.push('/(tabs)/profile')}
+                >
+                  <Image
+                    source={require('../../assets/images/react-logo.png')}
+                    style={{ width: 32, height: 32 }}
+                    contentFit="cover"
+                    className="rounded-full"
+                  />
+                </TouchableOpacity>
               </View>
 
-              {/* 약속 목록 */}
-              {!pendingPromises || pendingPromises.length === 0 ? (
-                <View className="items-center justify-center py-10">
-                  <FontAwesome name="calendar-o" size={50} color="#d1d5db" />
-                  <Text className="text-gray-400 mt-4 text-center">
-                    약속이 없습니다
-                  </Text>
-                  <Text className="text-gray-400 text-center">
-                    부모님께 약속을 만들어 달라고 요청해보세요!
-                  </Text>
-                </View>
-              ) : (
-                pendingPromises.map((assignment) => (
-                  <View
-                    key={assignment.id}
-                    className="mb-3 p-4 rounded-xl border border-emerald-300 bg-white shadow-sm"
-                  >
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-1">
-                        <Text className="text-lg text-emerald-800">
-                          {assignment.promise?.title || '제목 없음'}
-                        </Text>
-                        <Text className="text-gray-500">
-                          기한:{' '}
-                          {new Date(assignment.dueDate).toLocaleDateString()}
-                        </Text>
-                      </View>
-
-                      <Pressable
-                        className="bg-emerald-500 px-3 py-1 rounded-full shadow-sm"
-                        onPress={() => navigateToVerify(assignment.id)}
-                        disabled={isOfflineMode}
+              {/* 오프라인 모드 표시 */}
+              {isOfflineMode && (
+                <View 
+                  className="rounded-xl p-3 mb-6"
+                  style={{ backgroundColor: 'rgba(255, 200, 0, 0.15)' }}
+                >
+                  <View className="flex-row items-center">
+                    <MaterialIcons 
+                      name="wifi-off" 
+                      size={20} 
+                      color={Colors.light.secondary} 
+                      style={{ marginRight: 8 }}
+                    />
+                    <View>
+                      <Text 
+                        className="font-medium"
+                        style={{ color: Colors.light.text }}
                       >
-                        <Text className="text-white">인증하기</Text>
-                      </Pressable>
+                        오프라인 모드
+                      </Text>
+                      <Text
+                        className="text-sm"
+                        style={{ color: Colors.light.textSecondary }}
+                      >
+                        인터넷 연결이 복구되면 자동으로 동기화됩니다.
+                      </Text>
                     </View>
                   </View>
-                ))
+                </View>
               )}
+            </Animated.View>
 
-              {/* 스티커 정보 */}
-              <Animated.View
-                className="bg-emerald-50 rounded-xl p-4 mt-2 mb-4 border border-emerald-200 shadow-sm"
-                style={{
-                  opacity: animation.interpolate({
-                    inputRange: [0, 300],
-                    outputRange: [1, 0],
-                  }),
-                  transform: [
-                    {
-                      translateY: animation.interpolate({
-                        inputRange: [0, 300],
-                        outputRange: [0, 300],
-                      }),
-                    },
-                  ],
-                }}
-              >
-                <View className="flex-row items-center mb-2">
-                  <FontAwesome
-                    name="star"
-                    size={18}
-                    color="#10b981"
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text className="text-lg font-medium text-emerald-700">
-                    내 스티커
-                  </Text>
-                </View>
-
-                <View className="flex-row">
-                  {stickers && stickers.length > 0 ? (
-                    <>
-                      {stickers.slice(0, 2).map((sticker) => (
-                        <Image
-                          key={sticker.id}
-                          source={
-                            sticker.imageUrl
-                              ? { uri: sticker.imageUrl }
-                              : require('../../assets/images/react-logo.png')
-                          }
-                          style={{ width: 40, height: 40 }}
-                          contentFit="contain"
-                          className="mr-2"
-                        />
-                      ))}
-                      {stickers.length > 2 && (
-                        <View className="w-10 h-10 border-2 border-dashed border-emerald-300 rounded-full items-center justify-center">
-                          <Text className="text-emerald-600">
-                            +{stickers.length - 2}
-                          </Text>
-                        </View>
-                      )}
-                    </>
-                  ) : (
-                    <Text className="text-gray-500">
-                      아직 모은 스티커가 없어요.
-                    </Text>
-                  )}
-                </View>
-
-                <Text className="mt-2 text-emerald-800">
-                  {stats && stats.stickerCount > 0
-                    ? `${stats.stickerCount}개의 스티커를 모았어요!`
-                    : '약속을 완료하고 스티커를 모아보세요!'}
+            {isLoading ? (
+              <View className="items-center justify-center py-10">
+                <ActivityIndicator size="large" color={Colors.light.primary} />
+                <Text className="mt-3" style={{ color: Colors.light.textSecondary }}>
+                  정보를 불러오는 중...
                 </Text>
-
-                <Pressable
-                  className="bg-emerald-500 py-2 rounded-lg mt-3 shadow-sm"
-                  onPress={() => router.push('/(child)/rewards')}
+              </View>
+            ) : (
+              <>
+                {/* 요약 정보 카드 */}
+                <Animated.View 
+                  className="mb-6"
+                  style={{
+                    opacity: fadeAnim,
+                    transform: [{ translateY: slideAnim }],
+                  }}
                 >
-                  <Text className="text-white text-center">스티커 더 보기</Text>
-                </Pressable>
-              </Animated.View>
+                  <View 
+                    className="rounded-2xl p-5 border border-green-100 overflow-hidden"
+                    style={{ backgroundColor: 'rgba(88, 204, 2, 0.08)' }}
+                  >
+                    <View className="flex-row justify-between mb-4">
+                      <View>
+                        <Text className="text-lg font-bold mb-1" style={{ color: Colors.light.text }}>
+                          이번 주 미션
+                        </Text>
+                        <Text style={{ color: Colors.light.textSecondary }}>
+                          {pendingPromises ? pendingPromises.length : 0}개의 약속이 남았어요
+                        </Text>
+                      </View>
+                      
+                      <View 
+                        className="w-12 h-12 rounded-full items-center justify-center"
+                        style={{ backgroundColor: 'rgba(88, 204, 2, 0.15)' }}
+                      >
+                        <MaterialIcons name="assignment" size={24} color={Colors.light.primary} />
+                      </View>
+                    </View>
+                    
+                    {/* 진행 바 */}
+                    <View>
+                      <View className="flex-row justify-between mb-1.5">
+                        <Text className="text-xs font-medium" style={{ color: Colors.light.textSecondary }}>
+                          진행률
+                        </Text>
+                        <Text className="text-xs font-medium" style={{ color: Colors.light.primary }}>
+                          {stats && stats.totalPromises > 0 
+                            ? Math.round((stats.completedPromises / stats.totalPromises) * 100)
+                            : 0}%
+                        </Text>
+                      </View>
+                      <View className="h-2 bg-white rounded-full overflow-hidden">
+                        <View 
+                          className="h-full bg-green-500" 
+                          style={{ 
+                            width: `${stats && stats.totalPromises > 0 
+                              ? Math.round((stats.completedPromises / stats.totalPromises) * 100)
+                              : 0}%`,
+                          }}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                </Animated.View>
+                
+                {/* 스티커 정보 */}
+                <Animated.View 
+                  className="mb-6"
+                  style={{
+                    opacity: fadeAnim,
+                    transform: [{ translateY: slideAnim }],
+                  }}
+                >
+                  <View className="flex-row justify-between items-center mb-4">
+                    <View className="flex-row items-center">
+                      <MaterialIcons name="star" size={20} color={Colors.light.secondary} style={{ marginRight: 6 }} />
+                      <Text className="text-lg font-bold" style={{ color: Colors.light.text }}>
+                        내 스티커
+                      </Text>
+                    </View>
+                    
+                    <TouchableOpacity 
+                      className="flex-row items-center"
+                      onPress={() => router.push('/(child)/rewards')}
+                    >
+                      <Text 
+                        className="text-sm mr-1"
+                        style={{ color: Colors.light.primary }}
+                      >
+                        더 보기
+                      </Text>
+                      <MaterialIcons name="chevron-right" size={16} color={Colors.light.primary} />
+                    </TouchableOpacity>
+                  </View>
 
-              <Pressable
-                className="bg-emerald-500 py-3 rounded-xl mb-4 shadow-sm"
-                onPress={() => router.push('/(child)/promises')}
+                  <View 
+                    className="p-4 rounded-xl border border-gray-100"
+                    style={{ backgroundColor: 'white' }}
+                  >
+                    <View className="flex-row items-center">
+                      <View className="flex-row flex-1">
+                        {stickers && stickers.length > 0 ? (
+                          <>
+                            {stickers.slice(0, 3).map((sticker, index) => (
+                              <View 
+                                key={sticker.id} 
+                                style={{ 
+                                  marginLeft: index > 0 ? -10 : 0, 
+                                  zIndex: 3 - index,
+                                }}
+                              >
+                                <Image
+                                  source={
+                                    sticker.imageUrl
+                                      ? { uri: sticker.imageUrl }
+                                      : require('../../assets/images/react-logo.png')
+                                  }
+                                  style={{ width: 40, height: 40 }}
+                                  contentFit="contain"
+                                  className="rounded-full bg-yellow-50 border border-yellow-100"
+                                />
+                              </View>
+                            ))}
+                            {stickers.length > 3 && (
+                              <View 
+                                className="ml-1 px-2 py-0.5 rounded-full bg-yellow-50 border border-yellow-100"
+                                style={{ alignSelf: 'center' }}
+                              >
+                                <Text
+                                  className="text-xs"
+                                  style={{ color: Colors.light.secondary }}
+                                >
+                                  +{stickers.length - 3}
+                                </Text>
+                              </View>
+                            )}
+                          </>
+                        ) : (
+                          <Text style={{ color: Colors.light.textSecondary }}>
+                            아직 모은 스티커가 없어요
+                          </Text>
+                        )}
+                      </View>
+                      
+                      <View 
+                        className="px-3 py-1 rounded-lg"
+                        style={{ backgroundColor: 'rgba(255, 200, 0, 0.15)' }}
+                      >
+                        <Text 
+                          className="font-medium"
+                          style={{ color: Colors.light.secondary }}
+                        >
+                          {stats ? stats.stickerCount : 0}개 보유
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </Animated.View>
+                
+                {/* 약속 목록 헤더 */}
+                <Animated.View 
+                  className="flex-row justify-between items-center mb-3"
+                  style={{
+                    opacity: fadeAnim,
+                    transform: [{ translateY: slideAnim }],
+                  }}
+                >
+                  <View className="flex-row items-center">
+                    <MaterialIcons name="list-alt" size={20} color={Colors.light.text} style={{ marginRight: 6 }} />
+                    <Text className="text-lg font-bold" style={{ color: Colors.light.text }}>
+                      약속 목록
+                    </Text>
+                  </View>
+                  
+                  <TouchableOpacity 
+                    className="flex-row items-center"
+                    onPress={() => router.push('/(child)/promises')}
+                  >
+                    <Text 
+                      className="text-sm mr-1"
+                      style={{ color: Colors.light.primary }}
+                    >
+                      전체보기
+                    </Text>
+                    <MaterialIcons name="chevron-right" size={16} color={Colors.light.primary} />
+                  </TouchableOpacity>
+                </Animated.View>
+                
+                {/* 약속 그룹별 목록 */}
+                <Animated.View
+                  style={{
+                    opacity: fadeAnim,
+                    transform: [{ translateY: slideAnim }],
+                  }}
+                  
+                >
+                  {pendingPromises && pendingPromises.length > 0 ? (
+                    Object.entries(groupedPromises).map(([title, promises]) => (
+                      <PromiseGroup
+                        key={title}
+                        title={title}
+                        promises={promises}
+                        onPromisePress={navigateToVerify}
+                        isOfflineMode={isOfflineMode}
+                      />
+                    ))
+                  ) : (
+                    <View className="items-center justify-center py-8 px-4 ">
+                      <View 
+                        className="w-16 h-16 rounded-full mb-4 items-center justify-center"
+                        style={{ backgroundColor: 'rgba(88, 204, 2, 0.1)' }}
+                      >
+                        <MaterialIcons name="event-note" size={32} color={Colors.light.primary} />
+                      </View>
+                      <Text 
+                        className="text-lg font-bold text-center mb-2"
+                        style={{ color: Colors.light.text }}
+                      >
+                        아직 약속이 없어요
+                      </Text>
+                      <Text 
+                        className="text-center"
+                        style={{ color: Colors.light.textSecondary }}
+                      >
+                        부모님께 약속을 만들어 달라고 요청해보세요!
+                      </Text>
+                    </View>
+                  )}
+                </Animated.View>
+              </>
+            )}
+          </View>
+          
+          {/* 최하단 버튼 */}
+          <View className="">
+            <Animated.View
+              style={{
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              }}
+            >
+              <TouchableOpacity
+                className="py-3.5 rounded-xl active:opacity-90"
+                style={{ backgroundColor: Colors.light.primary }}
+                onPress={() => router.push('/(tabs)')}
               >
-                <Text className="text-white text-center">전체 약속 보기</Text>
-              </Pressable>
-            </>
-          )}
+                <Text className="text-white text-center font-bold">
+                  홈으로 가기
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
