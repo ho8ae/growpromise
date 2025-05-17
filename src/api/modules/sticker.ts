@@ -9,6 +9,7 @@ export interface StickerTemplate {
   category: string;
   imageUrl: string;
   createdAt: string;
+  color?: string;
 }
 
 // 스티커 타입

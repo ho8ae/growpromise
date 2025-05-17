@@ -46,6 +46,7 @@ export interface PromiseAssignment {
   status: PromiseStatus;
   verificationImage?: string;
   verificationTime?: string;
+  verificationDescription?: string;
   completedAt?: string;
   rejectionReason?: string;
   message?: string; // 추가: 인증 시 메시지
@@ -211,28 +212,28 @@ const promiseApi = {
   submitVerification: async (
     promiseAssignmentId: string,
     imageUri: string,
-    message?: string,
+    verificationDescription?: string, // 변경: message -> verificationDescription
   ): Promise<PromiseAssignment> => {
     try {
       // 이미지 파일로 FormData 생성
       const formData = new FormData();
       formData.append('promiseAssignmentId', promiseAssignmentId);
-
-      // 메시지가 있으면 추가
-      if (message) {
-        formData.append('message', message);
+  
+      // 설명이 있으면 추가
+      if (verificationDescription) {
+        formData.append('verificationDescription', verificationDescription); // 변경: message -> verificationDescription
       }
-
-      // 이미지 파일 준비 - 중요: 필드 이름을 'verificationImage'로 변경
+  
+      // 이미지 파일 준비
       const uriParts = imageUri.split('.');
       const fileType = uriParts[uriParts.length - 1];
-
+  
       formData.append('verificationImage', {
         uri: imageUri,
         name: `photo.${fileType}`,
         type: `image/${fileType}`,
       } as any);
-
+  
       const response = await apiClient.post<ApiResponse<PromiseAssignment>>(
         '/promises/verify',
         formData,
@@ -242,7 +243,7 @@ const promiseApi = {
           },
         },
       );
-
+  
       return response.data.data;
     } catch (error) {
       console.error('약속 인증 제출 오류:', error);
