@@ -591,7 +591,7 @@ export default function CreatePromiseScreen() {
                   {repeatOptions.map((option) => (
                     <Pressable
                       key={option.value}
-                      className={`flex-row items-center p-4 rounded-xl border ${
+                      className={`flex-row items-center p-4 rounded-xl border mb-2 ${
                         formData.repeatType === option.value
                           ? 'bg-emerald-50 border-emerald-200'
                           : 'bg-white border-gray-200'
