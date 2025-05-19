@@ -41,6 +41,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authApi.login(data);
+      
+      // AsyncStorage에 사용자 정보 저장
+      await AsyncStorage.setItem('auth_token', response.token);
+      await AsyncStorage.setItem('user_type', response.user.userType);
+      await AsyncStorage.setItem('user_id', response.user.id);
+      await AsyncStorage.setItem('username', response.user.username); // 추가된 부분
+      
       set({
         user: response.user,
         token: response.token,
@@ -97,6 +104,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await AsyncStorage.removeItem('auth_token');
       await AsyncStorage.removeItem('user_type');
       await AsyncStorage.removeItem('user_id');
+      await AsyncStorage.removeItem('username'); // 추가된 부분
       
       // 상태 완전 초기화
       set({
@@ -115,6 +123,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await AsyncStorage.removeItem('auth_token');
       await AsyncStorage.removeItem('user_type');
       await AsyncStorage.removeItem('user_id');
+      await AsyncStorage.removeItem('username'); // 추가된 부분
       
       set({
         user: null,
@@ -135,12 +144,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const token = await AsyncStorage.getItem('auth_token');
       const userType = await AsyncStorage.getItem('user_type');
       const userId = await AsyncStorage.getItem('user_id');
+      const username = await AsyncStorage.getItem('username'); // 추가된 부분
       
-      console.log('확인된 인증 상태:', { token, userType, userId });
+      console.log('확인된 인증 상태:', { token, userType, userId, username });
       
       // 토큰이 있고 유효한 경우에만 인증된 것으로 처리
       if (token && userType && userId) {
-        // API로 토큰 유효성 검사 (선택적으로 추가 가능)
+        // API로 토큰 유효성 검사
         const isValid = await authApi.isAuthenticated();
         
         if (isValid) {
@@ -149,9 +159,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             token,
             user: {
               id: userId,
-              username: '',  // 실제 앱에서는 서버에서 사용자 정보를 가져와야 합니다
+              username: username || '',  // 수정된 부분
               userType: userType as 'PARENT' | 'CHILD',
-              profileId: ''  // 실제 앱에서는 서버에서 프로필 ID를 가져와야 합니다
+              profileId: ''
             },
             isAuthChecked: true
           });
@@ -160,6 +170,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           await AsyncStorage.removeItem('auth_token');
           await AsyncStorage.removeItem('user_type');
           await AsyncStorage.removeItem('user_id');
+          await AsyncStorage.removeItem('username'); // 추가된 부분
           set({ 
             isAuthenticated: false, 
             user: null,

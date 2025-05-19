@@ -1,28 +1,26 @@
+import {
+  Ionicons,
+  MaterialIcons
+} from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Pressable, 
-  ScrollView, 
-  Switch, 
-  Text, 
-  View, 
-  Alert, 
+import React, { useEffect, useRef, useState } from 'react';
+import {
   ActivityIndicator,
+  Alert,
   Animated,
-  StyleSheet
+  Pressable,
+  ScrollView,
+  Switch,
+  Text,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  MaterialCommunityIcons, 
-  MaterialIcons, 
-  FontAwesome5 
-} from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { useAuthStore } from '../../stores/authStore';
-import { useQuery } from '@tanstack/react-query';
 import api from '../../api';
 import Colors from '../../constants/Colors';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -43,12 +41,12 @@ export default function ProfileScreen() {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 500,
+        duration: 300,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 600,
+        duration: 300,
         useNativeDriver: true,
       }),
     ]).start();
@@ -67,7 +65,10 @@ export default function ProfileScreen() {
         userType: ''
       });
     }
+    
   }, [isAuthenticated, user]);
+
+  
 
   // 연결된 계정 정보 가져오기 (부모인 경우 자녀 목록, 자녀인 경우 부모 정보)
   const { 
@@ -94,16 +95,12 @@ export default function ProfileScreen() {
     enabled: isAuthenticated && !!user,
   });
 
+
+
   const handleLogout = async () => {
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      
-      
-      // 로그아웃 처리
       await logout();
-
-      // 두번 처리 되는 로직 나중에 수정 필요
       router.replace('/(auth)/login');
     } catch (error) {
       console.error('로그아웃 오류:', error);
@@ -164,338 +161,381 @@ export default function ProfileScreen() {
       setSoundEffects(prev => !prev);
     }
   };
+  
+  
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <SafeAreaView className="flex-1 bg-white">
       <ScrollView 
         className="flex-1" 
-        contentContainerStyle={{ paddingBottom: 80 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
         <View className="px-5 pt-4">
+          {/* 헤더 */}
           <Animated.View 
             style={{ 
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }]
             }}
+            className="mb-6"
           >
-            <Text className="text-3xl font-bold text-center my-5 text-emerald-700">설정</Text>
+            <Text className="text-2xl font-bold" style={{ color: Colors.light.text }}>설정</Text>
           </Animated.View>
 
+          {/* 프로필 섹션 */}
           {isAuthenticated ? (
             <Animated.View 
-              className="items-center py-6 mb-5 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-2xl border border-emerald-200 shadow-sm"
               style={{ 
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }]
               }}
+              className="mb-6"
             >
-              <View className="bg-white p-1 rounded-full border-2 border-emerald-300 shadow-md mb-3">
-                <Image
-                  source={require('../../assets/images/react-logo.png')}
-                  style={{ width: 90, height: 90 }}
-                  contentFit="contain"
-                  className="rounded-full"
-                />
+              <View className="flex-row items-center">
+                <View className="border-2 rounded-full p-0.5 mr-4" 
+                  style={{ borderColor: user?.userType === 'PARENT' ? Colors.light.tertiary : Colors.light.secondary }}>
+                  <Image
+                    source={require('../../assets/images/react-logo.png')}
+                    style={{ width: 60, height: 60 }}
+                    contentFit="cover"
+                    className="rounded-full"
+                  />
+                </View>
+                <View>
+                  <Text className="text-xl font-bold" style={{ color: Colors.light.text }}>
+                    {userProfile.name}
+                  </Text>
+                  <View className="flex-row items-center mt-1">
+                    <View className="px-2 py-0.5 rounded-full mr-2" 
+                      style={{ backgroundColor: user?.userType === 'PARENT' ? `${Colors.light.tertiary}15` : `${Colors.light.secondary}15` }}>
+                      <Text className="text-xs font-medium" 
+                        style={{ color: user?.userType === 'PARENT' ? Colors.light.tertiary : Colors.light.secondary }}>
+                        {userProfile.userType} 계정
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => handleSettingPress('프로필 정보')}
+                    >
+                      <Text className="text-xs" style={{ color: Colors.light.primary }}>
+                        프로필 수정
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
               </View>
-              <Text className="text-2xl font-bold text-emerald-700">{userProfile.name}</Text>
-              <View className="bg-emerald-100 px-4 py-1 rounded-full mt-2">
-                <Text className="text-emerald-700 font-medium">{userProfile.userType} 계정</Text>
-              </View>
-              
-              <Pressable
-                className="bg-emerald-100 mt-4 px-4 py-2 rounded-lg flex-row items-center active:opacity-80"
-                onPress={() => handleSettingPress('프로필 정보')}
-              >
-                <MaterialIcons name="edit" size={16} color={Colors.light.leafGreen} style={{ marginRight: 4 }} />
-                <Text className="text-emerald-700 font-medium">프로필 수정</Text>
-              </Pressable>
             </Animated.View>
           ) : (
             <Animated.View 
-              className="items-center py-6 mb-5 bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-2xl p-5 border border-amber-200 shadow-sm"
               style={{ 
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }]
               }}
+              className="mb-6 p-4 rounded-xl"
+              // style={{ backgroundColor: '#F5F5F5' }}
             >
-              <View className="bg-amber-100 p-3 rounded-full shadow-sm mb-3">
-                <FontAwesome5 name="user-circle" size={40} color="#92400e" />
+              <View className="flex-row items-center mb-3">
+                <View className="bg-gray-200 rounded-full p-2 mr-3">
+                  <Ionicons name="person-outline" size={24} color="#777777" />
+                </View>
+                <Text className="text-lg font-medium" style={{ color: Colors.light.text }}>
+                  로그인하지 않았습니다
+                </Text>
               </View>
-              <Text className="text-xl font-bold text-amber-800 mb-2">로그인하지 않았습니다</Text>
-              <Text className="text-amber-700 text-center mb-4">
-                모든 기능을 사용하려면 로그인하세요.
+              <Text className="text-sm mb-4" style={{ color: Colors.light.textSecondary }}>
+                모든 기능을 사용하려면 로그인이 필요합니다.
               </Text>
               <Pressable
-                className="bg-gradient-to-r from-amber-500 to-amber-400 py-3 px-6 rounded-xl shadow-sm active:opacity-90 w-full"
+                className="py-2.5 rounded-lg active:opacity-90"
+                style={{ backgroundColor: Colors.light.primary }}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   router.navigate('/(auth)/login');
                 }}
               >
-                <Text className="text-white font-bold text-center">로그인하기</Text>
+                <Text className="text-white font-medium text-center">로그인하기</Text>
               </Pressable>
             </Animated.View>
           )}
 
+          {/* 구분선 */}
+          <Animated.View 
+            style={{ 
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+            className="my-4 border-t border-gray-100"
+          />
+
+          {/* 계정 섹션 */}
           {isAuthenticated && (
             <Animated.View 
-              className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl p-5 mb-5 border border-blue-200 shadow-sm"
-              style={{
+              style={{ 
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }]
               }}
+              className="mb-6"
             >
-              <View className="flex-row items-center mb-4">
-                <View className="bg-blue-200 p-3 rounded-full mr-3 shadow-sm">
-                  <FontAwesome5 name="user-cog" size={16} color="#3b82f6" />
-                </View>
-                <Text className="text-xl font-bold text-blue-700">계정 설정</Text>
-              </View>
-
-              <Pressable
-                className="flex-row justify-between items-center py-4 border-b border-gray-200 active:bg-blue-50 rounded-lg px-2"
-                onPress={() => handleSettingPress('프로필 정보')}
-              >
-                <View className="flex-row items-center">
-                  <FontAwesome5 name="user-edit" size={16} color="#3b82f6" style={{ width: 24 }} />
-                  <Text className="text-lg ml-3 text-gray-700">프로필 정보 변경</Text>
-                </View>
-                <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
-              </Pressable>
-
-              <Pressable
-                className="flex-row justify-between items-center py-4 border-b border-gray-200 active:bg-blue-50 rounded-lg px-2"
-                onPress={() => handleSettingPress('비밀번호')}
-              >
-                <View className="flex-row items-center">
-                  <FontAwesome5 name="lock" size={16} color="#3b82f6" style={{ width: 24 }} />
-                  <Text className="text-lg ml-3 text-gray-700">비밀번호 변경</Text>
-                </View>
-                <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
-              </Pressable>
-
-              {/* 연결된 계정 관리 섹션 */}
-              <View>
+              <Text className="text-base font-bold mb-3 px-1" style={{ color: Colors.light.text }}>
+                계정
+              </Text>
+              
+              <View className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <Pressable
-                  className="flex-row justify-between items-center py-4 border-b border-gray-200 active:bg-blue-50 rounded-lg px-2"
-                  onPress={() => handleSettingPress('연결된 계정')}
+                  className="flex-row items-center justify-between p-4 active:bg-gray-50"
+                  onPress={() => handleSettingPress('프로필 정보')}
                 >
                   <View className="flex-row items-center">
-                    <FontAwesome5 name="link" size={16} color="#3b82f6" style={{ width: 24 }} />
+                    <Ionicons name="person-outline" size={18} color={Colors.light.text} className="mr-3" />
+                    <Text className="text-base" style={{ color: Colors.light.text }}>프로필 정보 변경</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
+                </Pressable>
+                
+                <View className="h-px bg-gray-100 mx-4" />
+                
+                <Pressable
+                  className="flex-row items-center justify-between p-4 active:bg-gray-50"
+                  onPress={() => handleSettingPress('비밀번호')}
+                >
+                  <View className="flex-row items-center">
+                    <Ionicons name="lock-closed-outline" size={18} color={Colors.light.text} className="mr-3" />
+                    <Text className="text-base" style={{ color: Colors.light.text }}>비밀번호 변경</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
+                </Pressable>
+                
+                <View className="h-px bg-gray-100 mx-4" />
+                
+                <Pressable
+                  className="flex-row items-center justify-between p-4 active:bg-gray-50"
+                  onPress={() => handleSettingPress('연결된 계정')}
+                >
+                  <View className="flex-row items-center flex-1">
+                    <Ionicons name="link-outline" size={18} color={Colors.light.text} className="mr-3" />
                     <View className="flex-row items-center flex-1">
-                      <Text className="text-lg ml-3 text-gray-700">
+                      <Text className="text-base" style={{ color: Colors.light.text }}>
                         {user?.userType === 'PARENT' ? '자녀 계정 연결' : '부모님 계정 연결'}
                       </Text>
                       
                       {/* 연결 상태 표시 */}
                       {isLoadingConnections ? (
-                        <ActivityIndicator size="small" color="#10b981" style={{ marginLeft: 8 }} />
+                        <ActivityIndicator size="small" color={Colors.light.primary} style={{ marginLeft: 8 }} />
                       ) : (
                         connectedAccounts && 
                         (Array.isArray(connectedAccounts) ? 
                           connectedAccounts.length > 0 : 
                           connectedAccounts !== null) && (
-                          <View className="ml-2 px-2 py-1 bg-emerald-100 rounded-full">
-                            <Text className="text-xs font-medium text-emerald-700">연결됨</Text>
+                          <View className="ml-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: `${Colors.light.primary}15` }}>
+                            <Text className="text-xs font-medium" style={{ color: Colors.light.primary }}>
+                              연결됨
+                            </Text>
                           </View>
                         )
                       )}
                     </View>
                   </View>
-                  <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
+                  <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
                 </Pressable>
                 
                 {/* 연결된 계정 정보 표시 */}
-                {user?.userType === 'PARENT' ? (
-                  // 부모인 경우 자녀 목록 표시
-                  <>
-                    {Array.isArray(connectedAccounts) && connectedAccounts.length > 0 && (
-                      <View className="mt-2 ml-7 bg-blue-50 p-3 rounded-lg">
-                        <Text className="text-sm font-medium text-blue-700 mb-2">연결된 자녀</Text>
-                        {connectedAccounts.map(child => (
-                          <View key={child.id} className="flex-row items-center py-2 border-b border-blue-100">
-                            <View className="bg-blue-100 p-2 rounded-full mr-2">
-                              <MaterialCommunityIcons name="account-child" size={18} color="#3b82f6" />
-                            </View>
-                            <Text className="text-gray-700 font-medium">{child.id}</Text>
+                {(user?.userType === 'PARENT' && Array.isArray(connectedAccounts) && connectedAccounts.length > 0) || 
+                (user?.userType === 'CHILD' && connectedAccounts && !Array.isArray(connectedAccounts)) ? (
+                  <View className="mx-4 my-2 p-3 rounded-lg" style={{ backgroundColor: '#F8F8F8' }}>
+                    <Text className="text-xs font-medium mb-2" style={{ color: Colors.light.textSecondary }}>
+                      {user?.userType === 'PARENT' ? '연결된 자녀' : '연결된 부모님'}
+                    </Text>
+                    
+                    {user?.userType === 'PARENT' && Array.isArray(connectedAccounts) ? (
+                      connectedAccounts.map((child, index) => (
+                        <View key={child.id} className={`flex-row items-center py-2 ${index < connectedAccounts.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                          <View className="p-1 rounded-full mr-2" style={{ backgroundColor: '#EFEFEF' }}>
+                            <Ionicons name="person" size={16} color={Colors.light.secondary} />
                           </View>
-                        ))}
-                      </View>
-                    )}
-                  </>
-                ) : (
-                  // 자녀인 경우 부모 정보 표시
-                  <>
-                    {connectedAccounts && !Array.isArray(connectedAccounts) && (
-                      <View className="mt-2 ml-7 bg-blue-50 p-3 rounded-lg">
-                        <Text className="text-sm font-medium text-blue-700 mb-2">연결된 부모님</Text>
-                        <View className="flex-row items-center py-2">
-                          <View className="bg-blue-100 p-2 rounded-full mr-2">
-                            <MaterialCommunityIcons name="account-tie" size={18} color="#3b82f6" />
-                          </View>
-                          <Text className="text-gray-700 font-medium">{connectedAccounts}</Text>
+                          <Text style={{ color: Colors.light.text }}>{child.id}</Text>
                         </View>
+                      ))
+                    ) : (
+                      <View className="flex-row items-center py-2">
+                        <View className="p-1 rounded-full mr-2" style={{ backgroundColor: '#EFEFEF' }}>
+                          <Ionicons name="person" size={16} color={Colors.light.tertiary} />
+                        </View>
+                        {/* <Text style={{ color: Colors.light.text }}>{connectedAccounts?.userId}</Text> */}
                       </View>
                     )}
-                  </>
-                )}
-
-                {/* 계정 연결 안내 메시지 */}
-                {(user?.userType === 'PARENT' && (!connectedAccounts || !Array.isArray(connectedAccounts) || connectedAccounts.length === 0)) ||
-                (user?.userType === 'CHILD' && (!connectedAccounts || connectedAccounts === null)) ? (
-                  <View className="mt-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                    <Text className="text-amber-800 text-sm mb-2 font-medium">
-                      {user?.userType === 'PARENT' 
-                        ? '아직 연결된 자녀 계정이 없습니다'
-                        : '아직 부모님 계정과 연결되지 않았습니다'}
-                    </Text>
-                    <Text className="text-amber-700 text-sm mb-3">
-                      {user?.userType === 'PARENT' 
-                        ? '자녀 계정을 연결하면 약속을 관리할 수 있어요.'
-                        : '부모님 계정과 연결하면 약속을 인증하고 스티커를 모을 수 있어요.'}
-                    </Text>
-                    <Pressable
-                      className="bg-gradient-to-r from-amber-500 to-amber-400 py-2.5 rounded-lg shadow-sm active:opacity-90"
-                      onPress={handleConnectedAccounts}
-                    >
-                      <Text className="text-white text-center font-medium">
-                        {user?.userType === 'PARENT' ? '자녀 계정 연결하기' : '부모님 계정 연결하기'}
-                      </Text>
-                    </Pressable>
                   </View>
                 ) : null}
               </View>
+              
+              {/* 계정 연결 안내 메시지 */}
+              {(user?.userType === 'PARENT' && (!connectedAccounts || !Array.isArray(connectedAccounts) || connectedAccounts.length === 0)) ||
+              (user?.userType === 'CHILD' && (!connectedAccounts || connectedAccounts === null)) ? (
+                <View className="mt-3 p-4 rounded-lg" style={{ backgroundColor: '#F8F8F8' }}>
+                  <Text className="text-sm font-medium mb-2" style={{ color: Colors.light.text }}>
+                    {user?.userType === 'PARENT' 
+                      ? '아직 연결된 자녀 계정이 없습니다'
+                      : '아직 부모님 계정과 연결되지 않았습니다'}
+                  </Text>
+                  <Text className="text-sm mb-3" style={{ color: Colors.light.textSecondary }}>
+                    {user?.userType === 'PARENT' 
+                      ? '자녀 계정을 연결하면 약속을 관리할 수 있어요.'
+                      : '부모님 계정과 연결하면 약속을 인증하고 스티커를 모을 수 있어요.'}
+                  </Text>
+                  <Pressable
+                    className="py-2.5 rounded-lg active:opacity-90"
+                    style={{ backgroundColor: Colors.light.primary }}
+                    onPress={handleConnectedAccounts}
+                  >
+                    <Text className="text-white text-center font-medium">
+                      {user?.userType === 'PARENT' ? '자녀 계정 연결하기' : '부모님 계정 연결하기'}
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
             </Animated.View>
           )}
 
+          {/* 앱 설정 섹션 */}
           <Animated.View 
-            className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-2xl p-5 mb-5 border border-emerald-200 shadow-sm"
-            style={{
+            style={{ 
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }]
             }}
+            className="mb-6"
           >
-            <View className="flex-row items-center mb-4">
-              <View className="bg-emerald-200 p-3 rounded-full mr-3 shadow-sm">
-                <FontAwesome5 name="sliders-h" size={16} color={Colors.light.leafGreen} />
+            <Text className="text-base font-bold mb-3 px-1" style={{ color: Colors.light.text }}>
+              앱 설정
+            </Text>
+            
+            <View className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <View className="flex-row items-center justify-between p-4">
+                <View className="flex-row items-center">
+                  <Ionicons name="notifications-outline" size={18} color={Colors.light.text} className="mr-3" />
+                  <Text className="text-base" style={{ color: Colors.light.text }}>알림</Text>
+                </View>
+                <Switch
+                  value={notifications}
+                  onValueChange={() => handleSwitchToggle('notifications')}
+                  trackColor={{ false: '#E5E5E5', true: `${Colors.light.primary}80` }}
+                  thumbColor={notifications ? Colors.light.primary : '#FFFFFF'}
+                  ios_backgroundColor="#E5E5E5"
+                />
               </View>
-              <Text className="text-xl font-bold text-emerald-700">앱 설정</Text>
+              
+              <View className="h-px bg-gray-100 mx-4" />
+              
+              <View className="flex-row items-center justify-between p-4">
+                <View className="flex-row items-center">
+                  <Ionicons name="volume-medium-outline" size={18} color={Colors.light.text} className="mr-3" />
+                  <Text className="text-base" style={{ color: Colors.light.text }}>효과음</Text>
+                </View>
+                <Switch
+                  value={soundEffects}
+                  onValueChange={() => handleSwitchToggle('sound')}
+                  trackColor={{ false: '#E5E5E5', true: `${Colors.light.primary}80` }}
+                  thumbColor={soundEffects ? Colors.light.primary : '#FFFFFF'}
+                  ios_backgroundColor="#E5E5E5"
+                />
+              </View>
+              
+              <View className="h-px bg-gray-100 mx-4" />
+              
+              <Pressable
+                className="flex-row items-center justify-between p-4 active:bg-gray-50"
+                onPress={() => handleSettingPress('테마')}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="color-palette-outline" size={18} color={Colors.light.text} className="mr-3" />
+                  <Text className="text-base" style={{ color: Colors.light.text }}>테마 설정</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
+              </Pressable>
             </View>
-
-            <View className="flex-row justify-between items-center py-4 border-b border-gray-200">
-              <View className="flex-row items-center">
-                <FontAwesome5 name="bell" size={16} color={Colors.light.leafGreen} style={{ width: 24 }} />
-                <Text className="text-lg ml-3 text-gray-700">알림</Text>
-              </View>
-              <Switch
-                value={notifications}
-                onValueChange={() => handleSwitchToggle('notifications')}
-                trackColor={{ false: '#d1d5db', true: Colors.light.leafGreen }}
-                thumbColor={notifications ? '#ffffff' : '#f4f4f5'}
-                ios_backgroundColor="#d1d5db"
-              />
-            </View>
-
-            <View className="flex-row justify-between items-center py-4 border-b border-gray-200">
-              <View className="flex-row items-center">
-                <FontAwesome5 name="volume-up" size={16} color={Colors.light.leafGreen} style={{ width: 24 }} />
-                <Text className="text-lg ml-3 text-gray-700">효과음</Text>
-              </View>
-              <Switch
-                value={soundEffects}
-                onValueChange={() => handleSwitchToggle('sound')}
-                trackColor={{ false: '#d1d5db', true: Colors.light.leafGreen }}
-                thumbColor={soundEffects ? '#ffffff' : '#f4f4f5'}
-                ios_backgroundColor="#d1d5db"
-              />
-            </View>
-
-            <Pressable
-              className="flex-row justify-between items-center py-4 active:bg-emerald-50 rounded-lg px-2"
-              onPress={() => handleSettingPress('테마')}
-            >
-              <View className="flex-row items-center">
-                <FontAwesome5 name="palette" size={16} color={Colors.light.leafGreen} style={{ width: 24 }} />
-                <Text className="text-lg ml-3 text-gray-700">테마 설정</Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
-            </Pressable>
           </Animated.View>
 
+          {/* 지원 섹션 */}
           <Animated.View 
-            className="bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-2xl p-5 mb-5 border border-purple-200 shadow-sm"
-            style={{
+            style={{ 
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }]
             }}
+            className="mb-6"
           >
-            <View className="flex-row items-center mb-4">
-              <View className="bg-purple-200 p-3 rounded-full mr-3 shadow-sm">
-                <FontAwesome5 name="question-circle" size={16} color="#8b5cf6" />
-              </View>
-              <Text className="text-xl font-bold text-purple-700">지원</Text>
+            <Text className="text-base font-bold mb-3 px-1" style={{ color: Colors.light.text }}>
+              지원
+            </Text>
+            
+            <View className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <Pressable
+                className="flex-row items-center justify-between p-4 active:bg-gray-50"
+                onPress={() => handleSettingPress('도움말')}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="help-circle-outline" size={18} color={Colors.light.text} className="mr-3" />
+                  <Text className="text-base" style={{ color: Colors.light.text }}>도움말</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
+              </Pressable>
+              
+              <View className="h-px bg-gray-100 mx-4" />
+              
+              <Pressable
+                className="flex-row items-center justify-between p-4 active:bg-gray-50"
+                onPress={() => handleSettingPress('문의하기')}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="mail-outline" size={18} color={Colors.light.text} className="mr-3" />
+                  <Text className="text-base" style={{ color: Colors.light.text }}>문의하기</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
+              </Pressable>
+              
+              <View className="h-px bg-gray-100 mx-4" />
+              
+              <Pressable
+                className="flex-row items-center justify-between p-4 active:bg-gray-50"
+                onPress={() => handleSettingPress('앱 정보')}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="information-circle-outline" size={18} color={Colors.light.text} className="mr-3" />
+                  <Text className="text-base" style={{ color: Colors.light.text }}>앱 정보</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
+              </Pressable>
             </View>
-
-            <Pressable
-              className="flex-row justify-between items-center py-4 border-b border-gray-200 active:bg-purple-50 rounded-lg px-2"
-              onPress={() => handleSettingPress('도움말')}
-            >
-              <View className="flex-row items-center">
-                <FontAwesome5 name="info-circle" size={16} color="#8b5cf6" style={{ width: 24 }} />
-                <Text className="text-lg ml-3 text-gray-700">도움말</Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
-            </Pressable>
-
-            <Pressable
-              className="flex-row justify-between items-center py-4 border-b border-gray-200 active:bg-purple-50 rounded-lg px-2"
-              onPress={() => handleSettingPress('문의하기')}
-            >
-              <View className="flex-row items-center">
-                <FontAwesome5 name="envelope" size={16} color="#8b5cf6" style={{ width: 24 }} />
-                <Text className="text-lg ml-3 text-gray-700">문의하기</Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
-            </Pressable>
-
-            <Pressable
-              className="flex-row justify-between items-center py-4 active:bg-purple-50 rounded-lg px-2"
-              onPress={() => handleSettingPress('앱 정보')}
-            >
-              <View className="flex-row items-center">
-                <FontAwesome5 name="mobile-alt" size={16} color="#8b5cf6" style={{ width: 24 }} />
-                <Text className="text-lg ml-3 text-gray-700">앱 정보</Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
-            </Pressable>
           </Animated.View>
 
+          {/* 로그아웃 버튼 */}
           {isAuthenticated && (
             <Animated.View
               style={{
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }]
               }}
+              className="mt-4 mb-6"
             >
               <Pressable
-                className="bg-red-400 py-3.5 rounded-2xl mb-6 shadow-sm active:opacity-90"
+                className="py-3 rounded-lg active:opacity-90 border border-gray-200"
                 onPress={handleLogout}
               >
-                <Text className="text-white text-center font-bold">로그아웃</Text>
+                <Text className="text-center font-medium" style={{ color: Colors.light.error }}>
+                  로그아웃
+                </Text>
               </Pressable>
             </Animated.View>
           )}
           
           {/* 앱 버전 정보 */}
           <Animated.View 
-            className="items-center mb-10"
+            className="items-center mb-8"
             style={{
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }]
             }}
           >
-            <Text className="text-gray-400 text-sm">쑥쑥약속 v1.0.0</Text>
+            <Text className="text-xs" style={{ color: Colors.light.textSecondary }}>
+              쑥쑥약속 v1.0.0
+            </Text>
           </Animated.View>
         </View>
       </ScrollView>
