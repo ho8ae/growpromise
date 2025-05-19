@@ -1,12 +1,7 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
-// FontAwesome5 대신 '@expo/vector-icons'에서 직접 Feather 아이콘을 가져옵니다
-import { AntDesign } from '@expo/vector-icons';
-
-// 색상을 직접 상수로 정의
-const COLORS = {
-  leafGreen: '#10b981',
-};
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import Colors from '../../constants/Colors';
 
 interface CalendarHeaderProps {
   currentYearMonth: {
@@ -23,30 +18,49 @@ const CalendarHeader = ({
   goToNextMonth,
 }: CalendarHeaderProps) => {
   return (
-    <View className="flex-row items-center justify-between mb-5 mx-2">
+    <View className="flex-row items-center justify-between mb-5 px-4">
       <Pressable
-        className="bg-white p-3 rounded-full shadow-sm active:bg-gray-100"
+        className="p-2.5 rounded-full active:bg-gray-100 bg-white shadow"
+        style={styles.navButton}
         onPress={goToPreviousMonth}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <AntDesign name="leftsquareo" size={24} color={COLORS.leafGreen} />
+        <MaterialIcons name="chevron-left" size={24} color={Colors.light.primary} />
       </Pressable>
 
-      <View className="bg-emerald-50 px-6 py-2 rounded-full border border-emerald-200">
+      <View className="bg-white px-6 py-2.5 rounded-full shadow" style={styles.monthIndicator}>
         <Text className="text-xl font-bold text-emerald-700">
           {currentYearMonth.year}년 {currentYearMonth.month}월
         </Text>
       </View>
 
       <Pressable
-        className="bg-white p-3 rounded-full shadow-sm active:bg-gray-100"
+        className="p-2.5 rounded-full active:bg-gray-100 bg-white shadow"
+        style={styles.navButton}
         onPress={goToNextMonth}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <AntDesign name="rightsquareo" size={24} color={COLORS.leafGreen} />
+        <MaterialIcons name="chevron-right" size={24} color={Colors.light.primary} />
       </Pressable>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  navButton: {
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  monthIndicator: {
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  }
+});
 
 export default CalendarHeader;

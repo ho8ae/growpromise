@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import Colors from '../../constants/Colors';
 
 // 타입 정의
 type YearMonth = {
@@ -101,13 +103,12 @@ function CalendarBody(props: CalendarBodyProps) {
   // 날짜 셀 렌더링 함수
   const renderDayCell = (day: number | null, dayIndex: number) => {
     if (!day) {
-      return <View key={`empty-${dayIndex}`} className="flex-1 aspect-square bg-gray-50" />;
+      return <View key={`empty-${dayIndex}`} className="aspect-square bg-gray-50/30" style={styles.dayCell} />;
     }
     
     try {
       const status = getPromiseCompletionStatus(day);
       const isCurrentDay = DateUtils.isToday(currentYearMonth.year, currentYearMonth.month, day);
-      const todayStyle = isCurrentDay ? 'bg-emerald-50' : 'bg-white';
       
       // 약속이 있는 날 표시 스타일
       const hasPromises = hasPromisesOnDate(day);
@@ -117,37 +118,39 @@ function CalendarBody(props: CalendarBodyProps) {
       return (
         <Pressable
           key={`day-${day}`}
-          className={`flex-1 aspect-square border-t border-r border-emerald-100 ${todayStyle} active:bg-emerald-50`}
+          className={`aspect-square ${isCurrentDay ? 'bg-emerald-50' : 'bg-white'} active:bg-emerald-50`}
+          style={styles.dayCell}
           onPress={() => handleDateSelect(day)}
         >
           <View className="flex-1 p-1">
             <Text
-              className={`text-right pr-1 pt-1 ${
+              className={`text-center py-1 ${
                 dayIndex === 0
                   ? 'text-red-500'
                   : dayIndex === 6
                   ? 'text-blue-500'
                   : 'text-gray-700'
-              } ${hasPromises ? 'font-bold' : ''} ${
-                isCurrentDay ? 'font-bold' : ''
-              }`}
+              } ${isCurrentDay ? 'font-bold' : ''}`}
+              style={styles.dayText}
             >
               {day}
             </Text>
             
             {hasPromises && (
-              <View className="flex-1 items-center justify-center">
-                <View className={`h-6 w-8 rounded-full items-center justify-center shadow-sm
-                  ${allCompleted 
-                    ? 'bg-emerald-400' 
-                    : hasIncomplete
-                      ? 'bg-amber-400'
-                      : 'bg-gray-300'}`}
-                >
-                  <Text className="text-xs font-bold text-white">
-                    {status.completed}/{status.total}
-                  </Text>
-                </View>
+              <View className="flex-1 items-center justify-center mt-1">
+                {allCompleted ? (
+                  <View className="h-6 w-6 rounded-full items-center justify-center bg-emerald-500">
+                    <MaterialIcons name="check" size={14} color="#ffffff" />
+                  </View>
+                ) : hasIncomplete ? (
+                  <View className="h-5 w-5 items-center justify-center">
+                    <Text className="text-xs font-bold text-amber-500">
+                      {status.completed}/{status.total}
+                    </Text>
+                  </View>
+                ) : (
+                  <View className="h-2 w-2 rounded-full bg-amber-400 mt-1" />
+                )}
               </View>
             )}
           </View>
@@ -158,10 +161,11 @@ function CalendarBody(props: CalendarBodyProps) {
       return (
         <Pressable
           key={`day-${day}`}
-          className="flex-1 aspect-square border-t border-r border-emerald-100 bg-white"
+          className="aspect-square bg-white"
+          style={styles.dayCell}
           onPress={() => handleDateSelect(day)}
         >
-          <Text className="text-right pr-1 pt-1 text-gray-700">{day}</Text>
+          <Text className="text-center py-1 text-gray-700">{day}</Text>
         </Pressable>
       );
     }
@@ -170,7 +174,7 @@ function CalendarBody(props: CalendarBodyProps) {
   // 달력 데이터가 없거나 오류 발생 시 기본 출력
   if (!calendarData || calendarData.length === 0) {
     return (
-      <View className="border border-emerald-200 rounded-2xl p-4 mb-6 bg-white shadow-sm">
+      <View className="rounded-2xl p-4 mb-6 bg-white">
         <Text className="text-center text-gray-500">달력을 불러올 수 없습니다.</Text>
       </View>
     );
@@ -179,9 +183,9 @@ function CalendarBody(props: CalendarBodyProps) {
   return (
     <>
       {/* 요일 헤더 */}
-      <View className="flex-row bg-emerald-400 rounded-t-2xl shadow-sm">
+      <View className="flex-row bg-emerald-500 rounded-t-xl">
         {WEEKDAYS.map((day, index) => (
-          <View key={`weekday-${index}`} className="flex-1 py-3 items-center">
+          <View key={`weekday-${index}`} className="flex-1 py-2.5 items-center">
             <Text className="font-bold text-white">
               {day}
             </Text>
@@ -190,9 +194,9 @@ function CalendarBody(props: CalendarBodyProps) {
       </View>
       
       {/* 달력 본문 */}
-      <View className="border border-emerald-200 rounded-b-2xl overflow-hidden mb-6 shadow-sm">
+      <View className="overflow-hidden rounded-b-xl">
         {calendarData.map((week, weekIndex) => (
-          <View key={`week-${weekIndex}`} className="flex-row">
+          <View key={`week-${weekIndex}`} className="flex-row" style={styles.weekRow}>
             {week.map((day, dayIndex) => renderDayCell(day, dayIndex))}
           </View>
         ))}
@@ -201,4 +205,20 @@ function CalendarBody(props: CalendarBodyProps) {
   );
 }
 
-export default React.memo(CalendarBody);
+const styles = StyleSheet.create({
+  dayCell: {
+    flex: 1,
+    borderWidth: 0.5,
+    borderColor: '#e5e7eb',
+  },
+  dayText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  weekRow: {
+    borderBottomWidth: 0,
+    borderBottomColor: '#e5e7eb',
+  }
+});
+
+export default CalendarBody;
