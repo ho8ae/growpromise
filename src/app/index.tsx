@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, Easing } from 'react-native';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Colors from '../constants/Colors';
@@ -10,6 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 
 export default function SplashScreen() {
   const router = useRouter();
+  const { fromLogout } = useLocalSearchParams();
   const logoScale = useRef(new Animated.Value(0.5)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const textOpacity = useRef(new Animated.Value(0)).current;
@@ -38,8 +39,10 @@ export default function SplashScreen() {
       }),
     ]).start();
     
-    // 일정 시간 후 다음 화면으로 이동
-    checkAuthAndNavigate();
+    // 로그아웃에서 온 게 아니라면 자동 네비게이션
+    if (!fromLogout) {
+      checkAuthAndNavigate();
+    }
   }, []);
   
   const checkAuthAndNavigate = async () => {
@@ -47,19 +50,22 @@ export default function SplashScreen() {
       const isFirstLaunch = await AsyncStorage.getItem('isFirstLaunch');
       const token = await AsyncStorage.getItem('auth_token');
       
-      // 타이머 설정 (2.5초 후 이동)
+      
+      
+      // 타이머 설정 (0초 후 이동)
       setTimeout(() => {
         if (isFirstLaunch === null) {
           // 최초 실행 시 온보딩 화면으로 이동
           router.replace('/onboarding');
         } else if (!token) {
           // 로그인 상태가 아니면 인증 화면으로 이동
-          router.replace('/(auth)');
+          router.replace('/(auth)/login');
         } else {
           // 로그인된 상태면 메인 화면으로 이동
           router.replace('/(tabs)');
         }
       }, 2500);
+
     } catch (error) {
       console.error('Navigation error:', error);
       router.replace('/onboarding');

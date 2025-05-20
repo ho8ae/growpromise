@@ -1,3 +1,4 @@
+// stores/authStore.ts 수정
 import { create } from 'zustand';
 import authApi, { LoginRequest, ParentSignupRequest, ChildSignupRequest } from '../api/modules/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,6 +30,16 @@ interface AuthState {
   connectParent: (parentCode: string) => Promise<void>;
 }
 
+// AsyncStorage 키 상수 정의
+const AUTH_STORAGE_KEYS = [
+  'auth_token',
+  'refresh_token',
+  'user_type',
+  'user_id',
+  'username',
+  'profile_id',
+];
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isLoading: false,
@@ -40,13 +51,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (data: LoginRequest) => {
     try {
       set({ isLoading: true, error: null });
+      
+      // 로그인 전에 기존 인증 데이터 정리
+      await AsyncStorage.multiRemove(AUTH_STORAGE_KEYS);
+      
       const response = await authApi.login(data);
       
       // AsyncStorage에 사용자 정보 저장
       await AsyncStorage.setItem('auth_token', response.token);
       await AsyncStorage.setItem('user_type', response.user.userType);
       await AsyncStorage.setItem('user_id', response.user.id);
-      await AsyncStorage.setItem('username', response.user.username); // 추가된 부분
+      await AsyncStorage.setItem('username', response.user.username);
+      if (response.user.profileId) {
+        await AsyncStorage.setItem('profile_id', response.user.profileId);
+      }
       
       set({
         user: response.user,
@@ -55,7 +73,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         isAuthChecked: true
       });
+      
+      console.log('Login successful:', response.user.username);
     } catch (error: any) {
+      console.error('Login error:', error);
       set({
         error: error.response?.data?.message || '로그인 중 오류가 발생했습니다.',
         isLoading: false,
@@ -96,34 +117,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     try {
       set({ isLoading: true });
+      console.log('Starting logout process...');
       
-      // 로그아웃 API 호출
-      await authApi.logout();
+      try {
+        // API 호출 실패해도 계속 진행
+        await authApi.logout();
+        console.log('API logout successful');
+      } catch (apiError) {
+        console.warn('API logout failed, continuing with local logout:', apiError);
+      }
       
-      // 추가 보안 - 직접 AsyncStorage에서 모든 인증 관련 항목 제거
-      await AsyncStorage.removeItem('auth_token');
-      await AsyncStorage.removeItem('user_type');
-      await AsyncStorage.removeItem('user_id');
-      await AsyncStorage.removeItem('username'); // 추가된 부분
+      // 모든 인증 관련 데이터 완전히 제거
+      await AsyncStorage.multiRemove(AUTH_STORAGE_KEYS);
+      console.log('AsyncStorage cleared');
       
       // 상태 완전 초기화
       set({
         user: null,
-        token: null,
+        token: null, 
         isAuthenticated: false,
         isLoading: false,
         isAuthChecked: true
       });
       
-      console.log('로그아웃 완료:', get());
-    } catch (error: any) {
-      console.error('로그아웃 오류:', error);
+      console.log('Auth store state reset: Logout complete');
+    } catch (error) {
+      console.error('Logout error:', error);
       
-      // 오류가 발생해도 로컬에서는 로그아웃을 진행
-      await AsyncStorage.removeItem('auth_token');
-      await AsyncStorage.removeItem('user_type');
-      await AsyncStorage.removeItem('user_id');
-      await AsyncStorage.removeItem('username'); // 추가된 부분
+      // 오류가 발생해도 로컬 상태는 초기화
+      await AsyncStorage.multiRemove(AUTH_STORAGE_KEYS);
       
       set({
         user: null,
@@ -139,58 +161,66 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   checkAuthStatus: async () => {
     try {
       set({ isLoading: true });
+      console.log('Checking authentication status...');
       
       // 모든 인증 토큰 가져오기
       const token = await AsyncStorage.getItem('auth_token');
       const userType = await AsyncStorage.getItem('user_type');
       const userId = await AsyncStorage.getItem('user_id');
-      const username = await AsyncStorage.getItem('username'); // 추가된 부분
-      
-      console.log('확인된 인증 상태:', { token, userType, userId, username });
+      const username = await AsyncStorage.getItem('username');
+      const profileId = await AsyncStorage.getItem('profile_id');
       
       // 토큰이 있고 유효한 경우에만 인증된 것으로 처리
       if (token && userType && userId) {
-        // API로 토큰 유효성 검사
-        const isValid = await authApi.isAuthenticated();
+        // 토큰 유효성 확인 (선택적)
+        let isTokenValid = true;
+        try {
+          isTokenValid = await authApi.isAuthenticated();
+        } catch (error) {
+          console.warn('Token validation failed:', error);
+          isTokenValid = false;
+        }
         
-        if (isValid) {
+        if (isTokenValid) {
+          console.log('Valid authentication found for user:', username);
           set({
             isAuthenticated: true,
             token,
             user: {
               id: userId,
-              username: username || '',  // 수정된 부분
+              username: username || '',
               userType: userType as 'PARENT' | 'CHILD',
-              profileId: ''
+              profileId: profileId || ''
             },
-            isAuthChecked: true
+            isAuthChecked: true,
+            isLoading: false
           });
         } else {
+          console.log('Invalid token found, clearing authentication data');
           // 토큰이 유효하지 않으면 로그아웃 처리
-          await AsyncStorage.removeItem('auth_token');
-          await AsyncStorage.removeItem('user_type');
-          await AsyncStorage.removeItem('user_id');
-          await AsyncStorage.removeItem('username'); // 추가된 부분
+          await AsyncStorage.multiRemove(AUTH_STORAGE_KEYS);
+          
           set({ 
             isAuthenticated: false, 
             user: null,
             token: null,
-            isAuthChecked: true 
+            isAuthChecked: true,
+            isLoading: false
           });
         }
       } else {
+        console.log('No authentication data found');
         // 토큰이 없으면 인증되지 않은 상태
         set({ 
           isAuthenticated: false, 
           user: null,
           token: null,
-          isAuthChecked: true 
+          isAuthChecked: true,
+          isLoading: false
         });
       }
-      
-      set({ isLoading: false });
     } catch (error) {
-      console.error('인증 상태 확인 오류:', error);
+      console.error('Authentication check error:', error);
       
       // 오류 발생 시 인증되지 않은 상태로 설정
       set({ 
