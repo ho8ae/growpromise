@@ -24,6 +24,7 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
 }) => {
   const router = useRouter();
   
+  
   // 부모용 액션 버튼 렌더링 (대소문자 구분 없이 처리)
   if (userType === 'parent' || userType === 'PARENT') {
     const handleInfoPress = () => {
@@ -80,7 +81,7 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
         />
         <ActionButton 
           icon="info"
-          label="자세히"
+          label="정보"
           color={Colors.light.primary}
           onPress={handleInfoPress}
         />
@@ -108,13 +109,11 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
         }}
       />
       <ActionButton 
-        icon="chat"
-        label="대화하기"
+        icon="star"
+        label="스티커"
         color={Colors.light.secondary}
-        // onPress={onTalkPress}
         onPress={() => {
-          Alert.alert("대화하기 기능은 출시 예정입니다.");
-          // TODO: 대화하기 로직 추가
+          router.push('/(child)/rewards')
         }}
       />
       <ActionButton 
