@@ -649,7 +649,7 @@ export default function PlantCollectionScreen() {
                       )}
                       
                       <Pressable
-                        className="py-3.5 rounded-xl active:opacity-90 mb-2"
+                        className="py-3.5 rounded-xl active:opacity-90 mb-4"
                         style={{ backgroundColor: Colors.light.primary }}
                         onPress={closeModal}
                       >

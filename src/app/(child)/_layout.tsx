@@ -43,6 +43,30 @@ export default function ChildLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="select-plant"
+        options={{
+          title: '식물 선택',
+          animation: 'slide_from_right',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="plant-detail"
+        options={{
+          title: '식물 선택',
+          animation: 'slide_from_right',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="plant-collection"
+        options={{
+          title: '식물 도감',
+          animation: 'slide_from_right',
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

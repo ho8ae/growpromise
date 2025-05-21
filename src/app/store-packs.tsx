@@ -1,351 +1,431 @@
 // src/app/store-packs.tsx
-import React, { useRef, useEffect, useState } from 'react';
+import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image'; // Expo의 Image 컴포넌트 사용
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useCallback, useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  Image as RNImage,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  Animated,
-  Dimensions,
-  StyleSheet,
-  ScrollView,
-  Image,
+  View,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FontAwesome5 } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import Colors from '../constants/Colors';
+import api from '../api';
+import { useAuthStore } from '../stores/authStore';
+import { getPlantFallbackImage, getPlantImageUrl } from '../utils/imageUrl';
 
-const { width, height } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.7;
-const CARD_HEIGHT = CARD_WIDTH * 1.4;
-const SPACING = 10;
+// 희귀도별 색상 정의
+const rarityColors = {
+  COMMON: '#9ca3af', // 회색
+  UNCOMMON: '#22c55e', // 초록
+  RARE: '#3b82f6', // 파랑
+  EPIC: '#a855f7', // 보라
+  LEGENDARY: '#f59e0b', // 노랑/금색
+};
 
-interface PackData {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image: string; // 실제 구현 시 이미지 경로로 대체
-  color: string;
-  items: number; // 팩에 포함된 아이템 수
-}
-
-const packData: PackData[] = [
-  {
-    id: 'basic_pack',
-    name: '기본 팩',
-    description: '기본적인 식물과 액세서리가 담긴 팩입니다.',
-    price: 100,
-    image: 'https://via.placeholder.com/300',
-    color: '#58CC02', // 듀오링고 메인 그린
-    items: 3,
-  },
-  {
-    id: 'premium_pack',
-    name: '프리미엄 팩',
-    description: '희귀한 식물과 액세서리가 담긴 팩입니다.',
-    price: 300,
-    image: 'https://via.placeholder.com/300',
-    color: '#1CB0F6', // 듀오링고 정보 파랑
-    items: 5,
-  },
-  {
-    id: 'special_pack',
-    name: '스페셜 팩',
-    description: '한정판 식물과 액세서리가 담긴 팩입니다.',
-    price: 500,
-    image: 'https://via.placeholder.com/300',
-    color: '#CE82FF', // 듀오링고 액센트 퍼플
-    items: 7,
-  },
-  {
-    id: 'seasonal_pack',
-    name: '시즌 팩',
-    description: '시즌 한정 식물과 액세서리가 담긴 팩입니다.',
-    price: 400,
-    image: 'https://via.placeholder.com/300',
-    color: '#FF9600', // 건강 색상
-    items: 5,
-  },
-  {
-    id: 'booster_pack',
-    name: '부스터 팩',
-    description: '성장 부스터와 특별 아이템이 담긴 팩입니다.',
-    price: 250,
-    image: 'https://via.placeholder.com/300',
-    color: '#FF4B4B', // 듀오링고 오류 빨강
-    items: 4,
-  },
-];
-
-// 무한 루프를 위해 데이터 준비
-const infinitePackData = [...packData, ...packData, ...packData];
+// 희귀도별 텍스트
+const rarityText = {
+  COMMON: '일반',
+  UNCOMMON: '특별',
+  RARE: '희귀',
+  EPIC: '영웅',
+  LEGENDARY: '전설',
+};
 
 export default function StorePacksScreen() {
   const router = useRouter();
-  const scrollX = useRef(new Animated.Value(0)).current;
-  const [coins, setCoins] = useState<number>(650); // 예시 코인 수
-  const [selectedPack, setSelectedPack] = useState<PackData | null>(null);
-  
-  // 슬라이더 위치 초기화
-  useEffect(() => {
-    // 무한 루프를 위해 중간 위치로 스크롤
-    const initialOffset = packData.length * CARD_WIDTH;
-    setTimeout(() => {
-      if (flatListRef.current) {
-        flatListRef.current.scrollToOffset({
-          offset: initialOffset,
-          animated: false,
-        });
-      }
-    }, 100);
-  }, []);
+  const queryClient = useQueryClient();
+  const { isAuthenticated, user } = useAuthStore();
 
-  const flatListRef = useRef<any>(null);
-  
-  // 뒤로가기 처리
-  const handleBack = () => {
+  // 상태 변수들
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawResult, setDrawResult] = useState<any | null>(null);
+  const [imageLoadError, setImageLoadError] = useState(false);
+
+  // 식물 뽑기 뮤테이션
+  const drawPlantMutation = useMutation({
+    mutationFn: async () => {
+      try {
+        return await api.plant.drawPlant('BASIC');
+      } catch (error) {
+        console.error('식물 뽑기 API 오류:', error);
+        throw error;
+      }
+    },
+    onSuccess: (result) => {
+      // 뽑기 결과 설정
+      setDrawResult(result);
+      setImageLoadError(false); // 이미지 로드 에러 초기화
+
+      // 식물 인벤토리 데이터 무효화
+      queryClient.invalidateQueries({ queryKey: ['plantInventory'] });
+      queryClient.invalidateQueries({ queryKey: ['allPlants'] });
+
+      // 진동 피드백
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (error) => {
+      console.error('식물 뽑기 실패:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('오류', '식물 뽑기에 실패했습니다. 다시 시도해주세요.');
+    },
+    onSettled: () => {
+      setIsDrawing(false);
+    },
+  });
+
+  // 뒤로가기
+  const handleBack = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
-  };
-  
-  // 팩 구매 처리
-  const handlePurchase = (pack: PackData) => {
+  }, [router]);
+
+  // 카드팩 오픈 시작
+  const handleDrawPlant = useCallback(() => {
+    if (isDrawing) return; // 이미 진행 중이면 중복 실행 방지
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    if (coins < pack.price) {
-      alert('코인이 부족합니다!');
+
+    try {
+      setIsDrawing(true);
+      drawPlantMutation.mutateAsync();
+    } catch (error) {
+      console.error('카드팩 오픈 오류:', error);
+      setIsDrawing(false);
+    }
+  }, [isDrawing, drawPlantMutation]);
+
+  // 다시 뽑기
+  const handleDrawAgain = useCallback(() => {
+    setDrawResult(null);
+    handleDrawPlant();
+  }, [handleDrawPlant]);
+
+  // 도감 이동
+  const handleGoToCollection = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (user?.userType === 'CHILD') {
+      router.push('/(child)/plant-collection');
+    } else {
+      // 부모 계정인 경우 자녀 선택 후 도감으로 이동
+      router.push('/(tabs)');
+    }
+  }, [router, user?.userType]);
+
+  // 식물 선택 화면으로 이동
+  const handleGoToSelectPlant = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (user?.userType === 'CHILD') {
+      router.push('/(child)/select-plant');
+    } else {
+      // 부모 계정인 경우 알림
+      Alert.alert('알림', '자녀 계정만 식물을 선택할 수 있습니다.');
+    }
+  }, [router, user?.userType]);
+
+  // 식물 선물하기 (부모 기능)
+  const handleGiftPlant = useCallback(() => {
+    if (user?.userType !== 'PARENT') {
       return;
     }
-    
-    // 실제 구현 시 API 호출
-    setCoins(coins - pack.price);
-    alert(`${pack.name}을(를) 구매했습니다! 인벤토리에서 확인하세요.`);
-  };
 
-  // 팩 선택 처리
-  const handleSelectPack = (pack: PackData) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedPack(pack);
-  };
-  
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // 실제로는 자녀 선택 후 선물하는 로직 필요
+    Alert.alert('식물 선물하기', '정말 이 식물을 자녀에게 선물하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '선물하기',
+        onPress: () => {
+          // 여기서 선물하기 API 호출 필요
+          Alert.alert('알림', '선물하기가 완료되었습니다.');
+          router.replace('/(tabs)');
+        },
+      },
+    ]);
+  }, [router, user?.userType]);
+
+  // 이미지 로드 오류 처리
+  const handleImageError = useCallback(() => {
+    console.log('이미지 로드 실패:', drawResult?.plantType?.imagePrefix);
+    setImageLoadError(true);
+  }, [drawResult?.plantType?.imagePrefix]);
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+    <SafeAreaView className="flex-1 bg-white">
       <StatusBar style="dark" />
-      
+
       {/* 헤더 */}
       <View className="px-4 py-4 flex-row justify-between items-center">
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={handleBack}
           className="p-2"
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <FontAwesome5 name="arrow-left" size={20} color="#333" />
         </TouchableOpacity>
-        
-        <Text className="text-xl font-bold text-gray-800">카드팩</Text>
-        
-        <View className="flex-row items-center bg-yellow-100 px-3 py-2 rounded-full">
-          <FontAwesome5 name="coins" size={16} color="#F59E0B" />
-          <Text className="ml-2 font-bold text-yellow-700">{coins}</Text>
-        </View>
-      </View>
-      
-      {/* 가이드 텍스트 */}
-      <View className="px-6 py-4">
-        <Text className="text-lg font-bold text-center text-gray-700">
-          팩을 열어 특별한 아이템을 모아보세요!
+
+        <Text className="text-xl font-bold text-gray-800">
+          {drawResult ? '식물 획득!' : '식물 뽑기'}
         </Text>
-        <Text className="text-sm text-center text-gray-500 mt-1">
-          좌우로 스와이프하여 탐색하세요
-        </Text>
+
+        <View className="w-10" />
       </View>
-      
-      {/* 카드 팩 캐러셀 */}
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        <Animated.FlatList
-          ref={flatListRef}
-          data={infinitePackData}
-          keyExtractor={(item, index) => `${item.id}-${index}`}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
-            alignItems: 'center',
-            paddingHorizontal: (width - CARD_WIDTH) / 2,
-          }}
-          snapToInterval={CARD_WIDTH + SPACING}
-          decelerationRate="fast"
-          bounces={false}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-            { useNativeDriver: true }
-          )}
-          renderItem={({ item, index }) => {
-            const inputRange = [
-              (index - 2) * (CARD_WIDTH + SPACING),
-              (index - 1) * (CARD_WIDTH + SPACING),
-              index * (CARD_WIDTH + SPACING),
-              (index + 1) * (CARD_WIDTH + SPACING),
-              (index + 2) * (CARD_WIDTH + SPACING),
-            ];
-            
-            // 애니메이션 값 계산
-            const translateY = scrollX.interpolate({
-              inputRange,
-              outputRange: [25, 15, 0, 15, 25],
-              extrapolate: 'clamp',
-            });
-            
-            const scale = scrollX.interpolate({
-              inputRange,
-              outputRange: [0.85, 0.9, 1, 0.9, 0.85],
-              extrapolate: 'clamp',
-            });
-            
-            const opacity = scrollX.interpolate({
-              inputRange,
-              outputRange: [0.5, 0.8, 1, 0.8, 0.5],
-              extrapolate: 'clamp',
-            });
-            
-            const rotateZ = scrollX.interpolate({
-              inputRange,
-              outputRange: ['5deg', '3deg', '0deg', '-3deg', '-5deg'],
-              extrapolate: 'clamp',
-            });
-            
-            return (
-              <TouchableOpacity
-                onPress={() => handleSelectPack(item)}
-                activeOpacity={0.9}
-              >
-                <Animated.View
-                  style={[
-                    styles.card,
-                    {
-                      transform: [
-                        { translateY },
-                        { scale },
-                        { rotateZ },
-                      ],
-                      opacity,
-                      backgroundColor: item.color,
-                      marginRight: SPACING,
-                    },
-                  ]}
-                >
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>{item.name}</Text>
-                    <View style={styles.itemsContainer}>
-                      <Text style={styles.itemsText}>{item.items}개의 아이템</Text>
-                    </View>
-                    <View style={styles.priceContainer}>
-                      <FontAwesome5 name="coins" size={14} color="white" />
-                      <Text style={styles.priceText}>{item.price}</Text>
-                    </View>
-                    <View style={styles.cardOverlay} />
+
+      <ScrollView className="flex-1">
+        {!drawResult ? (
+          // 뽑기 시작 화면
+          <View className="px-5 pt-4 pb-10">
+            {/* 안내 내용 */}
+            <View className="bg-white rounded-xl p-5 mb-6 shadow-sm border border-gray-100">
+              <View className="flex-row items-center mb-4">
+                <MaterialIcons name="emoji-nature" size={22} color="#10b981" />
+                <Text className="text-lg font-bold text-gray-800 ml-2">
+                  식물 뽑기 안내
+                </Text>
+              </View>
+
+              <Text className="text-gray-700 mb-4">
+                광고를 시청하고 무료로 식물을 뽑아보세요! 다양한 희귀도의 특별한
+                식물을 수집하고 자신만의 정원을 꾸밀 수 있습니다.
+              </Text>
+
+              <View className="bg-gray-50 p-3 rounded-lg">
+                <Text className="text-gray-600 mb-2 font-medium">
+                  식물 희귀도
+                </Text>
+                <View className="flex-row flex-wrap">
+                  <View className="flex-row items-center mr-3 mb-2">
+                    <View className="w-3 h-3 rounded-full bg-gray-400 mr-1" />
+                    <Text className="text-xs text-gray-600">일반 (70%)</Text>
                   </View>
-                </Animated.View>
-              </TouchableOpacity>
-            );
-          }}
-        />
-      </View>
-      
-      {/* 선택된 팩 정보 */}
-      {selectedPack && (
-        <View className="px-6 py-4 bg-white rounded-t-3xl shadow-lg">
-          <Text className="text-xl font-bold text-gray-800 mb-2">{selectedPack.name}</Text>
-          <Text className="text-gray-600 mb-3">{selectedPack.description}</Text>
-          
-          <View className="flex-row justify-between items-center mb-3">
-            <View className="flex-row items-center">
-              <FontAwesome5 name="box" size={16} color="#777" />
-              <Text className="text-gray-700 ml-2">{selectedPack.items}개 아이템</Text>
+                  <View className="flex-row items-center mr-3 mb-2">
+                    <View className="w-3 h-3 rounded-full bg-green-500 mr-1" />
+                    <Text className="text-xs text-gray-600">특별 (20%)</Text>
+                  </View>
+                  <View className="flex-row items-center mr-3 mb-2">
+                    <View className="w-3 h-3 rounded-full bg-blue-500 mr-1" />
+                    <Text className="text-xs text-gray-600">희귀 (7%)</Text>
+                  </View>
+                  <View className="flex-row items-center mr-3 mb-2">
+                    <View className="w-3 h-3 rounded-full bg-purple-500 mr-1" />
+                    <Text className="text-xs text-gray-600">영웅 (2%)</Text>
+                  </View>
+                  <View className="flex-row items-center mb-2">
+                    <View className="w-3 h-3 rounded-full bg-yellow-500 mr-1" />
+                    <Text className="text-xs text-gray-600">전설 (1%)</Text>
+                  </View>
+                </View>
+              </View>
             </View>
-            
-            <View className="flex-row items-center">
-              <FontAwesome5 name="coins" size={16} color="#F59E0B" />
-              <Text className="text-yellow-700 font-bold ml-2">{selectedPack.price}</Text>
+
+            {/* 식물 카드 */}
+            <View className="items-center mb-6">
+              <RNImage
+                source={require('../assets/images/character/level_3.png')}
+                style={{ width: 160, height: 160 }}
+                resizeMode="contain"
+              />
+              <Text className="text-gray-700 text-center mt-2">
+                어떤 식물이 나올까요?
+              </Text>
             </View>
-          </View>
-          
-          <TouchableOpacity
-            className={`py-3 rounded-full ${coins >= selectedPack.price ? 'bg-green-500' : 'bg-gray-400'}`}
-            onPress={() => handlePurchase(selectedPack)}
-            disabled={coins < selectedPack.price}
-          >
-            <Text className="text-white font-bold text-center">
-              {coins >= selectedPack.price ? '구매하기' : '코인 부족'}
+
+            {/* 뽑기 버튼 */}
+            <TouchableOpacity
+              className="py-4 rounded-xl overflow-hidden"
+              onPress={handleDrawPlant}
+              disabled={isDrawing}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#10b981', '#059669']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                className="py-4 items-center justify-center"
+              >
+                {isDrawing ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text className="text-white font-bold text-lg">
+                    식물 뽑기
+                  </Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <Text className="text-gray-500 text-center mt-2">
+              광고를 시청하고 무료로 뽑을 수 있습니다 (테스트 모드)
             </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+          </View>
+        ) : (
+          // 결과 화면
+          <View className="px-5 pt-4 pb-10 items-center">
+            <View className="items-center bg-gray-50 p-6 rounded-xl w-full mb-6 border border-gray-100">
+              <View
+                className="rounded-full p-2 mb-2"
+                style={{
+                  backgroundColor: `${
+                    rarityColors[drawResult.plantType.rarity || 'COMMON']
+                  }20`,
+                }}
+              >
+                <View
+                  className="rounded-full p-4"
+                  style={{
+                    backgroundColor: `${
+                      rarityColors[drawResult.plantType.rarity || 'COMMON']
+                    }40`,
+                  }}
+                >
+                  {/* 유틸리티 함수 사용하여 이미지 로드 */}
+                  {imageLoadError ? (
+                    // 이미지 로드 실패시 기본 이미지 표시
+                    <RNImage
+                      source={getPlantFallbackImage(
+                        drawResult.plantType.imagePrefix,
+                      )}
+                      style={{ width: 120, height: 120 }}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    // Expo Image를 사용하여 원격 이미지 로드
+                    <Image
+                      source={{
+                        uri: getPlantImageUrl(drawResult.plantType.imagePrefix),
+                      }}
+                      style={{ width: 120, height: 120 }}
+                      contentFit="contain"
+                      transition={300}
+                      placeholder={getPlantFallbackImage(
+                        drawResult.plantType.imagePrefix,
+                      )}
+                      onError={handleImageError}
+                    />
+                  )}
+                </View>
+              </View>
+              <View
+                className="px-3 py-1 rounded-full mb-3"
+                style={{
+                  backgroundColor:
+                    rarityColors[drawResult.plantType.rarity || 'COMMON'],
+                }}
+              >
+                <Text className="text-white font-medium">
+                  {rarityText[drawResult.plantType.rarity || 'COMMON']}
+                </Text>
+              </View>
+
+              <Text className="text-2xl font-bold text-gray-800 mb-2">
+                {drawResult.plantType.name}
+              </Text>
+
+              {drawResult.plantType.description && (
+                <Text className="text-gray-600 text-center mb-4">
+                  {drawResult.plantType.description}
+                </Text>
+              )}
+
+              {/* 중복 획득 시 메시지 개선 */}
+              {drawResult.isDuplicate && drawResult.experienceGained && (
+                <View className="bg-blue-50 px-4 py-3 rounded-xl mb-4 w-full items-center">
+                  <Text className="text-blue-800 font-bold mb-1">
+                    이미 보유한 식물입니다!
+                  </Text>
+                  <View className="flex-row items-center mb-2">
+                    <MaterialIcons name="inventory" size={18} color="#3b82f6" />
+                    <Text className="text-blue-700 ml-1">
+                      보유 수량이 증가했습니다 (+1)
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center">
+                    <MaterialIcons name="star" size={18} color="#3b82f6" />
+                    <Text className="text-blue-700 ml-1">
+                      경험치 +{drawResult.experienceGained} 획득
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* 새 식물 획득 시 메시지 */}
+              {!drawResult.isDuplicate && (
+                <View className="bg-green-50 px-4 py-3 rounded-xl mb-4 w-full items-center">
+                  <Text className="text-green-800 font-bold mb-1">
+                    새로운 식물을 획득했습니다!
+                  </Text>
+                  <Text className="text-green-700">
+                    인벤토리에 추가되었습니다
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* 하단 버튼 */}
+            {user?.userType === 'PARENT' ? (
+              // 부모 계정일 경우 선물하기 버튼 표시
+              <TouchableOpacity
+                className="w-full bg-purple-500 py-3 rounded-xl"
+                onPress={handleGiftPlant}
+              >
+                <Text className="text-white font-bold text-center">
+                  자녀에게 선물하기
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              // 자녀 계정일 경우 버튼들 표시
+              <View className="flex-row w-full">
+                <TouchableOpacity
+                  className="flex-1 bg-emerald-500 py-3 rounded-xl mr-2"
+                  onPress={handleGoToSelectPlant}
+                >
+                  <Text className="text-white font-bold text-center">
+                    식물 선택하기
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  className="flex-1 bg-blue-500 py-3 rounded-xl"
+                  onPress={handleDrawAgain}
+                >
+                  <Text className="text-white font-bold text-center">
+                    다시 뽑기
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TouchableOpacity
+              className="bg-gray-200 py-3 px-6 rounded-xl mt-4"
+              onPress={handleGoToCollection}
+            >
+              <Text className="text-gray-700 font-medium">도감 보기</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  cardContent: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'space-between',
-  },
-  cardTitle: {
-    color: 'white',
-    fontSize: 28,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  itemsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  itemsText: {
-    color: 'white',
-    fontWeight: '600',
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    alignSelf: 'flex-end',
-  },
-  priceText: {
-    color: 'white',
-    fontWeight: 'bold',
-    marginLeft: 5,
-  },
-  cardOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 16,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
   },
 });

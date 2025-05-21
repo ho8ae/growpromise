@@ -48,8 +48,8 @@ const AppHeader = ({
   }, []);
   
   return (
-    <Animated.View className="flex-row justify-between items-center mx-4">
-      <View className="flex-row items-center mb-3 ml-2">
+    <Animated.View className="flex-row justify-between items-center mx-4 mb-2">
+      <View className="flex-row items-center ml-2">
         <Image
           source={require('../../assets/images/logo.png')}
           style={{ width: 30, height: 30 }}

@@ -234,7 +234,7 @@ const PromiseActionCard = ({
       
       {/* 약속 선택 모달 */}
       <Modal
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
