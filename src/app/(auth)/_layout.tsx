@@ -32,7 +32,13 @@ export default function AuthLayout() {
             title: '부모님 계정 연결',
           }}
         />
-        {/* 백그라운드 스크린으로 index 추가 (보이지 않음) */}
+        <Stack.Screen
+          name="social-setup"
+          options={{
+            title: '소셜 로그인 설정',
+            presentation: 'modal', // 모달 형태로 표시
+          }}
+        />
         <Stack.Screen
           name="index"
           options={{

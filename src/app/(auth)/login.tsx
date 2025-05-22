@@ -1,4 +1,4 @@
-// app/(auth)/login.tsx - 실시간 검증 및 향상된 UX 적용
+// app/(auth)/login.tsx - 간소화된 소셜 로그인 버전
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -20,6 +20,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import authApi from '../../api/modules/auth';
+import SocialLoginButtons from '../../components/auth/SocialLoginButtons';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function LoginScreen() {
@@ -112,13 +114,11 @@ export default function LoginScreen() {
     return true;
   };
 
-  // 로그인 뮤테이션
+  // 일반 로그인 뮤테이션
   const loginMutation = useMutation({
     mutationFn: async () => {
-      // 에러 상태 초기화
       clearError();
 
-      // 입력 유효성 검사
       const isUsernameValid = validateUsername(username);
       const isPasswordValid = validatePassword(password);
 
@@ -126,9 +126,6 @@ export default function LoginScreen() {
         throw new Error('입력 정보를 확인해주세요');
       }
 
-      console.log('로그인 시도:', { username });
-
-      // 서버에 로그인 요청
       return await login({
         username,
         password,
@@ -136,17 +133,73 @@ export default function LoginScreen() {
     },
     onSuccess: () => {
       console.log('로그인 성공');
-      // 햅틱 피드백 - 성공
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace('/(tabs)');
     },
     onError: (error: any) => {
       console.error('로그인 실패:', error);
-      // 햅틱 피드백 - 오류
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         '로그인 실패',
         error.message || '아이디 또는 비밀번호가 올바르지 않습니다.',
+        [{ text: '확인' }],
+      );
+    },
+  });
+
+  // 소셜 로그인 뮤테이션 (자동 로그인/회원가입 처리)
+  const socialLoginMutation = useMutation({
+    mutationFn: async ({
+      provider,
+      data,
+    }: {
+      provider: 'GOOGLE' | 'APPLE';
+      data: any;
+    }) => {
+      clearError();
+
+      if (provider === 'APPLE') {
+        return await authApi.appleSignIn(data);
+      } else {
+        return await authApi.googleSignIn(data);
+      }
+    },
+    onSuccess: (response) => {
+      console.log('소셜 로그인 성공:', response);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      if (response.user.isNewUser) {
+        // 신규 회원인 경우
+        if (response.needsSetup) {
+          Alert.alert('회원가입 완료!', '초기 설정을 완료해주세요.', [
+            {
+              text: '설정하기',
+              onPress: () => router.push('/(auth)/social-setup'),
+            },
+          ]);
+        } else {
+          Alert.alert('회원가입 완료!', '쑥쑥약속에 오신 것을 환영합니다!', [
+            {
+              text: '시작하기',
+              onPress: () => router.replace('/(tabs)'),
+            },
+          ]);
+        }
+      } else {
+        // 기존 회원 로그인
+        if (response.needsSetup) {
+          router.push('/(auth)/social-setup');
+        } else {
+          router.replace('/(tabs)');
+        }
+      }
+    },
+    onError: (error: any) => {
+      console.error('소셜 로그인 실패:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        '로그인 실패',
+        error.message || '소셜 로그인 중 오류가 발생했습니다.',
         [{ text: '확인' }],
       );
     },
@@ -157,6 +210,14 @@ export default function LoginScreen() {
     Keyboard.dismiss();
     loginMutation.mutate();
   };
+
+  const handleSocialLogin = (provider: 'GOOGLE' | 'APPLE', data: any) => {
+    console.log(`${provider} 로그인/회원가입 시도:`, data);
+    socialLoginMutation.mutate({ provider, data });
+  };
+
+  const isAnyLoading =
+    loginMutation.isPending || socialLoginMutation.isPending || isLoading;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -170,7 +231,7 @@ export default function LoginScreen() {
           <View className="px-6 flex-1 justify-center">
             {/* 로고 및 타이틀 */}
             <Animated.View
-              className="items-center mb-10"
+              className="items-center mb-8"
               style={{
                 transform: [{ scale: logoScale }],
               }}
@@ -184,7 +245,7 @@ export default function LoginScreen() {
               <Text className="text-gray-500">함께 약속하고 함께 자라요</Text>
             </Animated.View>
 
-            {/* 로그인 폼 */}
+            {/* 일반 로그인 폼 */}
             <Animated.View
               className="mb-6"
               style={{
@@ -204,7 +265,6 @@ export default function LoginScreen() {
                   }}
                   onFocus={() => {
                     setIsUsernameFocused(true);
-                    // 햅틱 피드백 - 가벼운 터치
                     Haptics.selectionAsync();
                   }}
                   onBlur={() => {
@@ -225,6 +285,7 @@ export default function LoginScreen() {
                   autoCapitalize="none"
                   returnKeyType="next"
                   blurOnSubmit={false}
+                  editable={!isAnyLoading}
                 />
 
                 {usernameError ? (
@@ -249,7 +310,6 @@ export default function LoginScreen() {
                   }}
                   onFocus={() => {
                     setIsPasswordFocused(true);
-                    // 햅틱 피드백 - 가벼운 터치
                     Haptics.selectionAsync();
                   }}
                   onBlur={() => {
@@ -267,6 +327,7 @@ export default function LoginScreen() {
                   }`}
                   secureTextEntry
                   returnKeyType="done"
+                  editable={!isAnyLoading}
                 />
 
                 {passwordError ? (
@@ -284,8 +345,7 @@ export default function LoginScreen() {
                   !password ||
                   !!usernameError ||
                   !!passwordError ||
-                  loginMutation.isPending ||
-                  isLoading
+                  isAnyLoading
                     ? 'bg-[#AEDBAE]'
                     : 'bg-[#58CC02]'
                 } py-4 rounded-xl shadow-sm mb-4 active:opacity-90`}
@@ -295,8 +355,7 @@ export default function LoginScreen() {
                   !password ||
                   !!usernameError ||
                   !!passwordError ||
-                  loginMutation.isPending ||
-                  isLoading
+                  isAnyLoading
                 }
                 onPressIn={() => {
                   if (
@@ -304,15 +363,13 @@ export default function LoginScreen() {
                     password &&
                     !usernameError &&
                     !passwordError &&
-                    !loginMutation.isPending &&
-                    !isLoading
+                    !isAnyLoading
                   ) {
-                    // 햅틱 피드백 - 중간 강도 터치
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   }
                 }}
               >
-                {loginMutation.isPending || isLoading ? (
+                {isAnyLoading ? (
                   <View className="flex-row justify-center items-center">
                     <ActivityIndicator size="small" color="white" />
                     <Text className="text-white font-medium ml-2">
@@ -326,22 +383,37 @@ export default function LoginScreen() {
                 )}
               </Pressable>
 
+              {/* 소셜 로그인 버튼들 */}
+              <Animated.View
+                className="mt-4"
+                style={{
+                  opacity: formOpacity,
+                  transform: [{ translateY: formTranslateY }],
+                }}
+              >
+                <SocialLoginButtons
+                  onSocialLogin={handleSocialLogin}
+                  isLoading={isAnyLoading}
+                />
+              </Animated.View>
+
               {/* 에러 메시지 */}
               {error && (
                 <Text className="text-red-500 text-center mb-4">{error}</Text>
               )}
             </Animated.View>
 
-            {/* 회원가입 링크 */}
+            {/* 일반 회원가입 링크 */}
             <Pressable
               onPress={() => {
                 Haptics.selectionAsync();
                 router.navigate('/(auth)/signup');
               }}
-              className="py-2 active:opacity-70"
+              className="active:opacity-70"
+              disabled={isAnyLoading}
             >
               <Text className="text-center text-[#58CC02] font-medium">
-                계정이 없으신가요? 회원가입
+                일반 계정으로 회원가입
               </Text>
             </Pressable>
 
@@ -351,7 +423,8 @@ export default function LoginScreen() {
                 Haptics.selectionAsync();
                 router.navigate('/(tabs)');
               }}
-              className="mt-2 py-2 active:opacity-70"
+              className="mt-4 active:opacity-70"
+              disabled={isAnyLoading}
             >
               <Text className="text-center text-gray-500">
                 로그인 없이 둘러보기

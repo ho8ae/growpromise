@@ -1,4 +1,4 @@
-// app/(auth)/signup.tsx - 폼 유효성 검증 추가 버전
+// app/(auth)/signup.tsx - 소셜 로그인 제거, 일반 회원가입만
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Alert, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -51,13 +51,12 @@ export default function SignupScreen() {
   // 다음 단계로 전환 시 애니메이션
   const goToNextStep = () => {
     Animated.timing(slideAnim, {
-      toValue: -400, // 화면 너비만큼 왼쪽으로 이동
+      toValue: -400,
       duration: 200,
       useNativeDriver: true,
     }).start(() => {
       setStep(step + 1);
-      slideAnim.setValue(400); // 오른쪽에서 새 화면 준비
-      // 다음 단계로 이동할 때 이전 단계의 오류 메시지를 초기화
+      slideAnim.setValue(400);
       setErrors({
         ...errors,
         username: '',
@@ -77,22 +76,20 @@ export default function SignupScreen() {
     }
     
     Animated.timing(slideAnim, {
-      toValue: 400, // 화면 너비만큼 오른쪽으로 이동
+      toValue: 400,
       duration: 200,
       useNativeDriver: true,
     }).start(() => {
       setStep(step - 1);
-      slideAnim.setValue(-400); // 왼쪽에서 새 화면 준비
+      slideAnim.setValue(-400);
     });
   };
   
   // 회원가입 뮤테이션
   const signupMutation = useMutation({
     mutationFn: async () => {
-      // 에러 상태 초기화
       clearError();
       
-      // 기본 유효성 검사
       if (!username || !password || !confirmPassword || !userType) {
         throw new Error('모든 필수 항목을 입력해주세요.');
       }
@@ -101,7 +98,6 @@ export default function SignupScreen() {
         throw new Error('비밀번호가 일치하지 않습니다.');
       }
       
-      // 부모 계정 생성
       if (userType === 'PARENT') {
         if (!email) {
           throw new Error('이메일은 필수입니다.');
@@ -113,9 +109,7 @@ export default function SignupScreen() {
           password,
           confirmPassword
         });
-      } 
-      // 자녀 계정 생성
-      else {
+      } else {
         await childSignup({
           username,
           password,
@@ -306,6 +300,7 @@ export default function SignupScreen() {
               className="mr-4 w-40 h-40 rounded-3xl shadow-sm justify-center items-center bg-[#2B70C9] active:scale-95"
               onPress={() => handleUserTypeSelect('PARENT')}
               style={{ elevation: 4 }}
+              disabled={signupMutation.isPending}
             >
               <View className="bg-white p-4 rounded-full mb-3">
                 <FontAwesome5 name="user-tie" size={40} color="#2B70C9" />
@@ -317,6 +312,7 @@ export default function SignupScreen() {
               className="w-40 h-40 rounded-3xl shadow-sm justify-center items-center bg-[#FFC800] active:scale-95"
               onPress={() => handleUserTypeSelect('CHILD')}
               style={{ elevation: 4 }}
+              disabled={signupMutation.isPending}
             >
               <View className="bg-white p-4 rounded-full mb-3">
                 <FontAwesome5 name="child" size={40} color="#FFC800" />
@@ -352,6 +348,7 @@ export default function SignupScreen() {
                 }}
                 onBlur={() => validateUsername(username)}
                 autoFocus
+                editable={!signupMutation.isPending}
               />
               
               {errors.username ? (
@@ -388,6 +385,7 @@ export default function SignupScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoFocus
+                editable={!signupMutation.isPending}
               />
               
               {errors.email ? (
@@ -411,6 +409,7 @@ export default function SignupScreen() {
             <Pressable
               className="bg-gray-100 rounded-2xl px-4 py-5 flex-row justify-between items-center mb-8"
               onPress={() => setShowDatePicker(true)}
+              disabled={signupMutation.isPending}
             >
               <Text className={birthDate ? "text-gray-800 text-lg" : "text-gray-400 text-lg"}>
                 {birthDate ? format(birthDate, 'yyyy년 MM월 dd일', { locale: ko }) : '생년월일 선택'}
@@ -453,6 +452,7 @@ export default function SignupScreen() {
                 onBlur={() => validatePassword(password)}
                 secureTextEntry
                 autoFocus
+                editable={!signupMutation.isPending}
               />
               
               {errors.password ? (
@@ -477,6 +477,7 @@ export default function SignupScreen() {
                 }}
                 onBlur={() => validateConfirmPassword(confirmPassword, password)}
                 secureTextEntry
+                editable={!signupMutation.isPending}
               />
               
               {errors.confirmPassword ? (
@@ -518,6 +519,7 @@ export default function SignupScreen() {
                 keyboardType="number-pad"
                 maxLength={6}
                 autoFocus
+                editable={!signupMutation.isPending}
               />
               
               {errors.parentCode ? (
@@ -603,6 +605,7 @@ export default function SignupScreen() {
         <Pressable 
           onPress={goToPrevStep}
           className="p-2"
+          disabled={signupMutation.isPending}
         >
           <FontAwesome5 name="arrow-left" size={20} color="#333" />
         </Pressable>
@@ -634,7 +637,7 @@ export default function SignupScreen() {
       <View className="p-6 border-t border-gray-100">
         <Pressable
           className={`py-4 rounded-2xl ${
-            isNextButtonDisabled() ? 'bg-gray-300' : 'bg-[#58CC02]'
+            isNextButtonDisabled() || signupMutation.isPending ? 'bg-gray-300' : 'bg-[#58CC02]'
           }`}
           onPress={handleNextButton}
           disabled={isNextButtonDisabled() || signupMutation.isPending}
@@ -652,6 +655,7 @@ export default function SignupScreen() {
           <Pressable
             className="mt-4"
             onPress={() => router.push('/(auth)/login')}
+            disabled={signupMutation.isPending}
           >
             <Text className="text-[#58CC02] text-center">
               이미 계정이 있으신가요? 로그인하기
