@@ -171,7 +171,7 @@ export default function ParentDashboard() {
       <Stack.Screen options={{ headerShown: false }} />
       
       {/* 헤더 */}
-      <View className="px-5 py-4 bg-gray-50 border-b border-gray-100 items-center">
+      <View className="px-5 py-4 bg-gray-50 border-b border-gray-100 items-left">
         <Text className="text-2xl font-bold text-emerald-700">
           {user?.username ? `${user.username}님의 대시보드` : '부모 대시보드'}
         </Text>

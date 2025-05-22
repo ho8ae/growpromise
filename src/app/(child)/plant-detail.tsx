@@ -1,5 +1,4 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
@@ -16,53 +15,42 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import api from '../../api';
-import { WateringLog } from '../../api/modules/plant';
+import ExperienceGainAnimation from '../../components/plant/ExperienceGainAnimation';
 import Colors from '../../constants/Colors';
+import { usePlant } from '../../hooks/usePlant';
 import { useAuthStore } from '../../stores/authStore';
+import api from '../../api';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function PlantDetailScreen() {
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
   const { isAuthenticated, user } = useAuthStore();
+  const [showWateringLogs, setShowWateringLogs] = useState(false);
   const [isWatering, setIsWatering] = useState(false);
   const [isGrowing, setIsGrowing] = useState(false);
   const [showExperienceAnimation, setShowExperienceAnimation] = useState(false);
-  const [showWateringLogs, setShowWateringLogs] = useState(false);
+  const [experienceGained, setExperienceGained] = useState(10);
 
   // 애니메이션 값
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const experienceAnim = useRef(new Animated.Value(0)).current;
-  const experienceOpacity = useRef(new Animated.Value(0)).current;
 
-  // 현재 식물 조회
+  // usePlant 훅 사용 (자녀 모드)
   const {
-    data: plant,
-    isLoading: isLoadingPlant,
-    error: plantError,
-    refetch: refetchPlant,
-  } = useQuery({
-    queryKey: ['currentPlant', 'CHILD'],
-    queryFn: async () => {
-      if (!isAuthenticated || user?.userType !== 'CHILD') {
-        return null;
-      }
-      return await api.plant.getCurrentPlant();
-    },
-    enabled: isAuthenticated && user?.userType === 'CHILD',
-  });
-
-  // 식물 타입 조회
-  const { data: plantType, isLoading: isLoadingPlantType } = useQuery({
-    queryKey: ['plantType', plant?.plantTypeId],
-    queryFn: async () => {
-      if (!plant?.plantTypeId) return null;
-      return await api.plant.getPlantTypeById(plant.plantTypeId);
-    },
-    enabled: !!plant?.plantTypeId,
+    plant,
+    plantType,
+    isLoading,
+    error,
+    progressPercent,
+    plantImage,
+    waterPlant,
+    growPlant,
+    refreshPlant,
+  } = usePlant({
+    isParent: false, // 자녀 모드
   });
 
   // 스티커 개수 상태 관리
@@ -87,8 +75,10 @@ export default function PlantDetailScreen() {
 
   // 컴포넌트 마운트 시 스티커 개수 로드
   useEffect(() => {
-    loadStickerStats();
-  }, []);
+    if (isAuthenticated && user?.userType === 'CHILD') {
+      loadStickerStats();
+    }
+  }, [isAuthenticated, user]);
 
   // 애니메이션 시작
   useEffect(() => {
@@ -122,58 +112,37 @@ export default function PlantDetailScreen() {
     ).start();
   }, []);
 
-  // 경험치 애니메이션 실행
-  useEffect(() => {
-    if (showExperienceAnimation) {
-      Animated.sequence([
-        Animated.timing(experienceOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(experienceAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.delay(500),
-        Animated.timing(experienceOpacity, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setShowExperienceAnimation(false);
-      });
-    }
-  }, [showExperienceAnimation]);
+  // 물주기 처리
+  const handleWaterPlant = async () => {
+    if (isWatering || !plant) return;
 
-  // 물주기 뮤테이션
-  const waterPlantMutation = useMutation({
-    mutationFn: async () => {
-      if (!plant) throw new Error('식물이 없습니다');
-      return await api.plant.waterPlant(plant.id);
-    },
-    onSuccess: (result) => {
-      refetchPlant();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    try {
+      setIsWatering(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // waterPlant 훅 사용
+      const result = await waterPlant();
 
       // 경험치 획득 애니메이션 표시
+      setExperienceGained(result?.experienceGained || 10);
       setShowExperienceAnimation(true);
 
-      if (result.wateringStreak > 1) {
+      // 연속 물주기 메시지
+      if (result?.wateringStreak > 1) {
         Alert.alert(
           '물주기 성공!',
-          `연속 ${result.wateringStreak}일째 물을 주고 있어요! 식물이 건강하게 자라고 있어요. 건강도가 ${result.updatedPlant.health}%가 되었어요.`,
+          `연속 ${result.wateringStreak}일째 물을 주고 있어요! 식물이 건강하게 자라고 있어요.`,
         );
       } else {
         Alert.alert(
           '물주기 성공!',
-          `식물이 건강하게 자라고 있어요. 건강도가 ${result.updatedPlant.health}%가 되었어요.`,
+          `식물이 건강하게 자라고 있어요. 건강도가 ${
+            result?.updatedPlant?.health || plant.health
+          }%가 되었어요.`,
         );
       }
 
-      // 팝 애니메이션
+      // 애니메이션 효과
       Animated.sequence([
         Animated.timing(scaleAnim, {
           toValue: 1.1,
@@ -186,8 +155,11 @@ export default function PlantDetailScreen() {
           useNativeDriver: true,
         }),
       ]).start();
-    },
-    onError: (error) => {
+
+      // 스티커 개수도 새로고침
+      loadStickerStats();
+
+    } catch (error) {
       console.error('물주기 실패:', error);
 
       if (error instanceof Error) {
@@ -200,20 +172,23 @@ export default function PlantDetailScreen() {
           Alert.alert('오류', '물주기 과정에서 문제가 발생했습니다.');
         }
       }
-    },
-  });
+    } finally {
+      setIsWatering(false);
+    }
+  };
 
-  // 식물 성장 뮤테이션
-  const growPlantMutation = useMutation({
-    mutationFn: async () => {
-      if (!plant) throw new Error('식물이 없습니다');
-      return await api.plant.growPlant(plant.id);
-    },
-    onSuccess: (result) => {
-      refetchPlant();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  // 식물 성장시키기
+  const handleGrowPlant = async () => {
+    if (isGrowing || !plant) return;
 
-      if (result.isMaxStage) {
+    try {
+      setIsGrowing(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // growPlant 훅 사용
+      const result = await growPlant();
+
+      if (result?.isMaxStage) {
         Alert.alert(
           '식물 성장 완료!',
           '축하합니다! 식물이 최대 단계까지 성장했어요. 이제 식물 도감에서 확인할 수 있어요.',
@@ -225,7 +200,7 @@ export default function PlantDetailScreen() {
             { text: '확인', style: 'cancel' },
           ],
         );
-      } else if (result.isCompleted) {
+      } else if (result?.isCompleted) {
         Alert.alert(
           '식물 성장 완료!',
           '축하합니다! 식물이 완전히 성장했어요. 이제 식물 도감에서 확인할 수 있어요.',
@@ -240,7 +215,7 @@ export default function PlantDetailScreen() {
       } else {
         Alert.alert(
           '식물 성장!',
-          `식물이 ${result.plant.currentStage}단계로 성장했어요!`,
+          `식물이 ${result?.plant?.currentStage || plant.currentStage + 1}단계로 성장했어요!`,
         );
       }
 
@@ -257,34 +232,13 @@ export default function PlantDetailScreen() {
           useNativeDriver: true,
         }),
       ]).start();
-    },
-    onError: (error) => {
+
+      // 스티커 개수도 새로고침
+      loadStickerStats();
+
+    } catch (error) {
       console.error('식물 성장 실패:', error);
       Alert.alert('오류', '식물 성장 과정에서 문제가 발생했습니다.');
-    },
-  });
-
-  // 물주기 처리
-  const handleWaterPlant = async () => {
-    if (isWatering || !plant) return;
-
-    try {
-      setIsWatering(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await waterPlantMutation.mutateAsync();
-    } finally {
-      setIsWatering(false);
-    }
-  };
-
-  // 식물 성장시키기
-  const handleGrowPlant = async () => {
-    if (isGrowing || !plant) return;
-
-    try {
-      setIsGrowing(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await growPlantMutation.mutateAsync();
     } finally {
       setIsGrowing(false);
     }
@@ -337,33 +291,24 @@ export default function PlantDetailScreen() {
     return `${hours}:${minutes}`;
   };
 
-  // 이미지 가져오기
-  const getPlantImage = () => {
-    if (!plant || !plantType) return null;
-
-    // 식물의 현재 단계에 따른 이미지 경로 생성
-    const imageStage = Math.max(
-      1,
-      Math.min(plant.currentStage, plantType.growthStages),
+  // 인증되지 않은 사용자 처리
+  if (!isAuthenticated || user?.userType !== 'CHILD') {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+        <MaterialIcons name="error" size={40} color={Colors.light.error} />
+        <Text className="mt-4 text-red-500">자녀 계정으로 로그인해주세요.</Text>
+        <Pressable
+          className="mt-4 bg-primary py-3 px-6 rounded-xl"
+          onPress={() => router.push('/(auth)')}
+        >
+          <Text className="text-white font-bold">로그인 하기</Text>
+        </Pressable>
+      </SafeAreaView>
     );
-
-    try {
-      // 이미지는 실제 앱 개발 시 적절한 경로로 변경 필요
-      return require('../../assets/images/character/level_1.png');
-    } catch (e) {
-      console.error('식물 이미지 로드 실패:', e);
-      return null;
-    }
-  };
-
-  // 경험치 퍼센트 계산
-  const getExperiencePercent = () => {
-    if (!plant) return 0;
-    return ((plant.experience || 0) / (plant.experienceToGrow || 1)) * 100;
-  };
+  }
 
   // 로딩 상태
-  if (isLoadingPlant || isLoadingPlantType) {
+  if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-white justify-center items-center">
         <ActivityIndicator size="large" color={Colors.light.primary} />
@@ -373,18 +318,18 @@ export default function PlantDetailScreen() {
   }
 
   // 에러 상태
-  if (plantError || !plant) {
+  if (error || !plant) {
     return (
       <SafeAreaView className="flex-1 bg-white p-6 justify-center items-center">
         <View className="bg-red-100 p-4 rounded-full mb-4">
           <MaterialIcons name="error" size={40} color={Colors.light.error} />
         </View>
         <Text className="text-red-600 text-center text-lg mb-6">
-          식물 정보를 불러오는 중 오류가 발생했습니다.
+          {error || '식물 정보를 불러오는 중 오류가 발생했습니다.'}
         </Text>
         <Pressable
           className="bg-primary py-3 px-6 rounded-xl mb-4"
-          onPress={() => refetchPlant()}
+          onPress={() => refreshPlant()}
         >
           <Text className="text-white font-bold">다시 시도</Text>
         </Pressable>
@@ -397,11 +342,6 @@ export default function PlantDetailScreen() {
       </SafeAreaView>
     );
   }
-
-  // 물주기 기록 모달 구현
-  const handleShowWateringLogs = () => {
-    setShowWateringLogs(true);
-  };
 
   const stickerCount = isLoadingStickers
     ? '...'
@@ -417,17 +357,9 @@ export default function PlantDetailScreen() {
           headerShown: false,
         }}
       />
-      {/* 뒤로가기 버튼 */}
-      {/* <View className="absolute top-20 left-4 z-10">
-        <TouchableOpacity
-          onPress={() => router.back()}
-        >
-          <MaterialIcons name="arrow-back" size={28} color="black" />
-        </TouchableOpacity>
-      </View> */}
 
-      <SafeAreaView className="flex-1 bg-gray-50">
-        <ScrollView className="flex-1">
+      <ScrollView className="flex-1 bg-gray-50 ">
+        <ScrollView className="flex-1" style={{ paddingTop: insets.top }}>
           <Animated.View
             style={{
               opacity: fadeAnim,
@@ -475,9 +407,9 @@ export default function PlantDetailScreen() {
                     ],
                   }}
                 >
-                  {getPlantImage() ? (
+                  {plantImage ? (
                     <Image
-                      source={getPlantImage()}
+                      source={plantImage}
                       style={{ width: 160, height: 160 }}
                       contentFit="contain"
                     />
@@ -494,39 +426,12 @@ export default function PlantDetailScreen() {
 
                 {/* 경험치 획득 애니메이션 */}
                 {showExperienceAnimation && (
-                  <Animated.View
-                    style={{
-                      position: 'absolute',
-                      top: '20%',
-                      right: '10%',
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: Colors.light.primary,
-                      transform: [
-                        {
-                          translateY: experienceAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, -30],
-                          }),
-                        },
-                      ],
-                      opacity: experienceOpacity,
-                    }}
-                  >
-                    <View className="flex-row items-center">
-                      <MaterialIcons
-                        name="auto-fix-high"
-                        size={16}
-                        color={Colors.light.primary}
-                      />
-                      <Text className="text-primary font-medium ml-1">
-                        +10 경험치!
-                      </Text>
-                    </View>
-                  </Animated.View>
+                  <ExperienceGainAnimation
+                    amount={experienceGained}
+                    onAnimationComplete={() =>
+                      setShowExperienceAnimation(false)
+                    }
+                  />
                 )}
               </View>
 
@@ -593,7 +498,7 @@ export default function PlantDetailScreen() {
                     <View
                       className="h-full rounded-full"
                       style={{
-                        width: `${getExperiencePercent()}%`,
+                        width: `${progressPercent}%`,
                         backgroundColor: Colors.light.primary,
                       }}
                     />
@@ -611,7 +516,7 @@ export default function PlantDetailScreen() {
               </View>
             </View>
 
-            {/* 액션 버튼 영역 그리드 2행 2열 로 교체*/}
+            {/* 액션 버튼 영역 그리드 2행 2열 */}
             <View className="mb-6">
               {/* 첫 번째 행 */}
               <View className="flex-row mb-3">
@@ -659,7 +564,7 @@ export default function PlantDetailScreen() {
                         style={{ marginRight: 4 }}
                       />
                       <Text className="text-white font-bold text-sm">
-                        성장시키기
+                        성장하기
                       </Text>
                     </View>
                   )}
@@ -741,7 +646,9 @@ export default function PlantDetailScreen() {
                     시작일:
                   </Text>
                   <Text className="text-gray-800 flex-1">
-                    {formatDate(plant.startedAt)}
+                    {plant.startedAt
+                      ? formatDate(plant.startedAt)
+                      : '정보 없음'}
                   </Text>
                 </View>
 
@@ -776,12 +683,6 @@ export default function PlantDetailScreen() {
                   <Text className="font-bold text-gray-800 text-base">
                     물주기 상태
                   </Text>
-                  {/* 물주기 스트릭 그냥 불 아이콘 옆 숫자로만 표현 */}
-                  <View className="flex-row items-center">
-                    <Text className="text-gray-800 font-bold">
-                      {/* {plant.wateringStreak} day🔥 */}
-                    </Text>
-                  </View>
                 </View>
               </View>
 
@@ -822,6 +723,7 @@ export default function PlantDetailScreen() {
             </View>
           </Animated.View>
         </ScrollView>
+
         {/* 물주기 기록 모달 */}
         <Modal
           visible={showWateringLogs}
@@ -870,7 +772,6 @@ export default function PlantDetailScreen() {
                           style={{ color: Colors.light.info }}
                           className="font-medium"
                         >
-                          {/* 실제 api 받아야 함 */}
                           +{log.healthGain || 3}%
                         </Text>
                         {log.experienceGain > 0 && (
@@ -910,7 +811,7 @@ export default function PlantDetailScreen() {
             </View>
           </View>
         </Modal>
-      </SafeAreaView>
+      </ScrollView>
     </>
   );
 }

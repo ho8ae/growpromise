@@ -4,15 +4,16 @@ import { Image } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Pressable,
   Text,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import stickerApi from '../../api/modules/sticker';
 import Colors from '../../constants/Colors';
 import { usePlant } from '../../hooks/usePlant';
-
 import PlantDisplayFootAction from './PlantDisplayFootAction';
 
 // 스티커 통계 타입
@@ -34,7 +35,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
   showExperienceAnimation = false,
   experienceGained = 0,
 }) => {
-  // 커스텀 훅 사용
+  // usePlant 훅 사용 - 실시간 데이터 업데이트
   const {
     plant,
     plantType,
@@ -44,6 +45,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     plantImage,
     waterPlant,
     growPlant,
+    refreshPlant,
   } = usePlant({ isParent: false });
 
   // 스티커 개수 상태 관리
@@ -52,6 +54,10 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     availableStickers: 0,
   });
   const [isLoadingStickers, setIsLoadingStickers] = useState(false);
+  
+  // 액션 로딩 상태
+  const [isWatering, setIsWatering] = useState(false);
+  const [isGrowing, setIsGrowing] = useState(false);
 
   // 스티커 개수 로드
   const loadStickerStats = async () => {
@@ -71,6 +77,13 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
   useEffect(() => {
     loadStickerStats();
   }, []);
+
+  // 식물 데이터 변경 시 스티커 개수도 새로고침
+  useEffect(() => {
+    if (plant) {
+      loadStickerStats();
+    }
+  }, [plant?.currentStage, plant?.experience]);
 
   // 애니메이션 값
   const experienceAnim = useRef(new Animated.Value(0)).current;
@@ -119,25 +132,86 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     ).start();
   }, []);
 
-  // 물주기 핸들러
+  // 물주기 핸들러 - usePlant 훅 사용
   const handleWaterPress = async () => {
+    if (isWatering || !plant) return;
+
     try {
-      await waterPlant();
-      // 물주기 성공 로직 (예: 토스트 메시지 표시)
-    } catch (err) {
-      // 오류 처리 로직
-      console.error('물주기 실패:', err);
+      setIsWatering(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const result = await waterPlant();
+
+      // 성공 메시지
+      if (result?.wateringStreak > 1) {
+        Alert.alert(
+          '물주기 성공!',
+          `연속 ${result.wateringStreak}일째 물을 주고 있어요! 식물이 건강하게 자라고 있어요.`,
+        );
+      } else {
+        Alert.alert(
+          '물주기 성공!',
+          `식물이 건강하게 자라고 있어요. 건강도가 ${
+            result?.updatedPlant?.health || plant.health
+          }%가 되었어요.`,
+        );
+      }
+
+      // 스티커 개수 새로고침
+      loadStickerStats();
+    } catch (error) {
+      console.error('물주기 실패:', error);
+      
+      if (error instanceof Error) {
+        if (error.message.includes('already watered')) {
+          Alert.alert(
+            '알림',
+            '오늘은 이미 물을 줬어요. 내일 다시 시도해보세요.',
+          );
+        } else {
+          Alert.alert('오류', '물주기 과정에서 문제가 발생했습니다.');
+        }
+      }
+    } finally {
+      setIsWatering(false);
     }
   };
 
-  // 식물 성장 핸들러
+  // 식물 성장 핸들러 - usePlant 훅 사용
   const handleGrowPress = async () => {
+    if (isGrowing || !plant || !plant.canGrow) return;
+
     try {
-      await growPlant();
-      // 성장 성공 로직 (예: 축하 애니메이션)
-    } catch (err) {
-      // 오류 처리 로직
-      console.error('성장 실패:', err);
+      setIsGrowing(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const result = await growPlant();
+
+      // 성공 메시지
+      if (result?.isMaxStage) {
+        Alert.alert(
+          '식물 성장 완료!',
+          '축하합니다! 식물이 최대 단계까지 성장했어요. 이제 식물 도감에서 확인할 수 있어요.',
+        );
+      } else if (result?.isCompleted) {
+        Alert.alert(
+          '식물 성장 완료!',
+          '축하합니다! 식물이 완전히 성장했어요. 이제 식물 도감에서 확인할 수 있어요.',
+        );
+      } else {
+        Alert.alert(
+          '식물 성장!',
+          `식물이 ${result?.plant?.currentStage || plant.currentStage + 1}단계로 성장했어요!`,
+        );
+      }
+
+      // 스티커 개수 새로고침
+      loadStickerStats();
+    } catch (error) {
+      console.error('성장 실패:', error);
+      Alert.alert('오류', '식물 성장 과정에서 문제가 발생했습니다.');
+    } finally {
+      setIsGrowing(false);
     }
   };
 
@@ -161,6 +235,12 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
           color={Colors.light.error}
         />
         <Text className="mt-4 text-gray-500">{error}</Text>
+        <Pressable
+          className="mt-4 bg-primary py-2 px-4 rounded-lg"
+          onPress={() => refreshPlant()}
+        >
+          <Text className="text-white font-medium">다시 시도</Text>
+        </Pressable>
       </View>
     );
   }
@@ -210,7 +290,9 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
               {plant.name || plantType?.name || '나의 식물'}
             </Text>
             <View className="bg-yellow-200 rounded-full px-2 py-0.5 ml-2">
-              <Text className="text-xs font-medium text-yellow-800">기본</Text>
+              <Text className="text-xs font-medium text-yellow-800">
+                Lv.{plant.currentStage}
+              </Text>
             </View>
           </View>
 
@@ -365,6 +447,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
         onFertilizePress={handleGrowPress}
         onTalkPress={() => {}}
         onInfoPress={onInfoPress}
+        // isLoading={isWatering || isGrowing}
       />
     </View>
   );

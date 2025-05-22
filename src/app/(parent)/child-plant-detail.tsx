@@ -221,6 +221,7 @@ export default function ParentChildPlantDetailScreen() {
   if (error || !plant) {
     return (
       <SafeAreaView className="flex-1 bg-white p-6 justify-center items-center">
+        
         <View className="bg-red-100 p-4 rounded-full mb-4">
           <MaterialIcons name="error" size={40} color={Colors.light.error} />
         </View>
