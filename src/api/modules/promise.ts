@@ -79,6 +79,19 @@ export interface PromiseStats {
   stickerCount: number; // 스티커 개수 추가
 }
 
+// 갤러리 이미지 타입
+export interface GalleryImage {
+  id: string;
+  promiseId: string;
+  promiseTitle: string;
+  imageUrl: string;
+  verificationTime: string;
+  childId: string;
+  childName: string;
+  childProfileImage?: string;
+  isFavorite: boolean;
+}
+
 // 약속 API 함수들
 const promiseApi = {
   // 약속 생성 (부모)
@@ -218,22 +231,22 @@ const promiseApi = {
       // 이미지 파일로 FormData 생성
       const formData = new FormData();
       formData.append('promiseAssignmentId', promiseAssignmentId);
-  
+
       // 설명이 있으면 추가
       if (verificationDescription) {
         formData.append('verificationDescription', verificationDescription); // 변경: message -> verificationDescription
       }
-  
+
       // 이미지 파일 준비
       const uriParts = imageUri.split('.');
       const fileType = uriParts[uriParts.length - 1];
-  
+
       formData.append('verificationImage', {
         uri: imageUri,
         name: `photo.${fileType}`,
         type: `image/${fileType}`,
       } as any);
-  
+
       const response = await apiClient.post<ApiResponse<PromiseAssignment>>(
         '/promises/verify',
         formData,
@@ -243,7 +256,7 @@ const promiseApi = {
           },
         },
       );
-  
+
       return response.data.data;
     } catch (error) {
       console.error('약속 인증 제출 오류:', error);
