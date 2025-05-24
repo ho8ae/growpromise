@@ -1,22 +1,29 @@
 {
   "expo": {
-    "name": "kids-plan",
+    "name": "growpromise",
     "slug": "kids-plan",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/images/icon.png",
-    "scheme": "kidsplan",
+    "scheme": "growpromise",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.low-k.growpromise"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.low_k.growpromise"
     },
     "web": {
       "bundler": "metro",
@@ -26,23 +33,18 @@
     "plugins": [
       "expo-router",
       [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.584178392628-loms8bh6egsfr1q2fl9om43i9i51530g"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./src/assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
-        }
-      ],
-      [
-        "expo-location",
-        {
-          "accuracy": "best",
-          "foregroundService": true,
-          "requestAlwaysAuthorization": true,
-          "requestWhenInUseAuthorization": true,
-          "useActivity": true,
-          "locationAlwaysAndWhenInUsePermission": "앱이 위치 정보를 사용하여 약속 장소를 확인합니다."
         }
       ],
       [
