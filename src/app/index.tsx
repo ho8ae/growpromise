@@ -1,108 +1,123 @@
 // app/index.tsx
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, Easing } from 'react-native';
-import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Colors from '../constants/Colors';
+import { Redirect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View, Text, Platform } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
+import { useAuthStore } from '../../src/stores/authStore';
 
-export default function SplashScreen() {
-  const router = useRouter();
-  const { fromLogout } = useLocalSearchParams();
-  const logoScale = useRef(new Animated.Value(0.5)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
-  
+export default function IndexScreen() {
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [shouldShowOnboarding, setShouldShowOnboarding] = useState(false);
+  const { isAuthenticated, isAuthChecked, user } = useAuthStore();
+
   useEffect(() => {
-    // 로고 애니메이션
-    Animated.sequence([
-      Animated.parallel([
-        Animated.spring(logoScale, {
-          toValue: 1,
-          friction: 5,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoOpacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ]),
-      // 텍스트 애니메이션은 로고 애니메이션 후에 시작
-      Animated.timing(textOpacity, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    
-    // 로그아웃에서 온 게 아니라면 자동 네비게이션
-    if (!fromLogout) {
-      checkAuthAndNavigate();
-    }
-  }, []);
-  
-  const checkAuthAndNavigate = async () => {
-    try {
-      const isFirstLaunch = await AsyncStorage.getItem('isFirstLaunch');
-      const token = await AsyncStorage.getItem('auth_token');
-      
-      
-      
-      // 타이머 설정 (0초 후 이동)
-      setTimeout(() => {
-        if (isFirstLaunch === null) {
-          // 최초 실행 시 온보딩 화면으로 이동
-          router.replace('/onboarding');
-        } else if (!token) {
-          // 로그인 상태가 아니면 인증 화면으로 이동
-          router.replace('/(auth)/login');
-        } else {
-          // 로그인된 상태면 메인 화면으로 이동
-          router.replace('/(tabs)');
-        }
-      }, 2500);
-
-    } catch (error) {
-      console.error('Navigation error:', error);
-      router.replace('/onboarding');
-    }
-  };
-  
-  return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <StatusBar style="dark" />
-      
-      <View className="items-center">
-        {/* 로고 애니메이션 */}
-        <Animated.View
-          style={{
-            transform: [{ scale: logoScale }],
-            opacity: logoOpacity,
-          }}
-          className="mb-6"
-        >
-          <View className="bg-[#E6F4D7] p-8 rounded-full">
-            <FontAwesome5 
-              name="seedling" 
-              size={80} 
-              color={Colors.light.primary}
-            />
-          </View>
-        </Animated.View>
+    const initializeApp = async () => {
+      try {
+        console.log('🚀 앱 초기화 시작...');
         
-        {/* 텍스트 애니메이션 */}
-        <Animated.View
-          style={{ opacity: textOpacity }}
-          className="items-center"
-        >
-          <Text className="text-3xl font-bold text-[#58CC02] mb-2">쑥쑥약속</Text>
-          <Text className="text-lg text-gray-500">함께 약속하고 함께 자라요</Text>
-        </Animated.View>
+        // AsyncStorage에서 온보딩 상태 확인
+        const [
+          isFirstLaunch,
+          onboardingCompleted,
+          onboardingSkipped
+        ] = await AsyncStorage.multiGet([
+          'isFirstLaunch',
+          'onboardingCompleted', 
+          'onboardingSkipped'
+        ]);
+
+        const firstLaunch = isFirstLaunch[1];
+        const completed = onboardingCompleted[1];
+        const skipped = onboardingSkipped[1];
+
+        console.log('📱 온보딩 상태 확인:');
+        console.log('- isFirstLaunch:', firstLaunch);
+        console.log('- onboardingCompleted:', completed);
+        console.log('- onboardingSkipped:', skipped);
+
+        // 온보딩을 보여줄 조건:
+        // 1. 처음 실행이거나 (isFirstLaunch가 null)
+        // 2. isFirstLaunch가 'true'이고, 완료되지 않았고, 건너뛰지 않았을 때
+        const shouldShow = (
+          firstLaunch === null || 
+          (firstLaunch !== 'false' && completed !== 'true' && skipped !== 'true')
+        );
+
+        setShouldShowOnboarding(shouldShow);
+        
+        console.log('🎯 온보딩 표시 여부:', shouldShow);
+        
+      } catch (error) {
+        console.error('❌ 앱 초기화 중 오류:', error);
+        // 오류 발생 시 온보딩 건너뛰기
+        setShouldShowOnboarding(false);
+      } finally {
+        // 약간의 지연 후 초기화 완료
+        setTimeout(() => {
+          setIsInitializing(false);
+        }, 500);
+      }
+    };
+
+    initializeApp();
+  }, []);
+
+  // 초기화 중일 때 로딩 화면 표시
+  if (isInitializing) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white">
+        {/* StatusBar 배경 (Edge-to-Edge 대응) */}
+        {Platform.OS === 'android' && (
+          <View 
+            className="absolute top-0 left-0 right-0 bg-white"
+            style={{ height: 50 }}
+          />
+        )}
+        
+        <StatusBar style="dark" translucent={Platform.OS === 'android'} />
+        
+        <View className="bg-[#E6F4D7] p-6 rounded-full mb-6">
+          <FontAwesome5 name="seedling" size={50} color="#58CC02" />
+        </View>
+        <Text className="text-xl font-bold text-[#58CC02] mb-2">쑥쑥약속</Text>
+        <ActivityIndicator size="large" color="#58CC02" className="mt-8" />
+        <Text className="mt-4 text-gray-600">앱을 준비하고 있어요...</Text>
       </View>
-    </View>
-  );
+    );
+  }
+
+  // 초기화 완료 후 라우팅 결정
+  console.log('🎯 라우팅 결정 단계:');
+  console.log('- shouldShowOnboarding:', shouldShowOnboarding);
+  console.log('- isAuthChecked:', isAuthChecked);
+  console.log('- isAuthenticated:', isAuthenticated);
+  console.log('- userType:', user?.userType);
+
+  // 1. 온보딩이 필요한 경우
+  if (shouldShowOnboarding) {
+    console.log('➡️  온보딩 화면으로 이동');
+    return <Redirect href="/onboarding" />;
+  }
+
+  // 2. 인증 상태가 아직 확인되지 않은 경우 대기
+  if (!isAuthChecked) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white">
+        <ActivityIndicator size="large" color="#58CC02" />
+        <Text className="mt-4 text-gray-600">로그인 상태를 확인하고 있어요...</Text>
+      </View>
+    );
+  }
+
+  // 3. 인증되지 않은 경우 로그인 화면으로
+  if (!isAuthenticated) {
+    console.log('➡️  로그인 화면으로 이동');
+    return <Redirect href="/(auth)" />;
+  }
+
+  // 4. 인증된 경우 메인 탭으로
+  console.log('➡️  메인 탭으로 이동');
+  return <Redirect href="/(tabs)" />;
 }

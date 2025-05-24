@@ -6,18 +6,18 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryProvider } from '../../src/components/QueryProvider';
 import { useAuthStore } from '../../src/stores/authStore';
 
 // Google Sign-In 설정 (앱 시작시 한 번만 실행)
 GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID, // 올바른 환경변수 이름
-  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, // 올바른 환경변수 이름
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
   scopes: ['email', 'profile'],
-  offlineAccess: true, // idToken을 받기 위해 true로 변경
-  forceCodeForRefreshToken: true, // idToken을 받기 위해 true로 변경
+  offlineAccess: true,
+  forceCodeForRefreshToken: true,
 });
 
 console.log('🔧 Google Sign-In 설정 완료:');
@@ -34,6 +34,14 @@ console.log(
 function LoadingScreen() {
   return (
     <View className="flex-1 justify-center items-center bg-white">
+      {/* Edge-to-Edge 대응을 위한 StatusBar 배경 */}
+      {Platform.OS === 'android' && (
+        <View 
+          className="absolute top-0 left-0 right-0 bg-white"
+          style={{ height: 50 }} // StatusBar 높이만큼
+        />
+      )}
+      
       <View className="bg-[#E6F4D7] p-6 rounded-full mb-6">
         <FontAwesome5 name="seedling" size={50} color="#58CC02" />
       </View>
@@ -78,7 +86,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryProvider>
-        {/* <StatusBar style="dark" backgroundColor="transparent" translucent /> */}
+        {/* Edge-to-Edge 호환 StatusBar 설정 */}
+        <StatusBar 
+          style="dark" 
+          translucent={Platform.OS === 'android'} 
+          hidden={false}
+        />
+        
         <AuthenticationManager>
           <Stack
             screenOptions={{
@@ -91,6 +105,9 @@ export default function RootLayout() {
               contentStyle: {
                 backgroundColor: '#FFFFFF',
               },
+              // 안전 영역 자동 처리 비활성화 (Edge-to-Edge 대응)
+              statusBarStyle: 'dark',
+              statusBarTranslucent: Platform.OS === 'android',
             }}
           >
             <Stack.Screen name="index" />
