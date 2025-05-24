@@ -1,6 +1,6 @@
-// stores/authStore.ts 수정
+// stores/authStore.ts
 import { create } from 'zustand';
-import authApi, { LoginRequest, ParentSignupRequest, ChildSignupRequest } from '../api/modules/auth';
+import authApi, { LoginRequest, ParentSignupRequest, ChildSignupRequest, AuthResponse } from '../api/modules/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface User {
@@ -9,6 +9,8 @@ interface User {
   email?: string;
   userType: 'PARENT' | 'CHILD';
   profileId: string;
+  setupCompleted?: boolean;
+  isNewUser?: boolean;
 }
 
 interface AuthState {
@@ -19,8 +21,12 @@ interface AuthState {
   token: string | null;
   isAuthChecked: boolean;
   
+  // 소셜 로그인 관련 상태
+  socialLoginData: any | null;
+  needsSetup: boolean;
+  
   // 액션
-  login: (data: LoginRequest) => Promise<void>;
+  login: (data: LoginRequest) => Promise<AuthResponse>;
   parentSignup: (data: ParentSignupRequest) => Promise<void>;
   childSignup: (data: ChildSignupRequest) => Promise<void>;
   logout: () => Promise<void>;
@@ -28,6 +34,11 @@ interface AuthState {
   clearError: () => void;
   getParentConnectionCode: () => Promise<string>;
   connectParent: (parentCode: string) => Promise<void>;
+  
+  // 소셜 로그인 관련 액션
+  setSocialLoginData: (data: any | null) => void;
+  setNeedsSetup: (needs: boolean) => void;
+  completeSocialSetup: (data: any) => Promise<AuthResponse>;
 }
 
 // AsyncStorage 키 상수 정의
@@ -47,8 +58,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   token: null,
   isAuthChecked: false,
+  socialLoginData: null,
+  needsSetup: false,
   
-  login: async (data: LoginRequest) => {
+  login: async (data: LoginRequest): Promise<AuthResponse> => {
     try {
       set({ isLoading: true, error: null });
       
@@ -71,10 +84,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         token: response.token,
         isAuthenticated: true,
         isLoading: false,
-        isAuthChecked: true
+        isAuthChecked: true,
+        socialLoginData: null,
+        needsSetup: false
       });
       
       console.log('Login successful:', response.user.username);
+      return response;
     } catch (error: any) {
       console.error('Login error:', error);
       set({
@@ -137,7 +153,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         token: null, 
         isAuthenticated: false,
         isLoading: false,
-        isAuthChecked: true
+        isAuthChecked: true,
+        socialLoginData: null,
+        needsSetup: false
       });
       
       console.log('Auth store state reset: Logout complete');
@@ -153,7 +171,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: false,
         error: '로그아웃 중 오류가 발생했습니다.',
         isLoading: false,
-        isAuthChecked: true
+        isAuthChecked: true,
+        socialLoginData: null,
+        needsSetup: false
       });
     }
   },
@@ -260,6 +280,52 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: any) {
       set({
         error: error.response?.data?.message || '부모 연결 중 오류가 발생했습니다.',
+        isLoading: false
+      });
+      throw error;
+    }
+  },
+  
+  // 소셜 로그인 관련 메서드들
+  setSocialLoginData: (data: any | null) => {
+    set({ socialLoginData: data });
+  },
+  
+  setNeedsSetup: (needs: boolean) => {
+    set({ needsSetup: needs });
+  },
+  
+  completeSocialSetup: async (data: any): Promise<AuthResponse> => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      const response = await authApi.completeSocialSetup(data);
+      
+      // AsyncStorage에 사용자 정보 저장
+      await AsyncStorage.setItem('auth_token', response.token);
+      await AsyncStorage.setItem('user_type', response.user.userType);
+      await AsyncStorage.setItem('user_id', response.user.id);
+      await AsyncStorage.setItem('username', response.user.username);
+      if (response.user.profileId) {
+        await AsyncStorage.setItem('profile_id', response.user.profileId);
+      }
+      
+      set({
+        user: response.user,
+        token: response.token,
+        isAuthenticated: true,
+        isLoading: false,
+        isAuthChecked: true,
+        socialLoginData: null,
+        needsSetup: false
+      });
+      
+      console.log('Social setup complete:', response.user.username);
+      return response;
+    } catch (error: any) {
+      console.error('Social setup error:', error);
+      set({
+        error: error.response?.data?.message || '소셜 로그인 설정 중 오류가 발생했습니다.',
         isLoading: false
       });
       throw error;

@@ -1,8 +1,16 @@
-// components/auth/SocialLoginButtons.tsx
+// src/components/auth/SocialLoginButtons.tsx
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import React from 'react';
-import { Alert, Platform, Pressable, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
+import { useGoogleOAuth } from '../../hooks/useGoogleOAuth';
 
 interface SocialLoginButtonsProps {
   onSocialLogin: (provider: 'GOOGLE' | 'APPLE', data: any) => void;
@@ -11,125 +19,153 @@ interface SocialLoginButtonsProps {
 
 export default function SocialLoginButtons({
   onSocialLogin,
-  isLoading,
+  isLoading = false,
 }: SocialLoginButtonsProps) {
-  // Apple 로그인 처리 (로그인/회원가입 통합)
-  const handleAppleLogin = async () => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
+  const { signIn: googleSignIn, isLoading: isGoogleLoading, isConfigured } = useGoogleOAuth();
 
-      // TODO: Apple 개발자 계정 등록 후 활성화
-      /*
-      // Apple 로그인 라이브러리 import 필요
-      // import { appleAuth } from '@invertase/react-native-apple-authentication';
-      
-      if (Platform.OS === 'ios') {
-        // Apple 로그인 요청
-        const appleAuthRequestResponse = await appleAuth.performRequest({
-          requestedOperation: appleAuth.Operation.LOGIN,
-          requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
+  // Google 로그인 처리
+  const handleGoogleSignIn = async () => {
+    if (isLoading || isGoogleLoading) return;
+
+    try {
+      Haptics.selectionAsync();
+
+      console.log('🔵 Google 로그인 시작...');
+      const user = await googleSignIn();
+
+      if (user) {
+        console.log('✅ Google 로그인 성공:', {
+          id: user.id,
+          email: user.email,
+          name: user.name,
         });
 
-        if (!appleAuthRequestResponse.identityToken) {
-          Alert.alert('알림', 'Apple 로그인이 취소되었습니다.');
-          return;
-        }
-
-        // 백엔드로 전송할 데이터 준비
-        const loginData = {
-          idToken: appleAuthRequestResponse.identityToken,
-          userInfo: {
-            email: appleAuthRequestResponse.email,
-            fullName: appleAuthRequestResponse.fullName,
-            user: appleAuthRequestResponse.user,
-          }
+        // 서버로 전송할 데이터 준비
+        const signInData = {
+          idToken: user.idToken,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            picture: user.photo,
+            given_name: user.givenName,
+            family_name: user.familyName,
+            verified_email: user.email,
+          },
         };
 
-        // 백엔드에서 자동으로 로그인/회원가입 처리
-        onSocialLogin('APPLE', loginData);
-      } else {
-        // Android는 웹뷰 방식
-        Alert.alert('알림', 'Android에서는 아직 Apple 로그인을 지원하지 않습니다.');
-      }
-      */
+        console.log('📤 서버로 전송할 데이터:', {
+          userEmail: signInData.user?.email,
+          verified: signInData.user?.verified_email,
+          hasIdToken: !!signInData.idToken,
+        });
 
-      Alert.alert(
-        'Apple 로그인 준비중',
-        'Apple 개발자 계정 등록 완료 후 사용 가능합니다.',
-        [{ text: '확인' }],
-      );
+        // 부모 컴포넌트로 데이터 전달
+        onSocialLogin('GOOGLE', signInData);
+      }
     } catch (error: any) {
-      console.error('Apple 로그인 오류:', error);
-
-      if (error.code === '1001') {
-        Alert.alert('알림', 'Apple 로그인이 취소되었습니다.');
-      } else {
-        Alert.alert('오류', 'Apple 로그인 중 오류가 발생했습니다.');
-      }
+      console.error('❌ Google 로그인 실패:', error);
+      // useGoogleOAuth에서 이미 에러 처리를 하므로 여기서는 추가 처리 불필요
     }
   };
 
-  // Google 로그인 처리 (로그인/회원가입 통합)
-  const handleGoogleLogin = async () => {
+  // Apple 로그인 처리 (iOS만)
+  const handleAppleSignIn = async () => {
+    if (isLoading || isAppleLoading) return;
+
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setIsAppleLoading(true);
+      Haptics.selectionAsync();
 
-      // TODO: Google 로그인 구현 예정
-      Alert.alert(
-        'Google 로그인 준비중',
-        'Google 로그인 기능을 구현 중입니다.',
-        [{ text: '확인' }],
-      );
+      // TODO: Apple Sign-In 구현
+      Alert.alert('준비 중', 'Apple 로그인은 곧 지원될 예정입니다.', [
+        { text: '확인' }
+      ]);
+
     } catch (error) {
-      console.error('Google 로그인 오류:', error);
-      Alert.alert('오류', 'Google 로그인 중 오류가 발생했습니다.');
+      console.error('Apple 로그인 실패:', error);
+      Alert.alert('Apple 로그인 실패', 'Apple 로그인 중 오류가 발생했습니다.', [
+        { text: '확인' }
+      ]);
+    } finally {
+      setIsAppleLoading(false);
     }
   };
+
+  const isAnyLoading = isLoading || isGoogleLoading || isAppleLoading;
 
   return (
-    <View className="w-full">
+    <View>
       {/* 구분선 */}
-      <View className="flex-row items-center mb-8">
-        <View className="flex-1 h-px bg-gray-200" />
-        <Text className="px-4 text-gray-400 text-sm">또는</Text>
-        <View className="flex-1 h-px bg-gray-200" />
+      <View className="flex-row items-center my-6">
+        <View className="flex-1 h-px bg-gray-300" />
+        <Text className="mx-4 text-gray-500 font-medium">또는</Text>
+        <View className="flex-1 h-px bg-gray-300" />
       </View>
 
-      {/* Apple 로그인 버튼 */}
-      {Platform.OS === 'ios' && (   
+      {/* Google 로그인 버튼 */}
+      <Pressable
+        className={`bg-white border border-gray-300 py-3.5 rounded-xl shadow-sm mb-3 flex-row items-center justify-center ${
+          isAnyLoading || !isConfigured ? 'opacity-50' : 'active:opacity-90'
+        }`}
+        onPress={handleGoogleSignIn}
+        disabled={isAnyLoading || !isConfigured}
+        onPressIn={() => {
+          if (!isAnyLoading && isConfigured) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
+        }}
+      >
+        {isGoogleLoading ? (
+          <ActivityIndicator size="small" color="#4285F4" />
+        ) : (
+          <FontAwesome5 name="google" size={20} color="#4285F4" />
+        )}
+        <Text className="text-gray-800 font-medium text-lg ml-3">
+          {isGoogleLoading ? '로그인 중...' : 
+           !isConfigured ? 'Google 설정 중...' : 
+           'Google로 계속하기'}
+        </Text>
+      </Pressable>
+
+      {/* Apple 로그인 버튼 (iOS만) */}
+      {Platform.OS === 'ios' && (
         <Pressable
-          className="bg-black py-4 rounded-xl mb-3 flex-row items-center justify-center active:opacity-90"
-          onPress={handleAppleLogin}
-          disabled={isLoading}
+          className={`bg-black py-3.5 rounded-xl shadow-sm flex-row items-center justify-center ${
+            isAnyLoading ? 'opacity-50' : 'active:opacity-90'
+          }`}
+          onPress={handleAppleSignIn}
+          disabled={isAnyLoading}
+          onPressIn={() => {
+            if (!isAnyLoading) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+          }}
         >
-          <FontAwesome5
-            name="apple"
-            size={20}
-            color="white"
-            style={{ marginRight: 8 }}
-          />
-          <Text className="text-white font-semibold text-base">
-            Apple로 계속하기
+          {isAppleLoading ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <FontAwesome5 name="apple" size={20} color="white" />
+          )}
+          <Text className="text-white font-medium text-lg ml-3">
+            {isAppleLoading ? '로그인 중...' : 'Apple로 계속하기'}
           </Text>
         </Pressable>
       )}
 
-      {/* Google 로그인 버튼 */}
-      <Pressable
-        className="bg-white border-2 border-gray-200 py-4 rounded-xl mb-6 flex-row items-center justify-center active:opacity-90"
-        onPress={handleGoogleLogin}
-        disabled={isLoading}
-      >
-        <FontAwesome5
-          name="google"
-          size={20}
-          color="#DB4437"
-          style={{ marginRight: 8 }}
-        />
-        <Text className="text-gray-800 font-semibold text-base">
-          Google로 계속하기
+      {/* 안내 텍스트 */}
+      <Text className="text-gray-400 text-center text-sm mt-4 leading-5">
+        소셜 로그인으로 간편하게 회원가입하고{'\n'}
+        바로 쑥쑥약속을 시작하세요!
+      </Text>
+
+      {/* 설정 상태 디버그 정보 (개발 중에만) */}
+      {__DEV__ && (
+        <Text className="text-gray-300 text-center text-xs mt-2">
+          Google 설정: {isConfigured ? '✅' : '❌'}
         </Text>
-      </Pressable>
+      )}
     </View>
   );
 }
