@@ -1,20 +1,21 @@
-// app/(auth)/signup.tsx - 소셜 로그인 제거, 일반 회원가입만
+// app/(auth)/signup.tsx - Store 변경사항 반영
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Alert, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
-import { useAuthStore } from '../../stores/authStore';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import Colors from '../../constants/Colors';
-import { StatusBar } from 'expo-status-bar';
+import Colors from '../../../src/constants/Colors';
+import SafeStatusBar from '../../../src/components/common/SafeStatusBar';
+import authApi from '../../../src/api/modules/auth';
+import { useAuthStore } from '../../../src/stores/authStore';
 
 export default function SignupScreen() {
   const router = useRouter();
-  const { parentSignup, childSignup, clearError } = useAuthStore();
+  const { clearError } = useAuthStore();
   
   // 단계 관리
   const [step, setStep] = useState(1);
@@ -90,6 +91,14 @@ export default function SignupScreen() {
     mutationFn: async () => {
       clearError();
       
+      console.log('📝 회원가입 시도:', {
+        userType,
+        username,
+        email: userType === 'PARENT' ? email : undefined,
+        hasBirthDate: !!birthDate,
+        hasParentCode: !!parentCode,
+      });
+      
       if (!username || !password || !confirmPassword || !userType) {
         throw new Error('모든 필수 항목을 입력해주세요.');
       }
@@ -103,14 +112,16 @@ export default function SignupScreen() {
           throw new Error('이메일은 필수입니다.');
         }
         
-        await parentSignup({
+        console.log('👔 부모 회원가입 요청...');
+        return await authApi.parentSignup({
           username,
           email,
           password,
           confirmPassword
         });
       } else {
-        await childSignup({
+        console.log('👶 자녀 회원가입 요청...');
+        return await authApi.childSignup({
           username,
           password,
           confirmPassword,
@@ -119,14 +130,19 @@ export default function SignupScreen() {
         });
       }
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      console.log('✅ 회원가입 성공:', response);
       Alert.alert(
         '회원가입 완료!',
         '계정이 성공적으로 생성되었습니다.',
-        [{ text: '로그인하기', onPress: () => router.replace('/(auth)/login') }]
+        [{ 
+          text: '로그인하기', 
+          onPress: () => router.replace('/(auth)/login') 
+        }]
       );
     },
     onError: (error: any) => {
+      console.error('❌ 회원가입 실패:', error);
       Alert.alert(
         '회원가입 실패',
         error.message || '회원가입 중 오류가 발생했습니다.',
@@ -542,7 +558,7 @@ export default function SignupScreen() {
               회원가입 정보 입력 완료!
             </Text>
             <Text className="text-center text-gray-500 mb-8">
-              이제 &apos;쑥쑥약속&apos;을 시작해볼까요?
+              이제 '쑥쑥약속'을 시작해볼까요?
             </Text>
           </View>
         );
@@ -555,7 +571,7 @@ export default function SignupScreen() {
               회원가입 정보 입력 완료!
             </Text>
             <Text className="text-center text-gray-500 mb-8">
-              이제 &apos;쑥쑥약속&apos;을 시작해볼까요?
+              이제 '쑥쑥약속'을 시작해볼까요?
             </Text>
           </View>
         );
@@ -598,7 +614,7 @@ export default function SignupScreen() {
   
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <StatusBar style="dark" />
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       
       {/* 헤더 */}
       <View className="flex-row items-center px-6 py-4 border-b border-gray-100">

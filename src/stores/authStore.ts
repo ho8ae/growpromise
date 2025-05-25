@@ -1,7 +1,7 @@
-// stores/authStore.ts
-import { create } from 'zustand';
-import authApi, { LoginRequest, ParentSignupRequest, ChildSignupRequest, AuthResponse } from '../api/modules/auth';
+// src/stores/authStore.ts - Google 로그인 관련 부분만 수정
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from 'zustand';
+import authApi, { AuthResponse, LoginRequest, SocialSetupRequest } from '../api/modules/auth';
 
 interface User {
   id: string;
@@ -11,324 +11,294 @@ interface User {
   profileId: string;
   setupCompleted?: boolean;
   isNewUser?: boolean;
+  socialProvider?: 'GOOGLE' | 'APPLE';
 }
 
-interface AuthState {
+interface AuthStore {
+  // 상태
   user: User | null;
-  isLoading: boolean;
-  error: string | null;
   isAuthenticated: boolean;
-  token: string | null;
+  isLoading: boolean;
   isAuthChecked: boolean;
-  
-  // 소셜 로그인 관련 상태
-  socialLoginData: any | null;
-  needsSetup: boolean;
-  
+  error: string | null;
+  redirectAfterLogin: string | null;
+
   // 액션
-  login: (data: LoginRequest) => Promise<AuthResponse>;
-  parentSignup: (data: ParentSignupRequest) => Promise<void>;
-  childSignup: (data: ChildSignupRequest) => Promise<void>;
+  login: (credentials: LoginRequest) => Promise<AuthResponse>;
+  googleSignIn: (idToken: string, userInfo?: any) => Promise<AuthResponse>;
+  appleSignIn: (idToken: string, userInfo?: any) => Promise<AuthResponse>;
+  completeSocialSetup: (setupData: SocialSetupRequest) => Promise<AuthResponse>;
   logout: () => Promise<void>;
-  checkAuthStatus: () => Promise<void>;
   clearError: () => void;
-  getParentConnectionCode: () => Promise<string>;
-  connectParent: (parentCode: string) => Promise<void>;
-  
-  // 소셜 로그인 관련 액션
-  setSocialLoginData: (data: any | null) => void;
-  setNeedsSetup: (needs: boolean) => void;
-  completeSocialSetup: (data: any) => Promise<AuthResponse>;
+  setRedirectAfterLogin: (path: string | null) => void;
+  checkAuthStatus: () => Promise<void>;
 }
 
-// AsyncStorage 키 상수 정의
-const AUTH_STORAGE_KEYS = [
-  'auth_token',
-  'refresh_token',
-  'user_type',
-  'user_id',
-  'username',
-  'profile_id',
-];
-
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthStore>((set, get) => ({
+  // 초기 상태
   user: null,
-  isLoading: false,
-  error: null,
   isAuthenticated: false,
-  token: null,
+  isLoading: false,
   isAuthChecked: false,
-  socialLoginData: null,
-  needsSetup: false,
-  
-  login: async (data: LoginRequest): Promise<AuthResponse> => {
+  error: null,
+  redirectAfterLogin: null,
+
+  // 일반 로그인
+  login: async (credentials: LoginRequest) => {
+    set({ isLoading: true, error: null });
+
     try {
-      set({ isLoading: true, error: null });
-      
-      // 로그인 전에 기존 인증 데이터 정리
-      await AsyncStorage.multiRemove(AUTH_STORAGE_KEYS);
-      
-      const response = await authApi.login(data);
-      
-      // AsyncStorage에 사용자 정보 저장
-      await AsyncStorage.setItem('auth_token', response.token);
-      await AsyncStorage.setItem('user_type', response.user.userType);
-      await AsyncStorage.setItem('user_id', response.user.id);
-      await AsyncStorage.setItem('username', response.user.username);
-      if (response.user.profileId) {
-        await AsyncStorage.setItem('profile_id', response.user.profileId);
-      }
-      
+      console.log('🔐 일반 로그인 시도:', credentials.username);
+      const response = await authApi.login(credentials);
+
       set({
         user: response.user,
-        token: response.token,
         isAuthenticated: true,
         isLoading: false,
-        isAuthChecked: true,
-        socialLoginData: null,
-        needsSetup: false
+        error: null,
       });
-      
-      console.log('Login successful:', response.user.username);
+
+      console.log('✅ 일반 로그인 성공:', response.user.username);
       return response;
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('❌ 일반 로그인 실패:', error);
       set({
-        error: error.response?.data?.message || '로그인 중 오류가 발생했습니다.',
         isLoading: false,
-        isAuthChecked: true
+        error: error.message || '로그인에 실패했습니다.',
       });
       throw error;
     }
   },
-  
-  parentSignup: async (data: ParentSignupRequest) => {
+
+  // Google 로그인
+  googleSignIn: async (idToken: string, userInfo?: any) => {
+    set({ isLoading: true, error: null });
+
     try {
-      set({ isLoading: true, error: null });
-      await authApi.parentSignup(data);
-      set({ isLoading: false });
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.message || '회원가입 중 오류가 발생했습니다.',
-        isLoading: false
+      console.log('🟡 Google 로그인 API 호출 시작');
+      console.log('📤 전송 데이터:', {
+        hasIdToken: !!idToken,
+        userEmail: userInfo?.email,
+        userName: userInfo?.name,
       });
-      throw error;
-    }
-  },
-  
-  childSignup: async (data: ChildSignupRequest) => {
-    try {
-      set({ isLoading: true, error: null });
-      await authApi.childSignup(data);
-      set({ isLoading: false });
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.message || '회원가입 중 오류가 발생했습니다.',
-        isLoading: false
+
+      const response = await authApi.googleSignIn({
+        idToken,
+        userInfo,
       });
-      throw error;
-    }
-  },
-  
-  logout: async () => {
-    try {
-      set({ isLoading: true });
-      console.log('Starting logout process...');
-      
-      try {
-        // API 호출 실패해도 계속 진행
-        await authApi.logout();
-        console.log('API logout successful');
-      } catch (apiError) {
-        console.warn('API logout failed, continuing with local logout:', apiError);
-      }
-      
-      // 모든 인증 관련 데이터 완전히 제거
-      await AsyncStorage.multiRemove(AUTH_STORAGE_KEYS);
-      console.log('AsyncStorage cleared');
-      
-      // 상태 완전 초기화
-      set({
-        user: null,
-        token: null, 
-        isAuthenticated: false,
-        isLoading: false,
-        isAuthChecked: true,
-        socialLoginData: null,
-        needsSetup: false
+
+      console.log('📨 서버 응답:', {
+        hasUser: !!response.user,
+        userType: response.user?.userType,
+        isNewUser: response.user?.isNewUser,
+        needsSetup: response.needsSetup,
+        hasToken: !!response.token,
       });
-      
-      console.log('Auth store state reset: Logout complete');
-    } catch (error) {
-      console.error('Logout error:', error);
-      
-      // 오류가 발생해도 로컬 상태는 초기화
-      await AsyncStorage.multiRemove(AUTH_STORAGE_KEYS);
-      
-      set({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        error: '로그아웃 중 오류가 발생했습니다.',
-        isLoading: false,
-        isAuthChecked: true,
-        socialLoginData: null,
-        needsSetup: false
-      });
-    }
-  },
-  
-  checkAuthStatus: async () => {
-    try {
-      set({ isLoading: true });
-      console.log('Checking authentication status...');
-      
-      // 모든 인증 토큰 가져오기
-      const token = await AsyncStorage.getItem('auth_token');
-      const userType = await AsyncStorage.getItem('user_type');
-      const userId = await AsyncStorage.getItem('user_id');
-      const username = await AsyncStorage.getItem('username');
-      const profileId = await AsyncStorage.getItem('profile_id');
-      
-      // 토큰이 있고 유효한 경우에만 인증된 것으로 처리
-      if (token && userType && userId) {
-        // 토큰 유효성 확인 (선택적)
-        let isTokenValid = true;
-        try {
-          isTokenValid = await authApi.isAuthenticated();
-        } catch (error) {
-          console.warn('Token validation failed:', error);
-          isTokenValid = false;
-        }
-        
-        if (isTokenValid) {
-          console.log('Valid authentication found for user:', username);
-          set({
-            isAuthenticated: true,
-            token,
-            user: {
-              id: userId,
-              username: username || '',
-              userType: userType as 'PARENT' | 'CHILD',
-              profileId: profileId || ''
-            },
-            isAuthChecked: true,
-            isLoading: false
-          });
-        } else {
-          console.log('Invalid token found, clearing authentication data');
-          // 토큰이 유효하지 않으면 로그아웃 처리
-          await AsyncStorage.multiRemove(AUTH_STORAGE_KEYS);
-          
-          set({ 
-            isAuthenticated: false, 
-            user: null,
-            token: null,
-            isAuthChecked: true,
-            isLoading: false
-          });
-        }
-      } else {
-        console.log('No authentication data found');
-        // 토큰이 없으면 인증되지 않은 상태
-        set({ 
-          isAuthenticated: false, 
-          user: null,
-          token: null,
-          isAuthChecked: true,
-          isLoading: false
+
+      // 토큰이 있으면 완전한 로그인 상태
+      if (response.token) {
+        set({
+          user: response.user,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
         });
+        console.log('✅ Google 로그인 완료:', response.user.username);
+      } else {
+        // 토큰이 없으면 설정이 필요한 상태
+        set({
+          user: response.user,
+          isAuthenticated: false, // 아직 완전히 인증되지 않음
+          isLoading: false,
+          error: null,
+        });
+        console.log('⚠️ Google 로그인 - 추가 설정 필요');
       }
-    } catch (error) {
-      console.error('Authentication check error:', error);
-      
-      // 오류 발생 시 인증되지 않은 상태로 설정
-      set({ 
-        isAuthenticated: false, 
-        user: null,
-        token: null,
+
+      return response;
+    } catch (error: any) {
+      console.error('❌ Google 로그인 실패:', error);
+      set({
         isLoading: false,
-        isAuthChecked: true 
+        error: error.message || 'Google 로그인에 실패했습니다.',
+      });
+      throw error;
+    }
+  },
+
+  // Apple 로그인 (향후 구현)
+  appleSignIn: async (idToken: string, userInfo?: any) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      console.log('🍎 Apple 로그인 API 호출 시작');
+
+      const response = await authApi.appleSignIn({
+        idToken,
+        userInfo,
+      });
+
+      if (response.token) {
+        set({
+          user: response.user,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        });
+        console.log('✅ Apple 로그인 완료:', response.user.username);
+      } else {
+        set({
+          user: response.user,
+          isAuthenticated: false,
+          isLoading: false,
+          error: null,
+        });
+        console.log('⚠️ Apple 로그인 - 추가 설정 필요');
+      }
+
+      return response;
+    } catch (error: any) {
+      console.error('❌ Apple 로그인 실패:', error);
+      set({
+        isLoading: false,
+        error: error.message || 'Apple 로그인에 실패했습니다.',
+      });
+      throw error;
+    }
+  },
+
+  // 소셜 로그인 설정 완료
+  completeSocialSetup: async (setupData: SocialSetupRequest) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      console.log('⚙️ 소셜 로그인 설정 완료:', setupData);
+
+      const response = await authApi.completeSocialSetup(setupData);
+
+      set({
+        user: response.user,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+
+      console.log('✅ 소셜 로그인 설정 완료:', response.user.username);
+      return response;
+    } catch (error: any) {
+      console.error('❌ 소셜 로그인 설정 실패:', error);
+      set({
+        isLoading: false,
+        error: error.message || '설정 완료에 실패했습니다.',
+      });
+      throw error;
+    }
+  },
+
+  // 로그아웃
+  logout: async () => {
+    set({ isLoading: true });
+
+    try {
+      console.log('🚪 로그아웃 시작...');
+
+      // AsyncStorage 정리
+      await authApi.logout();
+
+      // 상태 초기화
+      set({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+        redirectAfterLogin: null,
+      });
+
+      console.log('✅ 로그아웃 완료');
+    } catch (error) {
+      console.error('❌ 로그아웃 중 오류:', error);
+      // 오류가 있어도 로컬 상태는 정리
+      set({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+        redirectAfterLogin: null,
       });
     }
   },
-  
+
+  // 에러 클리어
   clearError: () => {
     set({ error: null });
   },
-  
-  getParentConnectionCode: async () => {
+
+  // 리다이렉트 경로 설정
+  setRedirectAfterLogin: (path: string | null) => {
+    set({ redirectAfterLogin: path });
+  },
+
+  // 인증 상태 확인
+  checkAuthStatus: async () => {
+    set({ isLoading: true });
+
     try {
-      set({ isLoading: true, error: null });
-      const code = await authApi.getParentConnectionCode();
-      set({ isLoading: false });
-      return code.code;
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.message || '연결 코드 생성 중 오류가 발생했습니다.',
-        isLoading: false
+      console.log('🔍 인증 상태 확인 시작...');
+
+      const [token, userType, userId, profileId] = await AsyncStorage.multiGet([
+        'auth_token',
+        'user_type',
+        'user_id',
+        'profile_id',
+      ]);
+
+      console.log('📱 저장된 인증 정보:', {
+        hasToken: !!token[1],
+        userType: userType[1],
+        userId: userId[1],
+        profileId: profileId[1],
       });
-      throw error;
-    }
-  },
-  
-  connectParent: async (parentCode: string) => {
-    try {
-      set({ isLoading: true, error: null });
-      await authApi.connectParent(parentCode);
-      set({ isLoading: false });
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.message || '부모 연결 중 오류가 발생했습니다.',
-        isLoading: false
-      });
-      throw error;
-    }
-  },
-  
-  // 소셜 로그인 관련 메서드들
-  setSocialLoginData: (data: any | null) => {
-    set({ socialLoginData: data });
-  },
-  
-  setNeedsSetup: (needs: boolean) => {
-    set({ needsSetup: needs });
-  },
-  
-  completeSocialSetup: async (data: any): Promise<AuthResponse> => {
-    try {
-      set({ isLoading: true, error: null });
-      
-      const response = await authApi.completeSocialSetup(data);
-      
-      // AsyncStorage에 사용자 정보 저장
-      await AsyncStorage.setItem('auth_token', response.token);
-      await AsyncStorage.setItem('user_type', response.user.userType);
-      await AsyncStorage.setItem('user_id', response.user.id);
-      await AsyncStorage.setItem('username', response.user.username);
-      if (response.user.profileId) {
-        await AsyncStorage.setItem('profile_id', response.user.profileId);
+
+      if (token[1] && userType[1] && userId[1]) {
+        // 저장된 인증 정보가 있으면 인증된 상태로 설정
+        const user: User = {
+          id: userId[1],
+          username: '', // 필요시 API에서 가져오기
+          userType: userType[1] as 'PARENT' | 'CHILD',
+          profileId: profileId[1] || '',
+        };
+
+        set({
+          user,
+          isAuthenticated: true,
+          isLoading: false,
+          isAuthChecked: true,
+        });
+
+        console.log('✅ 기존 로그인 상태 복원:', {
+          userId: user.id,
+          userType: user.userType,
+        });
+      } else {
+        // 인증 정보가 없으면 비인증 상태
+        set({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          isAuthChecked: true,
+        });
+
+        console.log('❌ 저장된 인증 정보 없음');
       }
-      
+    } catch (error) {
+      console.error('❌ 인증 상태 확인 실패:', error);
       set({
-        user: response.user,
-        token: response.token,
-        isAuthenticated: true,
+        user: null,
+        isAuthenticated: false,
         isLoading: false,
         isAuthChecked: true,
-        socialLoginData: null,
-        needsSetup: false
+        error: '인증 상태 확인에 실패했습니다.',
       });
-      
-      console.log('Social setup complete:', response.user.username);
-      return response;
-    } catch (error: any) {
-      console.error('Social setup error:', error);
-      set({
-        error: error.response?.data?.message || '소셜 로그인 설정 중 오류가 발생했습니다.',
-        isLoading: false
-      });
-      throw error;
     }
-  }
+  },
 }));

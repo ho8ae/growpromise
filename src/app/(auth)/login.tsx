@@ -1,9 +1,8 @@
-// app/(auth)/login.tsx - 간소화된 소셜 로그인 버전
+// app/(auth)/login.tsx - Google 로그인 처리 개선
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,13 +19,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import authApi from '../../api/modules/auth';
 import SocialLoginButtons from '../../components/auth/SocialLoginButtons';
-import { useAuthStore } from '../../stores/authStore';
+import SafeStatusBar from '../../../src/components/common/SafeStatusBar';
+import { useAuthStore } from '../../../src/stores/authStore';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { isLoading, error, login, clearError } = useAuthStore();
+  const { isLoading, error, login, googleSignIn, clearError } = useAuthStore();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -147,59 +146,77 @@ export default function LoginScreen() {
     },
   });
 
-  // 소셜 로그인 뮤테이션 (자동 로그인/회원가입 처리)
-  const socialLoginMutation = useMutation({
-    mutationFn: async ({
-      provider,
-      data,
-    }: {
-      provider: 'GOOGLE' | 'APPLE';
-      data: any;
-    }) => {
+  // Google 로그인 뮤테이션
+  const googleLoginMutation = useMutation({
+    mutationFn: async (userData: any) => {
       clearError();
-
-      if (provider === 'APPLE') {
-        return await authApi.appleSignIn(data);
-      } else {
-        return await authApi.googleSignIn(data);
+      
+      if (!userData.idToken) {
+        throw new Error('Google 인증 토큰을 받지 못했습니다.');
       }
+
+      console.log('🟡 Google 로그인 데이터 처리:', {
+        hasIdToken: !!userData.idToken,
+        userEmail: userData.email,
+        userName: userData.name,
+      });
+
+      return await googleSignIn(userData.idToken, {
+        id: userData.id,
+        email: userData.email,
+        name: userData.name,
+        picture: userData.photo,
+        given_name: userData.givenName,
+        family_name: userData.familyName,
+        verified_email: userData.email,
+      });
     },
     onSuccess: (response) => {
-      console.log('소셜 로그인 성공:', response);
+      console.log('🎉 Google 로그인 성공:', response);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       if (response.user.isNewUser) {
         // 신규 회원인 경우
         if (response.needsSetup) {
-          Alert.alert('회원가입 완료!', '초기 설정을 완료해주세요.', [
-            {
-              text: '설정하기',
-              onPress: () => router.push('/(auth)/social-setup'),
-            },
-          ]);
+          Alert.alert(
+            '환영합니다!', 
+            '쑥쑥약속에 가입해주셔서 감사합니다.\n초기 설정을 완료해주세요.', 
+            [
+              {
+                text: '설정하기',
+                onPress: () => router.push('/(auth)/social-setup'),
+              },
+            ]
+          );
         } else {
-          Alert.alert('회원가입 완료!', '쑥쑥약속에 오신 것을 환영합니다!', [
-            {
-              text: '시작하기',
-              onPress: () => router.replace('/(tabs)'),
-            },
-          ]);
+          Alert.alert(
+            '회원가입 완료!', 
+            '쑥쑥약속에 오신 것을 환영합니다!', 
+            [
+              {
+                text: '시작하기',
+                onPress: () => router.replace('/(tabs)'),
+              },
+            ]
+          );
         }
       } else {
         // 기존 회원 로그인
         if (response.needsSetup) {
+          console.log('⚙️ 추가 설정 필요, 설정 화면으로 이동');
           router.push('/(auth)/social-setup');
         } else {
+          console.log('✅ 설정 완료된 사용자, 메인으로 이동');
           router.replace('/(tabs)');
         }
       }
     },
     onError: (error: any) => {
-      console.error('소셜 로그인 실패:', error);
+      console.error('❌ Google 로그인 실패:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         '로그인 실패',
-        error.message || '소셜 로그인 중 오류가 발생했습니다.',
+        error.message || 'Google 로그인 중 오류가 발생했습니다.',
         [{ text: '확인' }],
       );
     },
@@ -211,17 +228,27 @@ export default function LoginScreen() {
     loginMutation.mutate();
   };
 
-  const handleSocialLogin = (provider: 'GOOGLE' | 'APPLE', data: any) => {
-    console.log(`${provider} 로그인/회원가입 시도:`, data);
-    socialLoginMutation.mutate({ provider, data });
+  const handleSocialLogin = (provider: 'GOOGLE' | 'APPLE', userData: any) => {
+    console.log(`${provider} 로그인 시도:`, {
+      provider,
+      hasUserData: !!userData,
+      userEmail: userData?.email,
+    });
+
+    if (provider === 'GOOGLE') {
+      googleLoginMutation.mutate(userData);
+    } else if (provider === 'APPLE') {
+      // Apple 로그인은 향후 구현
+      Alert.alert('준비 중', 'Apple 로그인은 곧 지원될 예정입니다.');
+    }
   };
 
   const isAnyLoading =
-    loginMutation.isPending || socialLoginMutation.isPending || isLoading;
+    loginMutation.isPending || googleLoginMutation.isPending || isLoading;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <StatusBar style="dark" />
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
 
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView

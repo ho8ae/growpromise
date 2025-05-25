@@ -13,15 +13,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
-import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import authApi from '../../api/modules/auth';
+import SafeStatusBar from '../../../src/components/common/SafeStatusBar';
+import { useAuthStore } from '../../../src/stores/authStore';
 
 export default function SocialSetupScreen() {
   const router = useRouter();
+  const { completeSocialSetup } = useAuthStore();
   
   const [userType, setUserType] = useState<'PARENT' | 'CHILD' | null>(null);
   const [birthDate, setBirthDate] = useState<Date | null>(null);
@@ -58,10 +59,11 @@ export default function SocialSetupScreen() {
         parentCode: parentCode || undefined
       };
 
-      return await authApi.completeSocialSetup(setupData);
+      console.log('⚙️ 소셜 설정 데이터:', setupData);
+      return await completeSocialSetup(setupData);
     },
     onSuccess: (response) => {
-      console.log('소셜 로그인 설정 完료:', response);
+      console.log('✅ 소셜 로그인 설정 완료:', response);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
       Alert.alert(
@@ -71,19 +73,15 @@ export default function SocialSetupScreen() {
           { 
             text: '시작하기', 
             onPress: () => {
-              // 사용자 타입에 따라 적절한 화면으로 이동
-              if (response.user.userType === 'PARENT') {
-                router.replace('/(parent)');
-              } else {
-                router.replace('/(child)');
-              }
+              // 메인 화면으로 이동
+              router.replace('/(tabs)');
             }
           }
         ]
       );
     },
     onError: (error: any) => {
-      console.error('소셜 로그인 설정 실패:', error);
+      console.error('❌ 소셜 로그인 설정 실패:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         '설정 실패',
@@ -111,7 +109,7 @@ export default function SocialSetupScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <StatusBar style="dark" />
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       
       {/* 헤더 */}
       <View className="flex-row items-center px-6 py-4 border-b border-gray-100">

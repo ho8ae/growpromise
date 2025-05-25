@@ -1,12 +1,13 @@
 // app/(auth)/_layout.tsx
+import SafeStatusBar from '@/src/components/common/SafeStatusBar';
 import { Stack } from 'expo-router';
 import React from 'react';
-import { StatusBar } from 'expo-status-bar';
 
 export default function AuthLayout() {
   return (
     <>
-      <StatusBar style="dark" />
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
+
       <Stack
         screenOptions={{
           headerShown: false,
