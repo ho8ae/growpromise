@@ -2,13 +2,12 @@
 import { Link } from 'expo-router';
 import { Text, View, Pressable } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
-
+import SafeStatusBar from '../components/common/SafeStatusBar';
 
 export default function NotFoundScreen() {
   return (
     <>
-      <StatusBar style="dark" />
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       <View className="flex-1 items-center justify-center bg-white px-6">
         <FontAwesome5 
           name="exclamation-circle" 

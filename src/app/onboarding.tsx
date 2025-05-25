@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Colors from '../constants/Colors';
-import { StatusBar } from 'expo-status-bar';
+import SafeStatusBar from '../../src/components/common/SafeStatusBar';
 import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
@@ -118,16 +118,7 @@ export default function OnboardingScreen() {
   
   return (
     <SafeAreaView className="flex-1 bg-white">
-      {/* Edge-to-Edge 대응 StatusBar */}
-      <StatusBar style="dark" translucent={Platform.OS === 'android'} />
-      
-      {/* Android Edge-to-Edge 대응 */}
-      {Platform.OS === 'android' && (
-        <View 
-          className="absolute top-0 left-0 right-0 bg-white z-10"
-          style={{ height: 50 }}
-        />
-      )}
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       
       <View className="flex-1 justify-between">
         {/* 상단 진행 표시바 (선택사항) */}

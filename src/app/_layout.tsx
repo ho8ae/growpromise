@@ -4,11 +4,11 @@ import '../../global.css';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, Text, View, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryProvider } from '../../src/components/QueryProvider';
+import SafeStatusBar from '../../src/components/common/SafeStatusBar';
 import { useAuthStore } from '../../src/stores/authStore';
 
 // Google Sign-In 설정 (앱 시작시 한 번만 실행)
@@ -34,13 +34,7 @@ console.log(
 function LoadingScreen() {
   return (
     <View className="flex-1 justify-center items-center bg-white">
-      {/* Edge-to-Edge 대응을 위한 StatusBar 배경 */}
-      {Platform.OS === 'android' && (
-        <View 
-          className="absolute top-0 left-0 right-0 bg-white"
-          style={{ height: 50 }} // StatusBar 높이만큼
-        />
-      )}
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       
       <View className="bg-[#E6F4D7] p-6 rounded-full mb-6">
         <FontAwesome5 name="seedling" size={50} color="#58CC02" />
@@ -86,13 +80,6 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryProvider>
-        {/* Edge-to-Edge 호환 StatusBar 설정 */}
-        <StatusBar 
-          style="dark" 
-          translucent={Platform.OS === 'android'} 
-          hidden={false}
-        />
-        
         <AuthenticationManager>
           <Stack
             screenOptions={{
@@ -105,9 +92,7 @@ export default function RootLayout() {
               contentStyle: {
                 backgroundColor: '#FFFFFF',
               },
-              // 안전 영역 자동 처리 비활성화 (Edge-to-Edge 대응)
-              statusBarStyle: 'dark',
-              statusBarTranslucent: Platform.OS === 'android',
+              // StatusBar 설정 제거 (각 화면에서 개별 처리)
             }}
           >
             <Stack.Screen name="index" />

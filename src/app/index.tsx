@@ -1,10 +1,10 @@
 // app/index.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Redirect } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View, Text, Platform } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import SafeStatusBar from '../../src/components/common/SafeStatusBar';
 import { useAuthStore } from '../../src/stores/authStore';
 
 export default function IndexScreen() {
@@ -68,15 +68,7 @@ export default function IndexScreen() {
   if (isInitializing) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
-        {/* StatusBar 배경 (Edge-to-Edge 대응) */}
-        {Platform.OS === 'android' && (
-          <View 
-            className="absolute top-0 left-0 right-0 bg-white"
-            style={{ height: 50 }}
-          />
-        )}
-        
-        <StatusBar style="dark" translucent={Platform.OS === 'android'} />
+        <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
         
         <View className="bg-[#E6F4D7] p-6 rounded-full mb-6">
           <FontAwesome5 name="seedling" size={50} color="#58CC02" />

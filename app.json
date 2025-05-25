@@ -10,7 +10,11 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.low-k.growpromise"
+      "bundleIdentifier": "com.low-k.growpromise",
+      "infoPlist": {
+        "UIViewControllerBasedStatusBarAppearance": true,
+        "UIStatusBarStyle": "UIStatusBarStyleDefault"
+      }
     },
     "android": {
       "adaptiveIcon": {
