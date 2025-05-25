@@ -126,18 +126,32 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  // Apple 로그인 (향후 구현)
-  appleSignIn: async (idToken: string, userInfo?: any) => {
+  // Apple 로그인
+  appleSignIn: async (identityToken: string, userInfo?: any) => {
     set({ isLoading: true, error: null });
 
     try {
       console.log('🍎 Apple 로그인 API 호출 시작');
+      console.log('📤 전송 데이터:', {
+        hasIdentityToken: !!identityToken,
+        userEmail: userInfo?.email,
+        userName: userInfo?.name,
+      });
 
       const response = await authApi.appleSignIn({
-        idToken,
+        idToken: identityToken,
         userInfo,
       });
 
+      console.log('📨 서버 응답:', {
+        hasUser: !!response.user,
+        userType: response.user?.userType,
+        isNewUser: response.user?.isNewUser,
+        needsSetup: response.needsSetup,
+        hasToken: !!response.token,
+      });
+
+      // 토큰이 있으면 완전한 로그인 상태
       if (response.token) {
         set({
           user: response.user,
@@ -147,9 +161,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         });
         console.log('✅ Apple 로그인 완료:', response.user.username);
       } else {
+        // 토큰이 없으면 설정이 필요한 상태
         set({
           user: response.user,
-          isAuthenticated: false,
+          isAuthenticated: false, // 아직 완전히 인증되지 않음
           isLoading: false,
           error: null,
         });
