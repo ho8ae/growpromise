@@ -1,4 +1,4 @@
-// app/(auth)/login.tsx - Google 로그인 처리 개선
+// app/(auth)/login.tsx - 완성된 소셜 로그인 (Google + Apple)
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -19,13 +19,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import SocialLoginButtons from '../../components/auth/SocialLoginButtons';
+import SocialLoginButtons from '../../../src/components/auth/SocialLoginButtons';
 import SafeStatusBar from '../../../src/components/common/SafeStatusBar';
 import { useAuthStore } from '../../../src/stores/authStore';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { isLoading, error, login, googleSignIn, clearError } = useAuthStore();
+  const { isLoading, error, login, googleSignIn, appleSignIn, clearError } = useAuthStore();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -131,12 +131,12 @@ export default function LoginScreen() {
       });
     },
     onSuccess: () => {
-      console.log('로그인 성공');
+      console.log('✅ 일반 로그인 성공');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace('/(tabs)');
     },
     onError: (error: any) => {
-      console.error('로그인 실패:', error);
+      console.error('❌ 일반 로그인 실패:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         '로그인 실패',
@@ -203,10 +203,10 @@ export default function LoginScreen() {
       } else {
         // 기존 회원 로그인
         if (response.needsSetup) {
-          console.log('⚙️ 추가 설정 필요, 설정 화면으로 이동');
+          console.log('⚙️ Google 추가 설정 필요, 설정 화면으로 이동');
           router.push('/(auth)/social-setup');
         } else {
-          console.log('✅ 설정 완료된 사용자, 메인으로 이동');
+          console.log('✅ Google 설정 완료된 사용자, 메인으로 이동');
           router.replace('/(tabs)');
         }
       }
@@ -215,15 +215,88 @@ export default function LoginScreen() {
       console.error('❌ Google 로그인 실패:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        '로그인 실패',
+        'Google 로그인 실패',
         error.message || 'Google 로그인 중 오류가 발생했습니다.',
         [{ text: '확인' }],
       );
     },
   });
 
+  // Apple 로그인 뮤테이션
+  const appleLoginMutation = useMutation({
+    mutationFn: async (appleData: any) => {
+      clearError();
+      
+      if (!appleData.identityToken) {
+        throw new Error('Apple 인증 토큰을 받지 못했습니다.');
+      }
+
+      console.log('🍎 Apple 로그인 데이터 처리:', {
+        hasIdentityToken: !!appleData.identityToken,
+        userEmail: appleData.email,
+        userName: appleData.name,
+      });
+
+      return await appleSignIn(appleData.identityToken, {
+        id: appleData.id,
+        email: appleData.email,
+        name: appleData.name,
+        fullName: appleData.fullName,
+      });
+    },
+    onSuccess: (response) => {
+      console.log('🎉 Apple 로그인 성공:', response);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      if (response.user.isNewUser) {
+        // 신규 회원인 경우
+        if (response.needsSetup) {
+          Alert.alert(
+            '환영합니다!', 
+            '쑥쑥약속에 가입해주셔서 감사합니다.\n초기 설정을 완료해주세요.', 
+            [
+              {
+                text: '설정하기',
+                onPress: () => router.push('/(auth)/social-setup'),
+              },
+            ]
+          );
+        } else {
+          Alert.alert(
+            '회원가입 완료!', 
+            '쑥쑥약속에 오신 것을 환영합니다!', 
+            [
+              {
+                text: '시작하기',
+                onPress: () => router.replace('/(tabs)'),
+              },
+            ]
+          );
+        }
+      } else {
+        // 기존 회원 로그인
+        if (response.needsSetup) {
+          console.log('⚙️ Apple 추가 설정 필요, 설정 화면으로 이동');
+          router.push('/(auth)/social-setup');
+        } else {
+          console.log('✅ Apple 설정 완료된 사용자, 메인으로 이동');
+          router.replace('/(tabs)');
+        }
+      }
+    },
+    onError: (error: any) => {
+      console.error('❌ Apple 로그인 실패:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Apple 로그인 실패',
+        error.message || 'Apple 로그인 중 오류가 발생했습니다.',
+        [{ text: '확인' }],
+      );
+    },
+  });
+
   const handleLogin = () => {
-    console.log('로그인 버튼 클릭');
+    console.log('🔐 일반 로그인 버튼 클릭');
     Keyboard.dismiss();
     loginMutation.mutate();
   };
@@ -238,13 +311,12 @@ export default function LoginScreen() {
     if (provider === 'GOOGLE') {
       googleLoginMutation.mutate(userData);
     } else if (provider === 'APPLE') {
-      // Apple 로그인은 향후 구현
-      Alert.alert('준비 중', 'Apple 로그인은 곧 지원될 예정입니다.');
+      appleLoginMutation.mutate(userData);
     }
   };
 
   const isAnyLoading =
-    loginMutation.isPending || googleLoginMutation.isPending || isLoading;
+    loginMutation.isPending || googleLoginMutation.isPending || appleLoginMutation.isPending || isLoading;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
