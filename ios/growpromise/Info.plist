@@ -31,6 +31,12 @@
           <string>com.low-k.growpromise</string>
         </array>
       </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array  >
+          <string>com.googleusercontent.apps.584178392628-loms8bh6egsfr1q2fl9om43i9i51530g</string>
+        </array>
+      </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>1</string>
