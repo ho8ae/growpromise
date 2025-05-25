@@ -4,6 +4,8 @@
   <dict>
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
+    <key>CFBundleAllowMixedLocalizations</key>
+    <true/>
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
@@ -33,7 +35,13 @@
       </dict>
       <dict>
         <key>CFBundleURLSchemes</key>
-        <array  >
+        <array>
+          <string>exp+kids-plan</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
           <string>com.googleusercontent.apps.584178392628-loms8bh6egsfr1q2fl9om43i9i51530g</string>
         </array>
       </dict>
