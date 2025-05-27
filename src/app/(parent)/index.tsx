@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import promiseApi, { PromiseAssignment } from '../../api/modules/promise';
 import { useAuthStore } from '../../stores/authStore';
 import Colors from '../../constants/Colors';
+import SafeStatusBar from '@/src/components/common/SafeStatusBar';
 
 // 슬라이드인 애니메이션 훅
 const useSlideInAnimation = (initialValue = 100, duration = 500) => {
@@ -167,7 +168,7 @@ export default function ParentDashboard() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       <Stack.Screen options={{ headerShown: false }} />
       
       {/* 헤더 */}

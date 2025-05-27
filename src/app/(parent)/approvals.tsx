@@ -29,6 +29,7 @@ import ExperienceGainAnimation from '../../components/plant/ExperienceGainAnimat
 // Services
 import Colors from '../../constants/Colors';
 import { getFallbackTemplates } from '../../services/stickerService';
+import SafeStatusBar from '@/src/components/common/SafeStatusBar';
 
 export default function ApprovalsScreen() {
   const router = useRouter();
@@ -287,7 +288,7 @@ export default function ApprovalsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       <Stack.Screen
         options={{
           headerShown: false,
