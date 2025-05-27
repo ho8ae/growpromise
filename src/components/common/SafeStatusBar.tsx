@@ -26,7 +26,7 @@ export default function SafeStatusBar({
         translucent={Platform.OS === 'android' ? translucent : false}
         hidden={hidden}
       />
-      
+
       {/* Android Edge-to-Edge 대응 */}
       {Platform.OS === 'android' && translucent && !hidden && (
         <View

@@ -10,7 +10,7 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import SafeStatusBar from '../components/common/SafeStatusBar';
 import { Image } from 'expo-image';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
@@ -254,7 +254,7 @@ export default function GalleryDetailScreen() {
   if (isLoadingDetail) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50" style={{ paddingTop: insets.top }}>
-        <StatusBar style="dark" />
+        <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
         <ActivityIndicator size="large" color={Colors.light.primary} />
         <Text className="mt-4 text-gray-500">이미지 정보를 불러오는 중...</Text>
       </View>
@@ -265,7 +265,7 @@ export default function GalleryDetailScreen() {
   if (error || !galleryDetail) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50 p-4" style={{ paddingTop: insets.top }}>
-        <StatusBar style="dark" />
+        <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
         <FontAwesome5 name="exclamation-circle" size={40} color="#ef4444" />
         <Text className="mt-4 text-lg font-bold text-gray-800">이미지를 찾을 수 없습니다</Text>
         <Text className="mt-2 text-center text-gray-500">
@@ -283,7 +283,7 @@ export default function GalleryDetailScreen() {
   
   return (
     <View className="flex-1 bg-black" style={{ paddingTop: insets.top }}>
-      <StatusBar style="light" />
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       
       <Stack.Screen
         options={{
