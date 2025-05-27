@@ -16,6 +16,7 @@ import api from '../../api';
 import { PromiseAssignment, PromiseStatus } from '../../api/modules/promise';
 import * as Haptics from 'expo-haptics';
 import Colors from '../../constants/Colors';
+import SafeStatusBar from '@/src/components/common/SafeStatusBar';
 
 export default function ChildPromisesScreen() {
   const router = useRouter();
@@ -163,7 +164,7 @@ export default function ChildPromisesScreen() {
         className="px-2.5 py-1 rounded-full flex-row items-center"
         style={{ backgroundColor: bgColor }}
       >
-        <MaterialIcons name={iconName} size={14} color={textColor} style={{ marginRight: 4 }} />
+        <MaterialIcons name={iconName as any} size={14} color={textColor} style={{ marginRight: 4 }} />
         <Text 
           className="text-xs font-medium"
           style={{ color: textColor }}
@@ -197,7 +198,7 @@ export default function ChildPromisesScreen() {
     >
       <View className="flex-row items-center">
         <MaterialIcons 
-          name={icon} 
+          name={icon as any} 
           size={16} 
           color={filter === value ? Colors.light.primary : Colors.light.textSecondary}
           style={{ marginRight: 6 }}
@@ -261,7 +262,7 @@ export default function ChildPromisesScreen() {
   
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       <Stack.Screen options={{ headerShown: false }} />
       
       <View className="flex-1">
@@ -420,7 +421,7 @@ export default function ChildPromisesScreen() {
                             className="w-10 h-10 rounded-full items-center justify-center mr-3"
                             style={{ backgroundColor: `${color}15` }}
                           >
-                            <MaterialIcons name={icon} size={20} color={color} />
+                            <MaterialIcons name={icon as any} size={20} color={color} />
                           </View>
                           
                           <View className="flex-1">

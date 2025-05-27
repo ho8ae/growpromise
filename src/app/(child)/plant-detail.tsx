@@ -523,7 +523,7 @@ export default function PlantDetailScreen() {
                 {/* 물주기 버튼 */}
                 <Pressable
                   className={`flex-1 rounded-xl py-3 mr-1.5 items-center justify-center ${
-                    canWaterPlant() ? 'bg-info' : 'bg-gray-300'
+                    canWaterPlant() ? 'bg-blue-500' : 'bg-gray-300'
                   }`}
                   onPress={handleWaterPlant}
                   disabled={!canWaterPlant() || isWatering}

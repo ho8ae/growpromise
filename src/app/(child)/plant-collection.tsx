@@ -23,6 +23,7 @@ import Colors from '../../constants/Colors';
 import api from '../../api';
 import { Plant, PlantCollectionGroup, PlantType } from '../../api/modules/plant';
 import { useAuthStore } from '../../stores/authStore';
+import SafeStatusBar from '@/src/components/common/SafeStatusBar';
 
 export default function PlantCollectionScreen() {
   const router = useRouter();
@@ -244,7 +245,7 @@ export default function PlantCollectionScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
     
       <SafeAreaView className="flex-1 bg-white">
         {/* 커스텀 헤더 */}

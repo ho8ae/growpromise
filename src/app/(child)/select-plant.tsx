@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../api';
-import { PlantType } from '../../api/modules/plant';
+import { PlantType, PlantInventoryItem } from '../../api/modules/plant';
 import Colors from '../../constants/Colors';
 import { useAuthStore } from '../../stores/authStore';
 import { getPlantFallbackImage, getPlantImageUrl } from '../../utils/imageUrl';
@@ -65,7 +65,7 @@ export default function SelectPlantScreen() {
         const basicPlants = await api.plant.getAllPlantTypes();
 
         // 2. 인벤토리 식물 가져오기
-        let inventoryItems = [];
+        let inventoryItems: PlantInventoryItem[] = [];
         if (user?.userType === 'CHILD') {
           inventoryItems = await api.plant.getPlantInventory();
         }
@@ -85,7 +85,7 @@ export default function SelectPlantScreen() {
 
         // 4. 인벤토리 식물 추출 및 정보 추가 (quantity > 0인 식물만)
         const inventoryPlants = inventoryItems
-          .filter((item) => item.quantity > 0)
+          .filter((item) => item.quantity !== undefined && item.quantity > 0)
           .map((item) => ({
             ...item.plantType,
             isBasic: false,
@@ -618,11 +618,11 @@ export default function SelectPlantScreen() {
                     더 많은 특별한 식물이 필요하세요?
                   </Text>
                   <Text className="text-blue-700 mt-1">
-                    상점에서 희귀 식물을 뽑아보세요!
+                  미션을 완수하고 보상을 받아보세요 ! 
                   </Text>
                   <View className="bg-blue-500 self-start py-1 px-3 rounded-full mt-2">
                     <Text className="text-white text-sm font-medium">
-                      식물 뽑으러 가기
+                      상점으로 이동
                     </Text>
                   </View>
                 </View>
@@ -864,16 +864,8 @@ export default function SelectPlantScreen() {
           </View>
         </ScrollView>
 
-        {/* 뒤로가기 버튼 */}
-        <View className="absolute top-12 left-4">
-          <Pressable
-            className="bg-white p-2 rounded-full shadow-md"
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <MaterialIcons name="arrow-back" size={24} color="#4b5563" />
-          </Pressable>
-        </View>
+      
+        
       </SafeAreaView>
     </>
   );
