@@ -13,7 +13,10 @@
       "bundleIdentifier": "com.low-k.growpromise",
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
-        "UIStatusBarStyle": "UIStatusBarStyleDefault"
+        "UIStatusBarStyle": "UIStatusBarStyleDefault",
+        "NSCameraUsageDescription": "약속 인증을 위해 카메라 접근이 필요합니다.",
+        "NSPhotoLibraryUsageDescription": "사진을 선택하기 위해 갤러리 접근이 필요합니다.",
+        "NSMicrophoneUsageDescription": "알림음을 위해 마이크 접근이 필요합니다."
       }
     },
     "android": {
@@ -42,9 +45,7 @@
           "iosUrlScheme": "com.googleusercontent.apps.584178392628-loms8bh6egsfr1q2fl9om43i9i51530g"
         }
       ],
-      [
-        "expo-apple-authentication"
-      ],
+      ["expo-apple-authentication"],
       [
         "expo-splash-screen",
         {
