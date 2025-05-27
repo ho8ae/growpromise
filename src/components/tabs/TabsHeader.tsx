@@ -57,12 +57,12 @@ const AppHeader = ({
         />
       </View>
       
-      {/* 중앙에 현재 시간 표시 */}
+      {/* 중앙에 현재 시간 표시
       <View className="absolute left-0 right-0 items-center">
         <Text className="text-base font-medium text-gray-700">
           {currentTime}
         </Text>
-      </View>
+      </View> */}
       
       <View className="flex-row items-center mr-2">
         <Pressable onPress={() => router.push('/calendar')}>
