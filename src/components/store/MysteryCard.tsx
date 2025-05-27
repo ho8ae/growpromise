@@ -14,7 +14,6 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import Colors from '../../constants/Colors';
-import {  getPlantImageUrl } from '@/src/utils/imageUrl';
 
 interface MysteryCardProps {
   onPress: () => void;
@@ -51,21 +50,29 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
         -1,
         true
       );
-    } else if (isHovered && !isRevealed && !isFlipping) {
-      // 호버 시 정지 및 확대
+    } else {
+      // 정지 상태로 만들기
       floatY.value = withSpring(0, { damping: 15, stiffness: 300 });
+    }
+
+    if (isHovered && !isRevealed && !isFlipping) {
+      // 호버 시 확대 및 오버레이 제거
       cardScale.value = withSpring(1.05, { damping: 15, stiffness: 300 });
       overlayOpacity.value = withSpring(0, { damping: 15, stiffness: 300 });
-    }
-  }, [isRevealed, isFlipping, isHovered]);
-
-  // 호버 해제 시 원래 상태로
-  useEffect(() => {
-    if (!isHovered && !isRevealed && !isFlipping) {
+    } else if (!isRevealed) {
+      // 일반 상태로 복원
       cardScale.value = withSpring(1, { damping: 15, stiffness: 300 });
       overlayOpacity.value = withSpring(0.3, { damping: 15, stiffness: 300 });
     }
-  }, [isHovered, isRevealed, isFlipping]);
+  }, [isRevealed, isFlipping, isHovered]);
+
+  // 호버 해제 시 원래 상태로 (중복 제거)
+  // useEffect(() => {
+  //   if (!isHovered && !isRevealed && !isFlipping) {
+  //     cardScale.value = withSpring(1, { damping: 15, stiffness: 300 });
+  //     overlayOpacity.value = withSpring(0.3, { damping: 15, stiffness: 300 });
+  //   }
+  // }, [isHovered, isRevealed, isFlipping]);
 
   const handlePress = () => {
     if (isRevealed || isFlipping) return;
@@ -84,11 +91,11 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
     }, 300);
   };
 
-  // 둥둥 떠다니는 스타일 (결과 화면에서는 고정)
+  // 둥둥 떠다니는 스타일
   const floatingStyle = useAnimatedStyle(() => {
     return {
       transform: [
-        { translateY: isRevealed ? 0 : floatY.value },
+        { translateY: floatY.value },
         { scale: cardScale.value },
       ],
     };
@@ -126,9 +133,6 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
 
     const plantType = drawResult.plantType;
     const progressPercent = (plant.experience / plant.experienceToGrow) * 100;
-    const plantImage = getPlantImageUrl(drawResult.plantType?.imagePrefix);
-    console.log(plantImage)
-    console.log('drawResult', drawResult.plantType?.imagePrefix);
 
     return (
       <Animated.View style={[floatingStyle, { width, height }]}>
@@ -164,13 +168,11 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
           <View className="flex-1 w-full items-center justify-center bg-blue-50 py-8">
             {/* 식물 이미지 */}
             <View className="mb-4">
-              <View className="">
-                <Image source={{ uri: plantImage }} 
-                style={{
-                  width: 150,
-                  height: 150,
-                  resizeMode: 'contain',
-                }}
+              <View className="bg-primary/10 p-8 rounded-full">
+                <MaterialIcons
+                  name="eco"
+                  size={60}
+                  color={Colors.light.primary}
                 />
               </View>
             </View>
@@ -299,7 +301,7 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
             }
           ]}
         >
-          {/* <Text style={{ 
+          <Text style={{ 
             color: '#ffffff', 
             fontWeight: 'bold', 
             fontSize: 18,
@@ -308,7 +310,7 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
             textShadowRadius: 3,
           }}>
             터치하여 열기
-          </Text> */}
+          </Text>
         </Animated.View>
       </Animated.View>
     </Pressable>
