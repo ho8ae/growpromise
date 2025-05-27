@@ -1,10 +1,9 @@
 // src/app/(tabs)/_layout.tsx
-import { FontAwesome5 } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import * as Haptics from 'expo-haptics';
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React from 'react';
 import { Image, View } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '../../constants/Colors';
 
@@ -22,7 +21,7 @@ export default function TabLayout() {
           borderTopWidth: 0,
           elevation: 0,
           height: 60 + (insets.bottom > 0 ? insets.bottom : 10),
-          paddingTop: 10,
+          paddingTop: 15,
           paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
           backgroundColor: 'rgba(255, 255, 255, 0.9)',
           borderTopLeftRadius: 24,
@@ -50,7 +49,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: '홈',
-          tabBarIcon: ({ color,focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View className="p-2">
               <Image
                 source={require('../../assets/images/icon/home_icon.png')}
@@ -63,36 +62,38 @@ export default function TabLayout() {
           ),
         }}
       />
+      
+      {/* 갤러리 탭 추가 */}
       <Tabs.Screen
-        name="help"
+        name="gallery"
         options={{
-          title: '도움말',
-          tabBarIcon: ({ color,focused }) => (
+          title: '갤러리',
+          tabBarIcon: ({ color, focused }) => (
             <View className="p-2">
               <Image
-                source={require('../../assets/images/icon/help_icon.png')}
-                className="w-7 h-7"
+                source={require('../../assets/images/icon/gallery_icon.png')}
+                className="w-9 h-9"
                 style={{
                   opacity: focused ? 1 : 0.4,
-                  
                 }}
               />
             </View>
           ),
         }}
       />
+    
+      
       <Tabs.Screen
         name="store-tab"
         options={{
           title: '상점',
-          tabBarIcon: ({ color,focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View className="p-2">
               <Image
                 source={require('../../assets/images/icon/shop_icon.png')}
                 className="w-8 h-8"
                 style={{
                   opacity: focused ? 1 : 0.4,
-                  
                 }}
               />
             </View>

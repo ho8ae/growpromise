@@ -10,7 +10,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
@@ -31,6 +30,7 @@ import { useAuthStore } from '../../stores/authStore';
 // 유틸
 import { getImageUrl } from '../../utils/imageUrl';
 import Colors from '../../constants/Colors';
+import SafeStatusBar from '@/src/components/common/SafeStatusBar';
 
 // 화면 너비 구하기
 const { width } = Dimensions.get('window');
@@ -253,7 +253,7 @@ export default function GalleryScreen() {
   
   return (
     <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
-      <StatusBar style="dark" />
+     <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       
       <Stack.Screen
         options={{

@@ -1,8 +1,7 @@
-// src/app/(tabs)/index.tsx
+// src/app/(tabs)/index.tsx - 수정된 handlePlantPress 함수
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -16,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../../api';
 
 // Components
-import PlantContainer from '../../components/plant/PlantContainer'; // 새로운 경로로 업데이트
+import PlantContainer from '../../components/plant/PlantContainer';
 import AuthBanner from '../../components/tabs/AuthBanner';
 import ConnectChildCard from '../../components/tabs/ConnectChildCard';
 import ErrorMessage from '../../components/tabs/ErrorMessage';
@@ -26,6 +25,7 @@ import TipsCard from '../../components/tabs/TipsCard';
 
 // Stores
 import { useAuthStore } from '../../stores/authStore';
+import SafeStatusBar from '@/src/components/common/SafeStatusBar';
 
 export default function TabsScreen() {
   const router = useRouter();
@@ -127,7 +127,7 @@ export default function TabsScreen() {
       setSelectedChildId(firstChild.childId);
       setSelectedChildData(firstChild); // 자녀 전체 데이터 저장
     }
-  }, [connectedChildren]);
+  }, [connectedChildren, selectedChildId]);
 
   // 자녀 선택 처리 (부모 계정용)
   const handleChildSelect = (childId: string) => {
@@ -200,7 +200,7 @@ export default function TabsScreen() {
     return false;
   };
 
-  // 식물 영역 클릭 시 처리
+  // 식물 영역 클릭 시 처리 - 개선된 버전
   const handlePlantPress = () => {
     if (handleAuthRequired()) return;
 
@@ -212,8 +212,8 @@ export default function TabsScreen() {
     } else if (user?.userType === 'CHILD') {
       // 자녀 계정은 식물 유무에 따라 다르게 처리
       if (currentPlant) {
-        // 식물이 있으면 식물 상세 정보 화면으로 이동
-        router.push('/(child)/plant-detail');
+        // 자녀 화면으로 이동
+        router.push('/(child)');
       } else {
         // 식물이 없으면 식물 선택 화면으로 이동
         router.push('/(child)/select-plant');
@@ -230,6 +230,24 @@ export default function TabsScreen() {
       router.push('/(parent)');
     } else if (user?.userType === 'CHILD') {
       router.push('/(child)');
+    }
+  };
+
+  // 식물 정보 자세히 보기
+  const handlePlantInfoPress = () => {
+    if (handleAuthRequired()) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    if (user?.userType === 'PARENT' && selectedChildId) {
+      // 부모 계정인 경우 자녀 식물 상세 페이지로 이동
+      router.push({
+        pathname: '/(parent)/child-plant-detail',
+        params: { childId: selectedChildId }
+      });
+    } else if (user?.userType === 'CHILD') {
+      // 자녀 계정인 경우 식물 상세 페이지로 이동
+      router.push('/(child)/plant-detail');
     }
   };
 
@@ -273,7 +291,7 @@ export default function TabsScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <StatusBar translucent backgroundColor="transparent" style="dark" hidden={true}/>
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
 
       <ScrollView
         style={{ paddingTop: insets.top }}
@@ -305,7 +323,7 @@ export default function TabsScreen() {
             translateY={translateY}
           />
 
-          {/* 식물 영역 - 새로운 PlantContainer 컴포넌트 사용 */}
+          {/* 식물 영역 - PlantContainer 컴포넌트 사용 */}
           <PlantContainer
             fadeAnim={fadeAnim}
             translateY={translateY}
@@ -331,13 +349,6 @@ export default function TabsScreen() {
             onPress={navigateToDashboard}
             childId={selectedChildId || undefined}
           />
-
-          {/* 빠른 액션 - 2열 그리드 */}
-          {/* <QuickActionGrid
-            userType={user?.userType}
-            handleAuthRequired={handleAuthRequired}
-            childId={selectedChildId || undefined}
-          /> */}
 
           {/* 사용자 팁 카드 */}
           <TipsCard userType={user?.userType} />
