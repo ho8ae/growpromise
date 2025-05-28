@@ -1,5 +1,6 @@
 // hooks/usePlant.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import plantApi, { Plant, PlantType } from '../api/modules/plant';
 
 interface UsePlantProps {
@@ -21,13 +22,88 @@ interface UsePlantReturn {
 }
 
 export const usePlant = ({ plantId, childId, isParent = false }: UsePlantProps): UsePlantReturn => {
-  const [plant, setPlant] = useState<Plant | null>(null);
-  const [plantType, setPlantType] = useState<PlantType | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [progressPercent, setProgressPercent] = useState(0);
+  const queryClient = useQueryClient();
 
-  // 식물 이미지 가져오기 함수 - API 기반으로 개선
+  // 🔥 현재 식물 정보 쿼리
+  const {
+    data: plant,
+    isLoading: isLoadingPlant,
+    error: plantError,
+    refetch: refetchPlant
+  } = useQuery({
+    queryKey: ['currentPlant', isParent ? 'PARENT' : 'CHILD', childId, plantId],
+    queryFn: async () => {
+      console.log('식물 데이터 조회 시작:', { isParent, childId, plantId });
+      
+      let currentPlant = null;
+      
+      // 부모모드인지 자녀모드인지에 따라 적절한 API 호출
+      if (isParent && childId) {
+        currentPlant = await plantApi.getChildCurrentPlant(childId);
+      } else if (plantId) {
+        // 특정 식물 ID가 있으면 해당 식물 정보 가져오기 (API에 없지만 필요시 추가)
+        console.warn('특정 식물 ID 조회는 현재 API에서 지원하지 않습니다.');
+        currentPlant = await plantApi.getCurrentPlant();
+      } else {
+        currentPlant = await plantApi.getCurrentPlant();
+      }
+      
+      if (currentPlant) {
+        console.log('식물 데이터 로드 완료:', {
+          id: currentPlant.id,
+          name: currentPlant.name,
+          stage: currentPlant.currentStage,
+          experience: currentPlant.experience,
+          experienceToGrow: currentPlant.experienceToGrow,
+          canGrow: currentPlant.canGrow,
+          imageUrl: currentPlant.imageUrl,
+          plantTypeId: currentPlant.plantTypeId
+        });
+      } else {
+        console.log('현재 진행 중인 식물이 없습니다.');
+      }
+      
+      return currentPlant;
+    },
+    enabled: !isParent || !!childId, // 부모모드면 childId 필수
+    staleTime: 30000, // 30초 동안 fresh 상태 유지
+    gcTime: 5 * 60 * 1000, // 5분 동안 캐시 유지
+  });
+
+  // 🔥 식물 타입 정보 쿼리
+  const {
+    data: plantType,
+    isLoading: isLoadingPlantType,
+  } = useQuery({
+    queryKey: ['plantType', plant?.plantTypeId],
+    queryFn: async () => {
+      if (!plant) return null;
+      
+      // 1. 이미 포함된 plantType 사용
+      if (plant.plantType) {
+        console.log('포함된 plantType 사용');
+        return plant.plantType;
+      }
+      
+      // 2. 별도로 plantType 조회
+      if (plant.plantTypeId) {
+        try {
+          console.log('plantType 별도 조회:', plant.plantTypeId);
+          const typeData = await plantApi.getPlantTypeById(plant.plantTypeId);
+          return typeData;
+        } catch (typeError) {
+          console.error('식물 타입 조회 실패:', typeError);
+          return null;
+        }
+      }
+      
+      return null;
+    },
+    enabled: !!plant,
+    staleTime: 5 * 60 * 1000, // 5분 동안 fresh 상태 유지 (타입 정보는 자주 바뀌지 않음)
+  });
+
+  // 🔥 식물 이미지 가져오기 함수
   const getPlantImage = useCallback(() => {
     if (!plant || !plantType) return null;
 
@@ -78,7 +154,7 @@ export const usePlant = ({ plantId, childId, isParent = false }: UsePlantProps):
     }
   }, [plant, plantType]);
 
-  // 경험치 퍼센트 계산 함수
+  // 🔥 경험치 퍼센트 계산 함수
   const calculateProgressPercent = useCallback((plantData: Plant) => {
     const experience = plantData.experience ?? 0;
     const experienceToGrow = plantData.experienceToGrow ?? 100;
@@ -89,80 +165,7 @@ export const usePlant = ({ plantId, childId, isParent = false }: UsePlantProps):
     return 0;
   }, []);
 
-  // 식물 데이터 불러오기
-  const loadPlantData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      let currentPlant = null;
-      
-      // 부모모드인지 자녀모드인지에 따라 적절한 API 호출
-      if (isParent && childId) {
-        currentPlant = await plantApi.getChildCurrentPlant(childId);
-      } else if (plantId) {
-        // 특정 식물 ID가 있으면 해당 식물 정보 가져오기 (API에 없지만 필요시 추가)
-        console.warn('특정 식물 ID 조회는 현재 API에서 지원하지 않습니다.');
-        currentPlant = await plantApi.getCurrentPlant();
-      } else {
-        currentPlant = await plantApi.getCurrentPlant();
-      }
-      
-      if (currentPlant) {
-        setPlant(currentPlant);
-        
-        // 식물 타입 정보 처리
-        if (currentPlant.plantType) {
-          // 이미 포함된 plantType 사용
-          setPlantType(currentPlant.plantType);
-        } else if (currentPlant.plantTypeId) {
-          // 별도로 plantType 조회
-          try {
-            const typeData = await plantApi.getPlantTypeById(currentPlant.plantTypeId);
-            setPlantType(typeData);
-          } catch (typeError) {
-            console.error('식물 타입 조회 실패:', typeError);
-            // plantType 없어도 식물 정보는 표시할 수 있도록
-          }
-        }
-        
-        // 경험치 퍼센트 계산
-        const percent = calculateProgressPercent(currentPlant);
-        setProgressPercent(percent);
-        
-        console.log('식물 데이터 로드 완료:', {
-          id: currentPlant.id,
-          name: currentPlant.name,
-          stage: currentPlant.currentStage,
-          experience: currentPlant.experience,
-          experienceToGrow: currentPlant.experienceToGrow,
-          progressPercent: percent,
-          canGrow: currentPlant.canGrow,
-          imageUrl: currentPlant.imageUrl,
-          plantTypeId: currentPlant.plantTypeId
-        });
-      } else {
-        // 현재 식물이 없는 경우
-        console.log('현재 진행 중인 식물이 없습니다.');
-        setPlant(null);
-        setPlantType(null);
-        setProgressPercent(0);
-      }
-    } catch (err) {
-      console.error('식물 데이터 로드 오류:', err);
-      const errorMessage = err instanceof Error ? err.message : '식물 정보를 불러오는 중 오류가 발생했습니다.';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [childId, isParent, plantId, calculateProgressPercent]);
-  
-  // 컴포넌트 마운트 시 데이터 로드
-  useEffect(() => {
-    loadPlantData();
-  }, [loadPlantData]);
-  
-  // 물주기 기능
+  // 🔥 물주기 기능
   const waterPlant = useCallback(async () => {
     if (!plant) {
       throw new Error('식물이 없습니다.');
@@ -172,29 +175,23 @@ export const usePlant = ({ plantId, childId, isParent = false }: UsePlantProps):
       console.log('물주기 시작:', plant.id);
       const result = await plantApi.waterPlant(plant.id);
       
-      if (result.updatedPlant) {
-        setPlant(result.updatedPlant);
-        
-        // 경험치 퍼센트 갱신
-        const percent = calculateProgressPercent(result.updatedPlant);
-        setProgressPercent(percent);
-        
-        console.log('물주기 완료:', {
-          health: result.updatedPlant.health,
-          experience: result.updatedPlant.experience,
-          progressPercent: percent,
-          wateringStreak: result.wateringStreak
-        });
-      }
+      // 🚀 모든 관련 쿼리 무효화 - 실시간 업데이트 핵심!
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['currentPlant'] }),
+        queryClient.invalidateQueries({ queryKey: ['promiseStats'] }),
+        queryClient.invalidateQueries({ queryKey: ['connectedChildren'] }),
+      ]);
+      
+      console.log('물주기 완료 및 쿼리 무효화 완료');
       
       return result;
     } catch (err) {
       console.error('물주기 오류:', err);
       throw err;
     }
-  }, [plant, calculateProgressPercent]);
+  }, [plant, queryClient]);
   
-  // 성장 단계 올리기
+  // 🔥 성장 단계 올리기
   const growPlant = useCallback(async () => {
     if (!plant) {
       throw new Error('식물이 없습니다.');
@@ -214,46 +211,50 @@ export const usePlant = ({ plantId, childId, isParent = false }: UsePlantProps):
       
       const result = await plantApi.growPlant(plant.id);
       
-      if (result.plant) {
-        // 즉시 상태 업데이트
-        setPlant(result.plant);
-        
-        // 식물 타입 정보도 업데이트 (새로운 정보가 있으면)
-        if (result.plant.plantType) {
-          setPlantType(result.plant.plantType);
-        }
-        
-        // 경험치 퍼센트 갱신
-        const percent = calculateProgressPercent(result.plant);
-        setProgressPercent(percent);
-        
-        console.log('식물 성장 완료:', {
-          newStage: result.plant.currentStage,
-          experience: result.plant.experience,
-          experienceToGrow: result.plant.experienceToGrow,
-          progressPercent: percent,
-          canGrow: result.plant.canGrow,
-          isCompleted: result.isCompleted,
-          isMaxStage: result.isMaxStage
-        });
-      }
+      // 🚀 모든 관련 쿼리 무효화 - 실시간 업데이트 핵심!
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['currentPlant'] }),
+        queryClient.invalidateQueries({ queryKey: ['promiseStats'] }),
+        queryClient.invalidateQueries({ queryKey: ['connectedChildren'] }),
+        queryClient.invalidateQueries({ queryKey: ['plantCollection'] }),
+        queryClient.invalidateQueries({ queryKey: ['plantType'] }),
+      ]);
+      
+      console.log('식물 성장 완료 및 쿼리 무효화 완료:', {
+        newStage: result.plant?.currentStage,
+        isCompleted: result.isCompleted,
+        isMaxStage: result.isMaxStage
+      });
       
       return result;
     } catch (err) {
       console.error('식물 성장 오류:', err);
       throw err;
     }
-  }, [plant, calculateProgressPercent]);
+  }, [plant, queryClient]);
   
-  // 식물 데이터 새로고침
+  // 🔥 식물 데이터 새로고침
   const refreshPlant = useCallback(async () => {
     console.log('식물 데이터 새로고침 시작');
-    await loadPlantData();
-  }, [loadPlantData]);
-  
+    
+    // 관련된 모든 쿼리를 다시 가져오기
+    await Promise.all([
+      refetchPlant(),
+      queryClient.invalidateQueries({ queryKey: ['plantType'] }),
+      queryClient.invalidateQueries({ queryKey: ['promiseStats'] }),
+    ]);
+    
+    console.log('식물 데이터 새로고침 완료');
+  }, [refetchPlant, queryClient]);
+
+  // 계산된 값들
+  const progressPercent = plant ? calculateProgressPercent(plant) : 0;
+  const isLoading = isLoadingPlant || isLoadingPlantType;
+  const error = plantError ? (plantError as Error).message : null;
+
   return {
-    plant,
-    plantType,
+    plant: plant || null,
+    plantType: plantType || null,
     isLoading,
     error,
     progressPercent,
