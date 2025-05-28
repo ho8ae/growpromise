@@ -14,13 +14,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import api from '../../api';
 import ExperienceGainAnimation from '../../components/plant/ExperienceGainAnimation';
 import Colors from '../../constants/Colors';
 import { usePlant } from '../../hooks/usePlant';
 import { useAuthStore } from '../../stores/authStore';
-import api from '../../api';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useQueryClient } from '@tanstack/react-query';
+
+import { useModalManager } from '../../managers/ModalManager';
+
 
 export default function PlantDetailScreen() {
   const router = useRouter();
@@ -31,6 +38,26 @@ export default function PlantDetailScreen() {
   const [isGrowing, setIsGrowing] = useState(false);
   const [showExperienceAnimation, setShowExperienceAnimation] = useState(false);
   const [experienceGained, setExperienceGained] = useState(10);
+
+  const { showPlantCompletion } = useModalManager();
+  
+
+  // 상태 추가 (상단에)
+  const queryClient = useQueryClient();
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completionData, setCompletionData] = useState<{
+    plant: any;
+    growthResult: any;
+  } | null>(null);
+
+  const invalidateAllQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['currentPlant'] });
+    queryClient.invalidateQueries({ queryKey: ['promiseStats'] });
+    queryClient.invalidateQueries({ queryKey: ['connectedChildren'] });
+    queryClient.invalidateQueries({ queryKey: ['plantCollection'] });
+    // tab/index 페이지의 데이터도 강제 새로고침
+    queryClient.refetchQueries({ queryKey: ['currentPlant'], type: 'active' });
+  };
 
   // 애니메이션 값
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -112,6 +139,8 @@ export default function PlantDetailScreen() {
     ).start();
   }, []);
 
+
+
   // 물주기 처리
   const handleWaterPlant = async () => {
     if (isWatering || !plant) return;
@@ -157,8 +186,8 @@ export default function PlantDetailScreen() {
       ]).start();
 
       // 스티커 개수도 새로고침
+      invalidateAllQueries(); // 👈 추가
       loadStickerStats();
-
     } catch (error) {
       console.error('물주기 실패:', error);
 
@@ -183,35 +212,11 @@ export default function PlantDetailScreen() {
 
     try {
       setIsGrowing(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      // growPlant 훅 사용
       const result = await growPlant();
 
-      if (result?.isMaxStage) {
-        Alert.alert(
-          '식물 성장 완료!',
-          '축하합니다! 식물이 최대 단계까지 성장했어요. 이제 식물 도감에서 확인할 수 있어요.',
-          [
-            {
-              text: '도감 보기',
-              onPress: () => router.push('/(child)/plant-collection'),
-            },
-            { text: '확인', style: 'cancel' },
-          ],
-        );
-      } else if (result?.isCompleted) {
-        Alert.alert(
-          '식물 성장 완료!',
-          '축하합니다! 식물이 완전히 성장했어요. 이제 식물 도감에서 확인할 수 있어요.',
-          [
-            {
-              text: '도감 보기',
-              onPress: () => router.push('/(child)/plant-collection'),
-            },
-            { text: '확인', style: 'cancel' },
-          ],
-        );
+      // 🎉 식물 완성 시 ModalManager를 통해 모달 표시
+      if (result?.isMaxStage || result?.isCompleted) {
+        showPlantCompletion(result?.plant || plant, result);
       } else {
         Alert.alert(
           '식물 성장!',
@@ -234,8 +239,8 @@ export default function PlantDetailScreen() {
       ]).start();
 
       // 스티커 개수도 새로고침
+      invalidateAllQueries();
       loadStickerStats();
-
     } catch (error) {
       console.error('식물 성장 실패:', error);
       Alert.alert('오류', '식물 성장 과정에서 문제가 발생했습니다.');

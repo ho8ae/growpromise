@@ -1,6 +1,5 @@
 // src/app/(tabs)/store-tab.tsx - 실시간 티켓 업데이트 개선
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -56,18 +55,6 @@ export default function StoreTabScreen() {
   
   const { counts, total, hasTickets } = useTicketCounts();
 
-  // 🎯 화면 포커스 시 티켓 데이터 새로고침
-  useFocusEffect(
-    useCallback(() => {
-      console.log('🎯 Store Tab 포커스됨 - 티켓 데이터 새로고침');
-      if (isAuthenticated) {
-        // 티켓 관련 쿼리 무효화 및 새로고침
-        queryClient.invalidateQueries({ queryKey: ['tickets'] });
-        queryClient.invalidateQueries({ queryKey: ['childStats'] });
-        refetchTickets();
-      }
-    }, [isAuthenticated, queryClient, refetchTickets])
-  );
 
   // 🎯 인증 상태 변경 시 티켓 데이터 새로고침
   useEffect(() => {

@@ -48,6 +48,8 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     refreshPlant,
   } = usePlant({ isParent: false });
 
+
+
   // 스티커 개수 상태 관리
   const [stickerStats, setStickerStats] = useState<StickerStats>({
     totalStickers: 0,
@@ -215,6 +217,12 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     }
   };
 
+  const handlePress = () => {
+    if (onPress) {  // 존재할 때만 호출
+      onPress();
+    }
+  };
+
   // 로딩 상태 표시
   if (isLoading) {
     return (
@@ -249,7 +257,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
   if (!plant) {
     return (
       <View className="bg-white rounded-xl p-4 shadow-sm mt-4">
-        <Pressable className="items-center" onPress={onPress}>
+        <Pressable className="items-center" onPress={handlePress}>
           <View className="w-20 h-20 bg-primary/10 rounded-full items-center justify-center mb-4 mt-4">
             <MaterialIcons name="eco" size={36} color={Colors.light.primary} />
           </View>
@@ -276,12 +284,14 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
   const experienceToGrow = plant.experienceToGrow ?? 100;
   const canGrow = plant.canGrow ?? false;
 
+  
+
   return (
     <View className="bg-gray-50 rounded-xl p-3">
       <Pressable
         className="mx-auto bg-white rounded-xl shadow-md overflow-hidden border-2 border-gray-200"
         style={{ aspectRatio: 0.7 }} // 포켓몬 카드 비율
-        onPress={onPress}
+        onPress={handlePress}
       >
         {/* 식물 이름 헤더 - 포켓몬 카드 스타일 */}
         <View className="bg-yellow-50 px-4 py-2 flex-row justify-between items-center border-b border-gray-200">

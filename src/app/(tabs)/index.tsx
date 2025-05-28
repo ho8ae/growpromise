@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  AppState,
   RefreshControl,
   ScrollView,
   View,
@@ -24,8 +25,8 @@ import PlantHeader from '../../components/tabs/TabsHeader';
 import TipsCard from '../../components/tabs/TipsCard';
 
 // Stores
-import { useAuthStore } from '../../stores/authStore';
 import SafeStatusBar from '@/src/components/common/SafeStatusBar';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function TabsScreen() {
   const router = useRouter();
@@ -181,6 +182,20 @@ export default function TabsScreen() {
     ]).start();
   }, []);
 
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active' && isAuthenticated) {
+        queryClient.refetchQueries({ queryKey: ['currentPlant'] });
+      }
+    };
+
+    const subscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange,
+    );
+    return () => subscription?.remove();
+  }, [isAuthenticated, queryClient]);
+
   // 비인증 사용자가 기능 사용 시도할 때 로그인 화면으로 안내
   const handleAuthRequired = () => {
     if (!isAuthenticated) {
@@ -209,17 +224,25 @@ export default function TabsScreen() {
     if (user?.userType === 'PARENT') {
       // 부모 계정은 대시보드로 이동
       router.push('/(parent)');
-    } else if (user?.userType === 'CHILD') {
+    }
+
+    if (user?.userType === 'CHILD') {
       // 자녀 계정은 식물 유무에 따라 다르게 처리
       if (currentPlant) {
         // 자녀 화면으로 이동
         router.push('/(child)');
-      } else {
+      }
+    }
+
+    if (user?.userType === 'CHILD') {
+      if (currentPlant === undefined || currentPlant == null) {
         // 식물이 없으면 식물 선택 화면으로 이동
         router.push('/(child)/select-plant');
       }
     }
   };
+
+  console.log('currentPlant 식물있는지 ', currentPlant);
 
   // 사용자 유형에 따른 대시보드 진입
   const navigateToDashboard = () => {
@@ -238,12 +261,12 @@ export default function TabsScreen() {
     if (handleAuthRequired()) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     if (user?.userType === 'PARENT' && selectedChildId) {
       // 부모 계정인 경우 자녀 식물 상세 페이지로 이동
       router.push({
         pathname: '/(parent)/child-plant-detail',
-        params: { childId: selectedChildId }
+        params: { childId: selectedChildId },
       });
     } else if (user?.userType === 'CHILD') {
       // 자녀 계정인 경우 식물 상세 페이지로 이동
@@ -259,35 +282,21 @@ export default function TabsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
-      // 관련 쿼리 무효화하여 데이터 다시 로드
+      // invalidate 대신 refetch 사용
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['connectedChildren'] }),
-        queryClient.invalidateQueries({ queryKey: ['currentPlant'] }),
-        queryClient.invalidateQueries({ queryKey: ['promiseStats'] }),
-        queryClient.invalidateQueries({ queryKey: ['notifications'] }),
-
-        // 자녀 선택 ID가 있는 경우 해당 데이터도 새로고침
-        selectedChildId
-          ? queryClient.invalidateQueries({
-              queryKey: ['currentPlant', 'PARENT', selectedChildId],
-            })
-          : Promise.resolve(),
-
-        selectedChildId
-          ? queryClient.invalidateQueries({
-              queryKey: ['promiseStats', selectedChildId],
-            })
-          : Promise.resolve(),
+        queryClient.refetchQueries({ queryKey: ['connectedChildren'] }),
+        queryClient.refetchQueries({ queryKey: ['currentPlant'] }),
+        queryClient.refetchQueries({ queryKey: ['promiseStats'] }),
+        queryClient.refetchQueries({ queryKey: ['notifications'] }),
       ]);
     } catch (error) {
       console.error('새로고침 중 오류:', error);
     } finally {
-      // 약간의 지연 시간을 주어 사용자가 새로고침이 완료되었음을 인지하게 함
       setTimeout(() => {
         setRefreshing(false);
       }, 800);
     }
-  }, [isAuthenticated, selectedChildId, queryClient]);
+  }, [isAuthenticated, queryClient]); // selectedChildId 의존성 제거
 
   return (
     <View className="flex-1 bg-gray-50">

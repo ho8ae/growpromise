@@ -62,23 +62,14 @@ const ExperienceGainAnimation: React.FC<ExperienceGainAnimationProps> = ({
     });
   }, []);
 
-  // 위치 스타일 결정
-  const getPositionStyle = () => {
-    switch (position) {
-      case 'top':
-        return { top: '15%' };
-      case 'bottom':
-        return { bottom: '15%' };
-      default: // center
-        return { top: '45%' };
-    }
-  };
-
   return (
     <Animated.View
       style={[
         styles.container,
-        getPositionStyle(),
+        // 🔧 position 스타일을 별도로 처리
+        position === 'top' && styles.topPosition,
+        position === 'bottom' && styles.bottomPosition,
+        position === 'center' && styles.centerPosition,
         {
           transform: [
             { translateY },
@@ -88,7 +79,11 @@ const ExperienceGainAnimation: React.FC<ExperienceGainAnimationProps> = ({
         },
       ]}
     >
-      <FontAwesome5 name="star" size={20} color={Colors.light.leafGreen} />
+      <FontAwesome5 
+        name="star" 
+        size={20} 
+        color={Colors.light.success} // 🔧 leafGreen → success로 변경
+      />
       <Text style={styles.text}>+{amount} 경험치!</Text>
     </Animated.View>
   );
@@ -106,7 +101,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.light.leafGreen,
+    borderColor: Colors.light.success, // 🔧 leafGreen → success로 변경
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -118,7 +113,17 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 16,
     fontWeight: 'bold',
-    color: Colors.light.leafGreen,
+    color: Colors.light.success, // 🔧 leafGreen → success로 변경
+  },
+  // 🔧 position 스타일들을 별도로 정의
+  topPosition: {
+    top: '15%',
+  },
+  bottomPosition: {
+    bottom: '15%',
+  },
+  centerPosition: {
+    top: '45%',
   },
 });
 
