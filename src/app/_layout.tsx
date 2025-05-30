@@ -9,7 +9,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Providers & Managers (새로운 구조)
-import { QueryProvider } from '../../src/components/QueryProvider';
+import { QueryProvider } from '../providers/QueryProvider';
 import { AppStateManager } from '../../src/managers/AppStateManager';
 import { ModalManagerProvider } from '../../src/managers/ModalManager';
 import { NavigationProvider } from '../../src/providers/NavigationProvider';
