@@ -1,17 +1,17 @@
 // src/components/store/MysteryCard.tsx (카드 뒤집기 애니메이션)
-import React, { useEffect, useState } from 'react';
-import { Text, Pressable, View, Image } from 'react-native';
+import { getPlantImageUrl } from '@/src/utils/imageUrl';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import React, { useEffect, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSpring,
-  withSequence,
   Easing,
-  interpolate,
-  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import Colors from '../../constants/Colors';
 
@@ -23,12 +23,12 @@ interface MysteryCardProps {
   isRevealed: boolean;
 }
 
-const MysteryCard: React.FC<MysteryCardProps> = ({ 
-  onPress, 
-  width, 
-  height, 
+const MysteryCard: React.FC<MysteryCardProps> = ({
+  onPress,
+  width,
+  height,
   drawResult,
-  isRevealed 
+  isRevealed,
 }) => {
   const [isFlipping, setIsFlipping] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -44,11 +44,17 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
       // 둥둥 떠다니는 애니메이션 (호버 중이 아닐 때만)
       floatY.value = withRepeat(
         withSequence(
-          withTiming(-15, { duration: 2000, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-          withTiming(15, { duration: 2000, easing: Easing.bezier(0.4, 0, 0.6, 1) })
+          withTiming(-15, {
+            duration: 2000,
+            easing: Easing.bezier(0.4, 0, 0.6, 1),
+          }),
+          withTiming(15, {
+            duration: 2000,
+            easing: Easing.bezier(0.4, 0, 0.6, 1),
+          }),
         ),
         -1,
-        true
+        true,
       );
     } else {
       // 정지 상태로 만들기
@@ -76,13 +82,13 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
 
   const handlePress = () => {
     if (isRevealed || isFlipping) return;
-    
+
     setIsFlipping(true);
-    
+
     // 카드 뒤집기 애니메이션
     rotateY.value = withSequence(
       withTiming(90, { duration: 300 }), // 90도까지 뒤집기
-      withTiming(0, { duration: 300 })   // 0도로 돌아오기
+      withTiming(0, { duration: 300 }), // 0도로 돌아오기
     );
 
     // 0.3초 후 onPress 호출 (카드가 완전히 뒤집힌 순간)
@@ -94,10 +100,7 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
   // 둥둥 떠다니는 스타일
   const floatingStyle = useAnimatedStyle(() => {
     return {
-      transform: [
-        { translateY: floatY.value },
-        { scale: cardScale.value },
-      ],
+      transform: [{ translateY: floatY.value }, { scale: cardScale.value }],
     };
   });
 
@@ -111,12 +114,9 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
   // 카드 뒤집기 스타일
   const flipStyle = useAnimatedStyle(() => {
     const rotateYDeg = `${rotateY.value}deg`;
-    
+
     return {
-      transform: [
-        { perspective: 1000 },
-        { rotateY: rotateYDeg },
-      ],
+      transform: [{ perspective: 1000 }, { rotateY: rotateYDeg }],
     };
   });
 
@@ -133,6 +133,12 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
 
     const plantType = drawResult.plantType;
     const progressPercent = (plant.experience / plant.experienceToGrow) * 100;
+
+    const MysteryPlantImageUrl = getPlantImageUrl(
+      drawResult.plantType.imagePrefix,
+    );
+    // console.log('drawResult',drawResult.plantType.imagePrefix)
+    // console.log('MysteryPlantImageUrl',MysteryPlantImageUrl)
 
     return (
       <Animated.View style={[floatingStyle, { width, height }]}>
@@ -169,10 +175,11 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
             {/* 식물 이미지 */}
             <View className="mb-4">
               <View className="bg-primary/10 p-8 rounded-full">
-                <MaterialIcons
-                  name="eco"
-                  size={60}
-                  color={Colors.light.primary}
+                <Image
+                  source={{ uri: MysteryPlantImageUrl }}
+                  style={{ width: 150, height: 150 }}
+                  contentFit="contain"
+                  transition={150}
                 />
               </View>
             </View>
@@ -180,9 +187,7 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
             {/* 새 획득 메시지 */}
             {!drawResult.isDuplicate && (
               <View className="bg-green-100 px-3 py-1 rounded-full mb-2">
-                <Text className="text-green-800 text-xs font-bold">
-                  NEW!
-                </Text>
+                <Text className="text-green-800 text-xs font-bold">NEW!</Text>
               </View>
             )}
           </View>
@@ -256,8 +261,8 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
 
             {/* 상태 메시지 */}
             <Text className="text-xs text-center text-gray-500">
-              {drawResult.isDuplicate 
-                ? `이미 보유한 식물입니다. 경험치 +${drawResult.experienceGained || 10}` 
+              {drawResult.isDuplicate
+                ? `이미 보유한 식물입니다. 경험치 +${drawResult.experienceGained || 10}`
                 : '새로운 식물을 획득했습니다!'}
             </Text>
           </View>
@@ -268,8 +273,8 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
 
   // 기본 상태 - 미스테리 카드
   return (
-    <Pressable 
-      onPress={handlePress} 
+    <Pressable
+      onPress={handlePress}
       onPressIn={() => setIsHovered(true)}
       onPressOut={() => setIsHovered(false)}
       style={{ width, height }}
@@ -278,16 +283,16 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
         {/* 카드 뒷면 이미지 */}
         <Image
           source={require('../../assets/images/card/basic_card.png')}
-          style={{ 
-            width, 
-            height, 
+          style={{
+            width,
+            height,
             borderRadius: 16,
           }}
           resizeMode="cover"
         />
-        
+
         {/* 카드 위 오버레이 */}
-        <Animated.View 
+        <Animated.View
           style={[
             overlayStyle,
             {
@@ -298,17 +303,19 @@ const MysteryCard: React.FC<MysteryCardProps> = ({
               justifyContent: 'center',
               backgroundColor: 'rgba(0, 0, 0, 0.3)',
               borderRadius: 16,
-            }
+            },
           ]}
         >
-          <Text style={{ 
-            color: '#ffffff', 
-            fontWeight: 'bold', 
-            fontSize: 18,
-            textShadowColor: '#000',
-            textShadowOffset: { width: 1, height: 1 },
-            textShadowRadius: 3,
-          }}>
+          <Text
+            style={{
+              color: '#ffffff',
+              fontWeight: 'bold',
+              fontSize: 18,
+              textShadowColor: '#000',
+              textShadowOffset: { width: 1, height: 1 },
+              textShadowRadius: 3,
+            }}
+          >
             터치하여 열기
           </Text>
         </Animated.View>

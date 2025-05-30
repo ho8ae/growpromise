@@ -270,7 +270,7 @@ export default function StoreTabScreen() {
                       </View>
                       
                       {total > 0 ? (
-                        <View className="flex-row justify-center space-x-4">
+                        <View className="flex-row justify-center space-x-4 gap-4">
                           {Object.entries(counts).map(([type, count]) => (
                             count > 0 && (
                               <View key={type} className="items-center">
@@ -416,7 +416,7 @@ export default function StoreTabScreen() {
           </View>
 
           {/* 하단 안내 */}
-          <View className="bg-green-50 rounded-xl p-4 border border-green-100 mt-4">
+          <View className="bg-green-50 rounded-xl p-4 border border-green-200 mt-4">
             <TouchableOpacity
               onPress={() => router.push('/(child)/select-plant')}
               className="flex-row items-center justify-center"
