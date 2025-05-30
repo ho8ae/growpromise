@@ -19,6 +19,7 @@ import promiseApi, {
   PromiseAssignment,
   PromiseStatus,
 } from '../../api/modules/promise';
+import PromiseSuccessModal from '../../components/common/PromiseSuccessModal';
 
 export default function VerifyPromise() {
   const router = useRouter();
@@ -40,6 +41,9 @@ export default function VerifyPromise() {
     [],
   );
   const [error, setError] = useState<string | null>(null);
+  
+  // 성공 모달 상태 추가
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const cameraRef = useRef<CameraView>(null);
 
@@ -134,13 +138,9 @@ export default function VerifyPromise() {
         message.trim() ? message : undefined,
       );
 
-      // 성공 시 알림 및 화면 이동
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
-        '성공',
-        '부모님께 인증 요청을 보냈어요! 승인되면 식물이 경험치를 얻게 됩니다.\n\n약속 유형에 따라 획득할 수 있는 경험치:\n- 일회성 약속: 20\n- 월간 약속: 15\n- 주간 약속: 10\n- 일일 약속: 5',
-        [{ text: '확인', onPress: () => router.back() }],
-      );
+      // 성공 시 모달 표시 (Alert 대신)
+      setIsSubmitting(false);
+      setShowSuccessModal(true);
     } catch (error) {
       console.error('인증 제출 중 오류:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -150,6 +150,12 @@ export default function VerifyPromise() {
       );
       setIsSubmitting(false);
     }
+  };
+
+  // 성공 모달 닫기 핸들러
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    router.back();
   };
 
   if (!permission) {
@@ -181,7 +187,7 @@ export default function VerifyPromise() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView className="flex-1">
-        <View className="px-4 pt-4 pb-8">
+        <View className="pt-4 pb-8 px-4">
           <Text className="text-2xl font-bold text-center my-4 text-emerald-700">
             약속 인증하기
           </Text>
@@ -246,7 +252,7 @@ export default function VerifyPromise() {
                   </CameraView>
                 </View>
               ) : (
-                <View className="bg-emerald-50 border-2 border-emerald-200 rounded-xl aspect-square items-center justify-center mb-4 overflow-hidden">
+                <View className="bg-emerald-50 border-2 border-emerald-200 rounded-xl aspect-square items-center justify-center mb-4 overflow-hidden ml-4">
                   {photoUri ? (
                     <Image
                       source={{ uri: photoUri }}
@@ -347,8 +353,8 @@ export default function VerifyPromise() {
                 </View>
               )}
 
-              <Text className="text-lg font-medium my-3 text-emerald-700">
-                인증 메시지 (선택사항)
+              <Text className="text-lg font-bold my-3 text-emerald-700">
+                부모님께 한 마디! (선택사항)
               </Text>
               <TextInput
                 className="border border-gray-300 rounded-xl p-4 mb-5"
@@ -361,7 +367,7 @@ export default function VerifyPromise() {
               />
 
               <Pressable
-                className={`py-4 rounded-xl shadow-md ${
+                className={`py-4 rounded-xl shadow-sm ${
                   photoUri &&
                   (assignmentId ||
                     selectedPromise ||
@@ -414,6 +420,13 @@ export default function VerifyPromise() {
           )}
         </View>
       </ScrollView>
+
+      {/* 성공 모달 추가 */}
+      <PromiseSuccessModal
+        visible={showSuccessModal}
+        onClose={handleSuccessModalClose}
+        message="부모님께 인증 요청을 보냈어요! 승인되면 식물이 경험치를 얻게 됩니다."
+      />
     </SafeAreaView>
   );
 }

@@ -25,6 +25,7 @@ export default function ChildLayout() {
         options={{
           title: '약속 인증하기',
           animation: 'slide_from_right',
+          headerShown: false,
         }}
       />
       <Stack.Screen
