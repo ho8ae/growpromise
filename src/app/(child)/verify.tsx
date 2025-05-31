@@ -20,12 +20,16 @@ import promiseApi, {
   PromiseStatus,
 } from '../../api/modules/promise';
 import PromiseSuccessModal from '../../components/common/PromiseSuccessModal';
+import { usePromiseRealtime } from '../../hooks/usePromiseRealtime';
 
 export default function VerifyPromise() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const assignmentId = params.assignmentId as string;
   const promiseId = params.promiseId as string;
+
+  // 실시간 업데이트 훅
+  const { onPromiseVerificationSubmitted } = usePromiseRealtime();
 
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraType, setCameraType] = useState<CameraType>('back');
@@ -42,7 +46,7 @@ export default function VerifyPromise() {
   );
   const [error, setError] = useState<string | null>(null);
   
-  // 성공 모달 상태 추가
+  // 성공 모달 상태
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const cameraRef = useRef<CameraView>(null);
@@ -131,14 +135,19 @@ export default function VerifyPromise() {
 
       setIsSubmitting(true);
 
+      const currentAssignmentId = assignmentId || selectedPromise;
+
       // API 호출하여 인증 제출
       await promiseApi.submitVerification(
-        assignmentId || selectedPromise, // assignmentId가 없으면 선택된 약속 ID 사용
+        currentAssignmentId,
         photoUri,
         message.trim() ? message : undefined,
       );
 
-      // 성공 시 모달 표시 (Alert 대신)
+      // ✨ 핵심: 실시간 업데이트 트리거
+      onPromiseVerificationSubmitted(currentAssignmentId);
+
+      // 성공 시 모달 표시
       setIsSubmitting(false);
       setShowSuccessModal(true);
     } catch (error) {
@@ -155,6 +164,12 @@ export default function VerifyPromise() {
   // 성공 모달 닫기 핸들러
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
+    
+    // ✨ 모달 닫을 때도 한 번 더 업데이트 (확실히 하기 위해)
+    setTimeout(() => {
+      onPromiseVerificationSubmitted(assignmentId || selectedPromise);
+    }, 300);
+    
     router.back();
   };
 
@@ -252,7 +267,7 @@ export default function VerifyPromise() {
                   </CameraView>
                 </View>
               ) : (
-                <View className="bg-emerald-50 border-2 border-emerald-200 rounded-xl aspect-square items-center justify-center mb-4 overflow-hidden ml-4">
+                <View className="bg-emerald-50 border-2 border-emerald-200 rounded-xl aspect-square items-center justify-center mb-4 overflow-hidden mx-auto">
                   {photoUri ? (
                     <Image
                       source={{ uri: photoUri }}
@@ -421,7 +436,7 @@ export default function VerifyPromise() {
         </View>
       </ScrollView>
 
-      {/* 성공 모달 추가 */}
+      {/* 성공 모달 */}
       <PromiseSuccessModal
         visible={showSuccessModal}
         onClose={handleSuccessModalClose}

@@ -10,7 +10,6 @@ import {
   Alert,
   Animated,
   Pressable,
-  StatusBar,
   Text,
   TextInput,
   View,
@@ -21,15 +20,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import promiseApi from '../../api/modules/promise';
 import stickerApi, { StickerTemplate } from '../../api/modules/sticker';
 
+// useQuery
+import { usePromiseRealtime } from '../../hooks/usePromiseRealtime';
+
 // Components
 import SelectedStickerPreview from '../../components/parent/SelectedStickerPreview';
 import StickerSelector from '../../components/parent/StickerSelector';
 import ExperienceGainAnimation from '../../components/plant/ExperienceGainAnimation';
 
 // Services
+import SafeStatusBar from '@/src/components/common/SafeStatusBar';
 import Colors from '../../constants/Colors';
 import { getFallbackTemplates } from '../../services/stickerService';
-import SafeStatusBar from '@/src/components/common/SafeStatusBar';
 
 export default function ApprovalsScreen() {
   const router = useRouter();
@@ -42,6 +44,19 @@ export default function ApprovalsScreen() {
     null,
   );
   const [showStickerModal, setShowStickerModal] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvalResult, setApprovalResult] = useState<{
+    approved: boolean;
+    childName: string;
+    promiseTitle: string;
+    experienceGained: number;
+  }>({
+    approved: false,
+    childName: '',
+    promiseTitle: '',
+    experienceGained: 0,
+  });
+  const { onPromiseVerificationResponded } = usePromiseRealtime();
 
   // 애니메이션 값
   const scrollY = React.useRef(new Animated.Value(0)).current;
@@ -201,33 +216,24 @@ export default function ApprovalsScreen() {
               }
             }
 
+            // ✨ 핵심: 실시간 업데이트 트리거
+            onPromiseVerificationResponded(id as string, true);
+
             // 경험치 획득 정보 처리
             const gainedExp = response.experienceGained || 0;
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-            // 경험치 획득 애니메이션 표시
-            if (gainedExp > 0) {
-              setExperienceGained(gainedExp);
-              setShowExperienceGain(true);
-
-              setTimeout(() => {
-                setShowExperienceGain(false);
-                Alert.alert(
-                  '성공',
-                  `인증을 승인했습니다. 자녀에게 스티커가 지급되었습니다.\n\n자녀의 식물이 ${gainedExp} 경험치를 획득했습니다!`,
-                  [{ text: '확인', onPress: () => router.back() }],
-                );
-              }, 2000);
-            } else {
-              Alert.alert(
-                '성공',
-                '인증을 승인했습니다. 자녀에게 스티커가 지급되었습니다.',
-                [{ text: '확인', onPress: () => router.back() }],
-              );
-            }
+            // Alert 대신 모달 데이터 설정
+            setApprovalResult({
+              approved: true,
+              childName: verification?.child?.user.username || '자녀',
+              promiseTitle: verification?.promise?.title || '약속',
+              experienceGained: gainedExp,
+            });
 
             setIsSubmitting(false);
+            setShowApprovalModal(true); // 모달 표시
           } catch (error) {
             console.error('인증 승인 중 오류:', error);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -237,7 +243,13 @@ export default function ApprovalsScreen() {
         },
       },
     ]);
-  }, [selectedStickerId, id, verification, formatDate, router]);
+  }, [
+    selectedStickerId,
+    id,
+    verification,
+    formatDate,
+    onPromiseVerificationResponded,
+  ]);
 
   // 인증 거절 처리
   const handleReject = useCallback(async () => {
@@ -263,13 +275,19 @@ export default function ApprovalsScreen() {
               rejectionReason,
             );
 
-            Alert.alert(
-              '성공',
-              '인증을 거절했습니다. 자녀에게 알림이 전송되었습니다.',
-              [{ text: '확인', onPress: () => router.back() }],
-            );
+            // ✨ 핵심: 실시간 업데이트 트리거
+            onPromiseVerificationResponded(id as string, false);
+
+            // Alert 대신 모달 데이터 설정
+            setApprovalResult({
+              approved: false,
+              childName: verification?.child?.user.username || '자녀',
+              promiseTitle: verification?.promise?.title || '약속',
+              experienceGained: 0,
+            });
 
             setIsSubmitting(false);
+            setShowApprovalModal(true); // 모달 표시
           } catch (error) {
             console.error('인증 거절 중 오류:', error);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

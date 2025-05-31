@@ -24,7 +24,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../api';
-import { PlantType, PlantInventoryItem } from '../../api/modules/plant';
+import { PlantInventoryItem, PlantType } from '../../api/modules/plant';
+import PlantTutorialModal from '../../components/common/PlantTutorialModal';
 import Colors from '../../constants/Colors';
 import { useAuthStore } from '../../stores/authStore';
 import { getPlantFallbackImage, getPlantImageUrl } from '../../utils/imageUrl';
@@ -42,6 +43,7 @@ export default function SelectPlantScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
 
   // 애니메이션 값
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -120,17 +122,10 @@ export default function SelectPlantScreen() {
       // 인벤토리 데이터 무효화 (리로드)
       queryClient.invalidateQueries({ queryKey: ['plantInventory'] });
       queryClient.invalidateQueries({ queryKey: ['allPlants'] });
+      queryClient.invalidateQueries({ queryKey: ['currentPlant'] }); // 추가
 
-      Alert.alert(
-        '식물 키우기 시작!',
-        '새로운 식물 키우기를 시작했어요. 약속을 완료하고 물을 주며 식물을 키워보세요!',
-        [
-          {
-            text: '확인',
-            onPress: () => router.back(),
-          },
-        ],
-      );
+      // Alert 대신 튜토리얼 모달 표시
+      setShowTutorialModal(true);
     },
     onError: (error) => {
       console.error('식물 생성 실패:', error);
@@ -211,6 +206,11 @@ export default function SelectPlantScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.replace('/(tabs)/store-tab');
   }, [router]);
+
+  const handleTutorialComplete = () => {
+    setShowTutorialModal(false);
+    router.back(); // 홈으로 돌아가기
+  };
 
   // 유틸리티 함수들
   const getDifficultyText = useCallback((difficulty: string) => {
@@ -618,7 +618,7 @@ export default function SelectPlantScreen() {
                     더 많은 특별한 식물이 필요하세요?
                   </Text>
                   <Text className="text-blue-700 mt-1">
-                  미션을 완수하고 보상을 받아보세요 ! 
+                    미션을 완수하고 보상을 받아보세요 !
                   </Text>
                   <View className="bg-blue-500 self-start py-1 px-3 rounded-full mt-2">
                     <Text className="text-white text-sm font-medium">
@@ -863,10 +863,15 @@ export default function SelectPlantScreen() {
             )}
           </View>
         </ScrollView>
-
-      
-        
       </SafeAreaView>
+      <PlantTutorialModal
+        visible={showTutorialModal}
+        onClose={handleTutorialComplete}
+        plantName={
+          plantName.trim() || `나의 ${selectedPlantType?.name || '식물'}`
+        }
+        plantType={selectedPlantType?.name || ''}
+      />
     </>
   );
 }
