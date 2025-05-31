@@ -48,8 +48,6 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     refreshPlant,
   } = usePlant({ isParent: false });
 
-
-
   // 스티커 개수 상태 관리
   const [stickerStats, setStickerStats] = useState<StickerStats>({
     totalStickers: 0,
@@ -218,7 +216,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
   };
 
   const handlePress = () => {
-    if (onPress) {  // 존재할 때만 호출
+    if (onPress) {
       onPress();
     }
   };
@@ -233,7 +231,8 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     );
   }
 
-  // 오류 상태 표시
+  // 이제 plant가 null인 경우는 상위에서 처리하므로 여기서는 제거
+  // 오류 상태만 처리
   if (error) {
     return (
       <View className="bg-white rounded-xl p-6 shadow-sm items-center justify-center">
@@ -253,38 +252,17 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     );
   }
 
-  // 식물이 없는 경우
-  if (!plant) {
-    return (
-      <View className="bg-white rounded-xl p-4 shadow-sm mt-4">
-        <Pressable className="items-center" onPress={handlePress}>
-          <View className="w-20 h-20 bg-primary/10 rounded-full items-center justify-center mb-4 mt-4">
-            <MaterialIcons name="eco" size={36} color={Colors.light.primary} />
-          </View>
-          <Text className="text-lg font-bold text-primary mb-2">
-            식물이 없어요
-          </Text>
-          <Text className="text-gray-500 text-center mb-4 px-6">
-            식물을 선택하고 키워보세요!
-          </Text>
-          <View className="bg-primary px-5 py-2.5 rounded-lg">
-            <Text className="text-white font-bold">식물 선택하기</Text>
-          </View>
-        </Pressable>
-      </View>
-    );
-  }
+  // plant가 있다고 가정하고 진행
 
   // 사용 가능한 스티커 개수
   const stickerCount = isLoadingStickers
     ? '...'
     : stickerStats.availableStickers;
 
-  const experience = plant.experience ?? 0;
-  const experienceToGrow = plant.experienceToGrow ?? 100;
-  const canGrow = plant.canGrow ?? false;
-
-  
+  // plant가 반드시 있다고 가정
+  const experience = plant?.experience ?? 0;
+  const experienceToGrow = plant?.experienceToGrow ?? 100;
+  const canGrow = plant?.canGrow ?? false;
 
   return (
     <View className="bg-gray-50 rounded-xl p-3">
@@ -297,11 +275,11 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
         <View className="bg-yellow-50 px-4 py-2 flex-row justify-between items-center border-b border-gray-200">
           <View className="flex-row items-center">
             <Text className="font-bold text-gray-800 text-base">
-              {plant.name || plantType?.name || '나의 식물'}
+              {plant?.name || plantType?.name || '식물을 선택하세요 !'}
             </Text>
             <View className="bg-yellow-200 rounded-full px-2 py-0.5 ml-2">
               <Text className="text-xs font-medium text-yellow-800">
-                Lv.{plant.currentStage}
+                Lv.{plant?.currentStage}
               </Text>
             </View>
           </View>
@@ -342,12 +320,8 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
                 contentFit="contain"
               />
             ) : (
-              <View className="bg-primary/10 p-10 rounded-full">
-                <MaterialIcons
-                  name="eco"
-                  size={60}
-                  color={Colors.light.primary}
-                />
+              <View className=" p-10 rounded-full">
+                <Text className="text-gray-500 text-center">식물을 선택하세요 !</Text>
               </View>
             )}
           </Animated.View>
@@ -396,13 +370,13 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
           <View className="mb-2 pb-2 border-b border-gray-100">
             <Text className="text-sm text-gray-500">
               {plantType?.category || '씨앗 타입'} • Lv.
-              {plant.currentStage || 1}
+              {plant?.currentStage || 1}
             </Text>
           </View>
 
           {/* 식물 이름 및 능력 */}
           <Text className="text-base font-bold text-gray-800 mb-1">
-            {plant.name || plantType?.name || '내 식물'}
+            {plant?.name || plantType?.name || '내 식물'}
           </Text>
 
           {/* HP 바 - 포켓몬 카드 스타일 */}
@@ -410,7 +384,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
             <View className="flex-row items-center justify-between mb-1">
               <Text className="text-xs font-bold text-red-500">HP</Text>
               <Text className="text-xs font-medium text-red-500">
-                {plant.health || 100}/100
+                {plant?.health || 100}/100
               </Text>
             </View>
 
@@ -418,7 +392,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
             <View className="h-2 bg-gray-100 rounded-full overflow-hidden ">
               <View
                 className="h-full bg-red-500 rounded-full"
-                style={{ width: `${plant.health || 100}%` }}
+                style={{ width: `${plant?.health || 100}%` }}
               />
             </View>
           </View>
@@ -457,7 +431,6 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
         onFertilizePress={handleGrowPress}
         onTalkPress={() => {}}
         onInfoPress={onInfoPress}
-        // isLoading={isWatering || isGrowing}
       />
     </View>
   );

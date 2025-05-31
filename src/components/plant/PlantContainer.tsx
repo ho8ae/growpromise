@@ -1,10 +1,6 @@
-// components/plant/PlantContainer.tsx
-import { MaterialIcons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
+// components/plant/PlantContainer.tsx - 매우 단순한 버전
 import React from 'react';
 import { ActivityIndicator, Animated, Text, View } from 'react-native';
-import plantApi from '../../api/modules/plant';
 import Colors from '../../constants/Colors';
 import ChildPlantDisplay from './ChildPlantDisplay';
 import ParentPlantDisplay from './ParentPlantDisplay';
@@ -12,11 +8,11 @@ import ParentPlantDisplay from './ParentPlantDisplay';
 interface PlantContainerProps {
   fadeAnim: Animated.Value;
   translateY: Animated.Value;
-  userType?: 'PARENT' | 'CHILD';
-  isLoading?: boolean;
-  onPress?: () => void;
+  userType?: 'PARENT' | 'CHILD'; // optional로 변경
+  isLoading: boolean;
+  onPress: () => void;
   childId?: string;
-  plant?: any;
+  plant: any; // 식물이 항상 있다고 가정
   connectedChildren?: any[];
   handleChildSelect?: (childId: string) => void;
   showExperienceAnimation?: boolean;
@@ -27,159 +23,15 @@ const PlantContainer: React.FC<PlantContainerProps> = ({
   fadeAnim,
   translateY,
   userType,
-  isLoading: externalLoading,
+  isLoading,
   onPress,
   childId,
-  plant: externalPlant,
-  connectedChildren = [],
+  plant,
+  connectedChildren,
   handleChildSelect,
   showExperienceAnimation = false,
   experienceGained = 0,
 }) => {
-  const [isWatering, setIsWatering] = React.useState(false);
-  const [isFertilizing, setIsFertilizing] = React.useState(false);
-  const [isTalking, setIsTalking] = React.useState(false);
-
-  // 현재 식물 정보 가져오기
-  const {
-    data: currentPlant,
-    isLoading: isLoadingPlant,
-    refetch: refetchPlant,
-  } = useQuery({
-    queryKey: ['currentPlant', userType, childId],
-    queryFn: async () => {
-      try {
-        if (userType === 'PARENT' && childId) {
-          // 부모가 자녀의 식물 조회
-          return await plantApi.getChildCurrentPlant(childId);
-        } else if (userType === 'CHILD') {
-          // 자녀가 자신의 식물 조회
-          return await plantApi.getCurrentPlant();
-        }
-        return null;
-      } catch (error) {
-        console.error('식물 데이터 로딩 실패:', error);
-        return null;
-      }
-    },
-    enabled: !!childId || userType === 'CHILD',
-  });
-
-  // 식물 타입 정보 가져오기
-  const { data: plantType, isLoading: isLoadingPlantType } = useQuery({
-    queryKey: ['plantType', (externalPlant || currentPlant)?.plantTypeId],
-    queryFn: async () => {
-      const plantTypeId = (externalPlant || currentPlant)?.plantTypeId;
-      if (!plantTypeId) return null;
-
-      try {
-        return await plantApi.getPlantTypeById(plantTypeId);
-      } catch (error) {
-        console.error('식물 타입 데이터 로딩 실패:', error);
-        return null;
-      }
-    },
-    enabled: !!(externalPlant || currentPlant)?.plantTypeId,
-  });
-
-  // 물주기 처리
-  const handleWaterPlant = async () => {
-    if (!currentPlant || userType !== 'CHILD' || isWatering) {
-      return;
-    }
-
-    try {
-      setIsWatering(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      // 물주기 API 호출
-      await plantApi.waterPlant(currentPlant.id);
-
-      // 식물 상태 갱신
-      await refetchPlant();
-
-      // 성공 메시지
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      return true;
-    } catch (error) {
-      console.error('물주기 실패:', error);
-      return null;
-    } finally {
-      setIsWatering(false);
-    }
-  };
-
-  // 영양제 주기 처리
-  const handleFertilizePlant = async () => {
-    if (!currentPlant || userType !== 'CHILD' || isFertilizing) {
-      return;
-    }
-
-    try {
-      setIsFertilizing(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      // 영양제 주기 API 호출 (구현 필요)
-      // await plantApi.fertilizePlant(currentPlant.id);
-
-      // 테스트용 지연 (실제 API가 없으므로)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // 식물 상태 갱신
-      await refetchPlant();
-
-      // 성공 메시지
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      return true;
-    } catch (error) {
-      console.error('영양제 주기 실패:', error);
-      return null;
-    } finally {
-      setIsFertilizing(false);
-    }
-  };
-
-  // 대화하기 처리
-  const handleTalkToPlant = async () => {
-    if (!currentPlant || userType !== 'CHILD' || isTalking) {
-      return;
-    }
-
-    try {
-      setIsTalking(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-      // 대화하기 API 호출 (구현 필요)
-      // await plantApi.talkToPlant(currentPlant.id);
-
-      // 테스트용 지연 (실제 API가 없으므로)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // 식물 상태 갱신
-      await refetchPlant();
-
-      // 성공 메시지
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      return true;
-    } catch (error) {
-      console.error('대화하기 실패:', error);
-      return null;
-    } finally {
-      setIsTalking(false);
-    }
-  };
-
-  // 식물 정보 버튼 처리
-  const handlePlantInfo = () => {
-    // 식물 정보 화면으로 이동 또는 모달 표시
-    onPress?.();
-  };
-
-  const isLoading = externalLoading || isLoadingPlant || isLoadingPlantType;
-  const displayPlant = externalPlant || currentPlant;
 
   // 로딩 상태 표시
   if (isLoading) {
@@ -188,57 +40,43 @@ const PlantContainer: React.FC<PlantContainerProps> = ({
         style={{
           opacity: fadeAnim,
           transform: [{ translateY }],
-          marginBottom: 20,
         }}
+        className="bg-white rounded-xl p-6 shadow-sm items-center justify-center mb-4"
       >
-        <View className="bg-white rounded-xl p-5 items-center justify-center border border-primary/20 min-h-[250px] shadow-md">
-          <ActivityIndicator size="large" color={Colors.light.primary} />
-          <Text className="mt-4 text-primary font-medium">
-            식물 정보를 불러오는 중...
-          </Text>
-
-          <View className="mt-4">
-            <View className="w-16 h-16 rounded-full bg-primary/10 items-center justify-center">
-              <MaterialIcons
-                name="eco"
-                size={30}
-                color={Colors.light.primary}
-                style={{ opacity: 0.6 }}
-              />
-            </View>
-          </View>
-        </View>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+        <Text className="mt-4 text-gray-500">식물 정보를 불러오는 중...</Text>
       </Animated.View>
     );
   }
 
-  // 사용자 유형에 따라 다른 컴포넌트 표시
+  // 사용자 유형에 따라 다른 컴포넌트 렌더링 - 식물이 있다고 가정
   return (
     <Animated.View
       style={{
         opacity: fadeAnim,
         transform: [{ translateY }],
-        marginBottom: 20,
       }}
+      className="mb-4"
     >
       {userType === 'PARENT' ? (
-        // 부모용 식물 컴포넌트
         <ParentPlantDisplay
-          plant={displayPlant}
+          plant={plant}
+          childId={childId!} // childId가 항상 있다고 가정
           onPress={onPress}
-          onInfoPress={handlePlantInfo}
-          connectedChildren={connectedChildren || []}
-          selectedChildId={childId || null}
-          handleChildSelect={handleChildSelect || (() => {})}
+          connectedChildren={connectedChildren}
+          handleChildSelect={handleChildSelect}
         />
-      ) : (
-        // 자녀용 식물 컴포넌트
+      ) : userType === 'CHILD' ? (
         <ChildPlantDisplay
           onPress={onPress}
-          onInfoPress={handlePlantInfo}
           showExperienceAnimation={showExperienceAnimation}
           experienceGained={experienceGained}
         />
+      ) : (
+        // userType이 undefined인 경우 기본 처리
+        <View className="bg-white rounded-xl p-6 shadow-sm items-center justify-center">
+          <Text className="text-gray-500">사용자 타입을 확인할 수 없습니다</Text>
+        </View>
       )}
     </Animated.View>
   );
