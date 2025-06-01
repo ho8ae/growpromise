@@ -14,7 +14,7 @@ const { width } = Dimensions.get('window');
 const slides = [
   {
     title: '약속을 만들어요',
-    description: '부모와 아이가 함께 지킬 약속을 만들고 관리해요.',
+    description: '부모와 자녀가 함께 지킬 약속을 만들고 관리해요.',
     icon: 'handshake',
     bgColor: '#E6F4D7',
     iconColor: Colors.light.primary,

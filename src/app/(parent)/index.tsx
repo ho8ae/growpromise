@@ -1,8 +1,9 @@
+import SafeStatusBar from '@/src/components/common/SafeStatusBar';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -11,13 +12,11 @@ import {
   ScrollView,
   Text,
   View,
-  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import promiseApi, { PromiseAssignment } from '../../api/modules/promise';
-import { useAuthStore } from '../../stores/authStore';
 import Colors from '../../constants/Colors';
-import SafeStatusBar from '@/src/components/common/SafeStatusBar';
+import { useAuthStore } from '../../stores/authStore';
 
 // 슬라이드인 애니메이션 훅
 const useSlideInAnimation = (initialValue = 100, duration = 500) => {
@@ -45,7 +44,9 @@ export default function ParentDashboard() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { animation, startAnimation } = useSlideInAnimation();
-  const [pendingVerifications, setPendingVerifications] = useState<PromiseAssignment[]>([]);
+  const [pendingVerifications, setPendingVerifications] = useState<
+    PromiseAssignment[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,19 +127,33 @@ export default function ParentDashboard() {
   }, []);
 
   // 인증 확인 화면으로 이동
-  const navigateToApproval = useCallback((verificationId: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push({
-      pathname: '/(parent)/approvals',
-      params: { id: verificationId },
-    });
-  }, [router]);
+  const navigateToApproval = useCallback(
+    (verificationId: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      router.push({
+        pathname: '/(parent)/approvals',
+        params: { id: verificationId },
+      });
+    },
+    [router],
+  );
 
   // 섹션 헤더 컴포넌트
-  const SectionHeader = ({ title, count }: { title: string; count?: number }) => (
+  const SectionHeader = ({
+    title,
+    count,
+  }: {
+    title: string;
+    count?: number;
+  }) => (
     <View className="flex-row justify-between items-center py-3 mb-2">
       <View className="flex-row items-center">
-        <FontAwesome5 name="check-circle" size={18} color={Colors.light.primary} className="mr-2" />
+        <FontAwesome5
+          name="check-circle"
+          size={18}
+          color={Colors.light.primary}
+          className="mr-2"
+        />
         <Text className="text-lg font-medium text-emerald-700">{title}</Text>
       </View>
       {count !== undefined && count > 0 && (
@@ -150,8 +165,19 @@ export default function ParentDashboard() {
   );
 
   // 메뉴 버튼 컴포넌트
-  const MenuButton = ({ title, icon, onPress, color = "bg-emerald-500", activeColor = "active:bg-emerald-600" }: 
-    { title: string, icon: string, onPress: () => void, color?: string, activeColor?: string }) => (
+  const MenuButton = ({
+    title,
+    icon,
+    onPress,
+    color = 'bg-emerald-500',
+    activeColor = 'active:bg-emerald-600',
+  }: {
+    title: string;
+    icon: string;
+    onPress: () => void;
+    color?: string;
+    activeColor?: string;
+  }) => (
     <Pressable
       className={`${color} py-3.5 rounded-xl shadow-sm mb-3 ${activeColor}`}
       onPress={() => {
@@ -170,14 +196,14 @@ export default function ParentDashboard() {
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
       <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       <Stack.Screen options={{ headerShown: false }} />
-      
+
       {/* 헤더 */}
       <View className="px-5 py-4 bg-gray-50 border-b border-gray-100 items-left">
         <Text className="text-2xl font-bold text-emerald-700">
           {user?.username ? `${user.username}님의 대시보드` : '부모 대시보드'}
         </Text>
       </View>
-      
+
       {/* 메인 컨텐츠 */}
       <ScrollView
         className="flex-1"
@@ -195,20 +221,29 @@ export default function ParentDashboard() {
         <View className="px-5 pt-4">
           {/* 인증 요청 섹션 */}
           <View className="mb-6">
-            <SectionHeader title="인증 요청" count={pendingVerifications.length} />
-            
+            <SectionHeader
+              title="인증 요청"
+              count={pendingVerifications.length}
+            />
+
             {/* 로딩 상태 */}
             {isLoading && (
               <View className="items-center justify-center py-10 bg-white rounded-xl shadow-sm">
                 <ActivityIndicator size="small" color={Colors.light.primary} />
-                <Text className="text-gray-500 mt-2">인증 요청을 불러오는 중...</Text>
+                <Text className="text-gray-500 mt-2">
+                  인증 요청을 불러오는 중...
+                </Text>
               </View>
             )}
-            
+
             {/* 오류 상태 */}
             {error && (
               <View className="items-center py-6 bg-red-50 rounded-xl shadow-sm">
-                <FontAwesome5 name="exclamation-circle" size={24} color="#ef4444" />
+                <FontAwesome5
+                  name="exclamation-circle"
+                  size={24}
+                  color="#ef4444"
+                />
                 <Text className="text-red-500 mt-2">{error}</Text>
                 <Pressable
                   className="bg-emerald-500 px-5 py-2 rounded-lg mt-4 active:bg-emerald-600"
@@ -218,18 +253,24 @@ export default function ParentDashboard() {
                 </Pressable>
               </View>
             )}
-            
+
             {/* 데이터가 없는 경우 */}
             {!isLoading && !error && pendingVerifications.length === 0 && (
               <View className="items-center py-8 bg-white rounded-xl shadow-sm">
-                <FontAwesome5 name="clipboard-check" size={30} color="#9ca3af" />
-                <Text className="text-gray-600 mt-3 font-medium">현재 대기 중인 인증 요청이 없습니다.</Text>
+                <FontAwesome5
+                  name="clipboard-check"
+                  size={30}
+                  color="#9ca3af"
+                />
+                <Text className="text-gray-600 mt-3 font-medium">
+                  현재 대기 중인 인증 요청이 없습니다.
+                </Text>
                 <Text className="text-gray-500 text-center mt-1">
                   자녀가 약속을 인증하면 여기에 표시됩니다.
                 </Text>
               </View>
             )}
-            
+
             {/* 인증 요청 목록 */}
             {!isLoading && !error && pendingVerifications.length > 0 && (
               <View>
@@ -252,7 +293,9 @@ export default function ParentDashboard() {
                         <Image
                           source={
                             verification.child?.user.profileImage
-                              ? getImageUrl(verification.child.user.profileImage)
+                              ? getImageUrl(
+                                  verification.child.user.profileImage,
+                                )
                               : require('../../assets/images/react-logo.png')
                           }
                           style={{ width: 50, height: 50 }}
@@ -264,14 +307,16 @@ export default function ParentDashboard() {
                             {verification.promise?.title || '제목 없음'}
                           </Text>
                           <Text className="text-gray-500 text-sm">
-                            {verification.child?.user.username || '이름 없음'} • {' '}
+                            {verification.child?.user.username || '이름 없음'} •{' '}
                             {verification.verificationTime
                               ? getRelativeTime(verification.verificationTime)
                               : '시간 정보 없음'}
                           </Text>
                         </View>
                         <View className="bg-emerald-500 px-3 py-1.5 rounded-full">
-                          <Text className="text-white text-xs font-medium">확인하기</Text>
+                          <Text className="text-white text-xs font-medium">
+                            확인하기
+                          </Text>
                         </View>
                       </View>
                     </Pressable>
@@ -281,47 +326,52 @@ export default function ParentDashboard() {
             )}
           </View>
         </View>
-        
-        
-        
       </ScrollView>
       {/* 메뉴 버튼 */}
       <Animated.View
-          className="px-5 mb-4"
-          style={{
-            opacity: animation.interpolate({
-              inputRange: [0, 100],
-              outputRange: [1, 0],
-            }),
-            transform: [{ translateY: animation }],
-          }}
-        >
-          <View className="bg-gray-50 p-5 rounded-xl mb-5">
-            <MenuButton 
-              title="새 약속 만들기" 
-              icon="plus" 
-              onPress={() => router.push('/(parent)/create-promise')}
-              color="bg-emerald-500"
-              activeColor="active:bg-emerald-600"
-            />
-            
-            <MenuButton 
-              title="약속 관리하기" 
-              icon="list" 
-              onPress={() => router.push('/(parent)/manage-promises')}
-              color="bg-blue-500"
-              activeColor="active:bg-blue-600"
-            />
-            
-            <MenuButton 
-              title="보상 설정하기" 
-              icon="gift" 
-              onPress={() => router.push('/(parent)/set-rewards')}
-              color="bg-amber-500"
-              activeColor="active:bg-amber-600"
-            />
-          </View>
-        </Animated.View>
+        className="px-5 mb-4"
+        style={{
+          opacity: animation.interpolate({
+            inputRange: [0, 100],
+            outputRange: [1, 0],
+          }),
+          transform: [{ translateY: animation }],
+        }}
+      >
+        <View className="bg-gray-50 p-5 rounded-xl mb-5">
+          {/* <MenuButton
+            title="새 약속 만들기"
+            icon="plus"
+            onPress={() => router.push('/(parent)/create-promise')}
+            color="bg-emerald-500"
+            activeColor="active:bg-emerald-600"
+          /> */}
+
+          <MenuButton
+            title="약속 관리하기"
+            icon="list"
+            onPress={() => router.push('/(parent)/manage-promises')}
+            color="bg-blue-500"
+            activeColor="active:bg-blue-600"
+          />
+
+          <MenuButton
+            title="보상 설정하기"
+            icon="gift"
+            onPress={() => router.push('/(parent)/set-rewards')}
+            color="bg-amber-500"
+            activeColor="active:bg-amber-600"
+          />
+
+          <MenuButton
+            title="홈으로 돌아가기"
+            icon="home"
+            onPress={() => router.replace('/(tab)/index' as any)} // 임시로
+            color="bg-emerald-500"
+            activeColor="active:bg-emerald-600"
+          />
+        </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }

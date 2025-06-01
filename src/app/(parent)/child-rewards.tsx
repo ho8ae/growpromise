@@ -3,7 +3,6 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -360,20 +359,20 @@ export default function ChildRewardsScreen() {
             {/* 보상 섹션 */}
             <View className="mb-6">
               <View className="flex-row justify-between items-center mb-2">
-                <Text className="text-lg font-bold text-emerald-800">
+                {/* <Text className="text-lg font-bold text-emerald-800">
                   부모가 설정한 보상
-                </Text>
+                </Text> */}
                 <Pressable
                   onPress={navigateToCreateReward}
-                  className="bg-emerald-500 px-3 py-1 rounded-lg"
+                  className="bg-emerald-500 px-3 py-1 rounded-lg w-full h-16 items-center justify-center shadow-sm active:bg-emerald-600"
                 >
-                  <Text className="text-white font-medium text-sm">
+                  <Text className="text-white font-medium text-2xl ">
                     보상 관리
                   </Text>
                 </Pressable>
               </View>
 
-              {rewards.length === 0 ? (
+              {/* {rewards.length === 0 ? (
                 <View className="bg-gray-50 rounded-xl p-8 items-center justify-center">
                   <FontAwesome5 name="gift" size={40} color="#d1d5db" />
                   <Text className="text-gray-500 mt-4 text-center">
@@ -427,7 +426,7 @@ export default function ChildRewardsScreen() {
                     </Pressable>
                   ))}
                 </View>
-              )}
+              )} */}
             </View>
           </ScrollView>
         )}
