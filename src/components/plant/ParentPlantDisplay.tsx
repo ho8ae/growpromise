@@ -1,4 +1,4 @@
-// components/plant/ParentPlantDisplay.tsx
+// components/plant/ParentPlantDisplay.tsx - 식물 없는 자녀 처리 개선
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
@@ -36,7 +36,7 @@ interface PlantType {
 }
 
 interface ParentPlantDisplayProps {
-  plant: Plant;
+  plant?: Plant | null; // optional로 변경
   childId: string;
   onPress?: () => void;
   onInfoPress?: () => void;
@@ -65,11 +65,11 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
   const flatListRef = useRef<FlatList>(null);
   const [currentChildIndex, setCurrentChildIndex] = useState(0);
   
-  // 카드 크기 설정 (여기서 조절 가능!)
-  const cardWidth = width - 64; // 좌우 패딩을 더 크게 (32씩)
-  const cardAspectRatio = 0.65; // 카드 비율 조절 (0.7보다 조금 더 넓게)
-  const plantImageSize = 150; // 식물 이미지 크기 (150에서 120으로 축소)
-  const cardScale = 0.9; // 카드 전체 스케일 (0.9 = 90% 크기)
+  // 카드 크기 설정
+  const cardWidth = width - 64;
+  const cardAspectRatio = 0.65;
+  const plantImageSize = 150;
+  const cardScale = 0.9;
 
   // 컴포넌트가 마운트되거나 식물 데이터가 변경될 때 경험치 퍼센트 계산
   useEffect(() => {
@@ -88,6 +88,10 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
       if (plant.plantType) {
         setPlantType(plant.plantType);
       }
+    } else {
+      // 식물이 없는 경우 초기화
+      setProgressPercent(0);
+      setPlantType(null);
     }
   }, [plant]);
 
@@ -178,143 +182,205 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
   const selectedChild = connectedChildren.find(child => child.childId === childId);
   const selectedChildName = selectedChild ? getChildName(selectedChild) : '자녀';
 
+  // 식물이 없는 자녀를 위한 빈 카드 컴포넌트
+  const renderEmptyPlantCard = (childName: string) => (
+    <View className="bg-white rounded-xl shadow-md overflow-hidden border-2 border-gray-200">
+      {/* 헤더 */}
+      <View className="bg-gray-50 px-4 py-2 flex-row justify-between items-center border-b border-gray-200">
+        <View className="flex-row items-center">
+          <Text className="font-bold text-gray-800 text-base">
+            {childName}의 식물
+          </Text>
+          <View className="bg-gray-200 rounded-full px-2 py-0.5 ml-2">
+            <Text className="text-xs font-medium text-gray-600">
+              식물 없음
+            </Text>
+          </View>
+        </View>
+
+        <View className="flex-row items-center">
+          <MaterialIcons
+            name="eco"
+            size={16}
+            color="#9CA3AF"
+            style={{ marginRight: 4 }}
+          />
+          <Text className="text-sm font-bold text-gray-500">
+            대기중
+          </Text>
+        </View>
+      </View>
+
+      {/* 빈 식물 영역 */}
+      <View className="w-full h-[68%] items-center justify-center bg-gray-50">
+        <View className="bg-gray-100 p-8 rounded-full">
+          <MaterialIcons
+            name="eco"
+            size={plantImageSize * 0.5}
+            color="#9CA3AF"
+          />
+        </View>
+        <Text className="text-sm text-gray-500 mt-2">아직 식물이 없어요</Text>
+      </View>
+
+      {/* 정보 영역 */}
+      <View className="p-3 bg-white">
+        <Text className="text-base font-bold text-gray-600 mb-2 text-center">
+          {childName}에게 첫 식물을 선택하게 해주세요!
+        </Text>
+        
+        <View className="bg-blue-50 px-3 py-2 rounded-lg">
+          <Text className="text-sm text-blue-600 text-center">
+            자녀가 앱에서 식물을 선택하면{'\n'}여기에 표시됩니다 🌱
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
   // 식물 카드 렌더링
   const renderPlantCard = ({ item: child, index }: { item: any; index: number }) => {
     const childName = getChildName(child);
     const isCurrentChild = child.childId === childId;
+    const hasPlant = isCurrentChild && plant;
     const plantImage = getPlantImage();
 
     return (
       <View style={{ width: cardWidth }}>
         <Pressable
-          className="mx-auto bg-white rounded-xl shadow-md overflow-hidden border-2 border-gray-200"
+          className="mx-auto"
           style={{ aspectRatio: cardAspectRatio, width: cardWidth * cardScale }}
           onPress={onPress}
         >
-          {/* 식물 이름 헤더 */}
-          <View className="bg-blue-50 px-4 py-2 flex-row justify-between items-center border-b border-gray-200">
-            <View className="flex-row items-center">
-              <Text className="font-bold text-gray-800 text-base">
-                {childName}의 {isCurrentChild ? (plant.name || plantType?.name || '식물') : '식물'}
-              </Text>
-              <View className="bg-blue-200 rounded-full px-2 py-0.5 ml-2">
-                <Text className="text-xs font-medium text-blue-800">
-                  Lv.{isCurrentChild ? plant.currentStage : 1}
-                </Text>
-              </View>
-            </View>
-
-            {/* 부모 아이콘 표시 */}
-            <View className="flex-row items-center">
-              <MaterialIcons
-                name="visibility"
-                size={16}
-                color="#2B70C9"
-                style={{ marginRight: 4 }}
-              />
-              <Text className="text-sm font-bold text-blue-600">
-                관찰
-              </Text>
-            </View>
-          </View>
-
-          {/* 배경 영역 */}
-          <View className="w-full h-[50%] items-center justify-center bg-blue-50">
-            <Animated.View
-              style={{
-                transform: [
-                  {
-                    translateY: bounceAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, -5],
-                    }),
-                  },
-                ],
-              }}
-            >
-              {isCurrentChild && plantImage ? (
-                <Image
-                  source={plantImage}
-                  style={{ width: plantImageSize, height: plantImageSize }}
-                  contentFit="contain"
-                />
-              ) : (
-                <View className="bg-primary/10 p-8 rounded-full">
-                  <MaterialIcons
-                    name="eco"
-                    size={plantImageSize * 0.5} // 이미지 크기에 비례한 아이콘 크기
-                    color={Colors.light.primary}
-                  />
+          {/* 식물이 없는 경우 빈 카드 표시 */}
+          {!hasPlant ? (
+            renderEmptyPlantCard(childName)
+          ) : (
+            /* 기존 식물 카드 */
+            <View className="bg-white rounded-xl shadow-md overflow-hidden border-2 border-gray-200">
+              {/* 식물 이름 헤더 */}
+              <View className="bg-blue-50 px-4 py-2 flex-row justify-between items-center border-b border-gray-200">
+                <View className="flex-row items-center">
+                  <Text className="font-bold text-gray-800 text-base">
+                    {childName}의 {plant?.name || plantType?.name || '식물'}
+                  </Text>
+                  <View className="bg-blue-200 rounded-full px-2 py-0.5 ml-2">
+                    <Text className="text-xs font-medium text-blue-800">
+                      Lv.{plant?.currentStage || 1}
+                    </Text>
+                  </View>
                 </View>
-              )}
-            </Animated.View>
-          </View>
 
-          {/* 식물 정보 영역 */}
-          <View className="p-3 bg-white border-t border-gray-200">
-            <View className="mb-2 pb-2 border-b border-gray-100">
-              <Text className="text-sm text-gray-500">
-                {isCurrentChild ? (plantType?.category || '씨앗 타입') : '씨앗 타입'} • Lv.{isCurrentChild ? (plant.currentStage || 1) : 1}
-              </Text>
-            </View>
+                <View className="flex-row items-center">
+                  <MaterialIcons
+                    name="visibility"
+                    size={16}
+                    color="#2B70C9"
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text className="text-sm font-bold text-blue-600">
+                    관찰
+                  </Text>
+                </View>
+              </View>
 
-            <Text className="text-base font-bold text-gray-800 mb-1">
-              {childName}의 {isCurrentChild ? (plant.name || plantType?.name || '식물') : '식물'}
-            </Text>
+              {/* 배경 영역 */}
+              <View className="w-full h-[50%] items-center justify-center bg-blue-50">
+                <Animated.View
+                  style={{
+                    transform: [
+                      {
+                        translateY: bounceAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, -5],
+                        }),
+                      },
+                    ],
+                  }}
+                >
+                  {plantImage ? (
+                    <Image
+                      source={plantImage}
+                      style={{ width: plantImageSize, height: plantImageSize }}
+                      contentFit="contain"
+                    />
+                  ) : (
+                    <View className="bg-primary/10 p-8 rounded-full">
+                      <MaterialIcons
+                        name="eco"
+                        size={plantImageSize * 0.5}
+                        color={Colors.light.primary}
+                      />
+                    </View>
+                  )}
+                </Animated.View>
+              </View>
 
-            {/* HP 바 */}
-            <View className="mt-4 mb-2">
-              <View className="flex-row items-center justify-between mb-1">
-                <Text className="text-xs font-bold text-red-500">HP</Text>
-                <Text className="text-xs font-medium text-red-500">
-                  {isCurrentChild ? (plant.health || 100) : 100}/100
+              {/* 식물 정보 영역 */}
+              <View className="p-3 bg-white border-t border-gray-200">
+                <View className="mb-2 pb-2 border-b border-gray-100">
+                  <Text className="text-sm text-gray-500">
+                    {plantType?.category || '씨앗 타입'} • Lv.{plant?.currentStage || 1}
+                  </Text>
+                </View>
+
+                <Text className="text-base font-bold text-gray-800 mb-1">
+                  {childName}의 {plant?.name || plantType?.name || '식물'}
                 </Text>
-              </View>
 
-              <View className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <View
-                  className="h-full bg-red-500 rounded-full"
-                  style={{ width: `${isCurrentChild ? (plant.health || 100) : 100}%` }}
-                />
+                {/* HP 바 */}
+                <View className="mt-4 mb-2">
+                  <View className="flex-row items-center justify-between mb-1">
+                    <Text className="text-xs font-bold text-red-500">HP</Text>
+                    <Text className="text-xs font-medium text-red-500">
+                      {plant?.health || 100}/100
+                    </Text>
+                  </View>
+
+                  <View className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <View
+                      className="h-full bg-red-500 rounded-full"
+                      style={{ width: `${plant?.health || 100}%` }}
+                    />
+                  </View>
+                </View>
+
+                {/* 경험치 진행 바 */}
+                <View className="mt-2 mb-1">
+                  <View className="flex-row justify-between mb-1">
+                    <Text className="text-xs font-medium text-gray-600">경험치</Text>
+                    <Text className="text-xs font-medium text-green-600">
+                      {plant?.experience || 0}/{plant?.experienceToGrow || 100}
+                    </Text>
+                  </View>
+
+                  <View className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <View
+                      className="h-full bg-green-500 rounded-full"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </View>
+                </View>
+
+                {/* 식물 상태 메시지 */}
+                <Text className="text-xs text-center mt-1 text-gray-500">
+                  {plant?.canGrow
+                    ? '성장할 준비가 되었어요!'
+                    : `다음 단계까지 ${(plant?.experienceToGrow || 100) - (plant?.experience || 0)} 경험치 남음`}
+                </Text>
+
+                {/* 건강도 경고 */}
+                {plant && plant.health < 50 && (
+                  <View className="bg-red-50 px-2 py-1 mt-2 rounded flex-row items-center justify-center">
+                    <MaterialIcons name="warning" size={12} color="#EF4444" />
+                    <Text className="text-xs text-red-500 ml-1">
+                      자녀에게 물주기를 권해보세요!
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
-
-            {/* 경험치 진행 바 */}
-            <View className="mt-2 mb-1">
-              <View className="flex-row justify-between mb-1">
-                <Text className="text-xs font-medium text-gray-600">경험치</Text>
-                <Text className="text-xs font-medium text-green-600">
-                  {isCurrentChild ? (plant.experience || 0) : 0}/{isCurrentChild ? (plant.experienceToGrow || 100) : 100}
-                </Text>
-              </View>
-
-              <View className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <View
-                  className="h-full bg-green-500 rounded-full"
-                  style={{ width: `${isCurrentChild ? progressPercent : 0}%` }}
-                />
-              </View>
-            </View>
-
-            {/* 식물 상태 메시지 */}
-            <Text className="text-xs text-center mt-1 text-gray-500">
-              {isCurrentChild && plant.canGrow
-                ? '성장할 준비가 되었어요!'
-                : isCurrentChild 
-                  ? `다음 단계까지 ${(plant.experienceToGrow || 100) - (plant.experience || 0)} 경험치 남음`
-                  : '식물 정보 로딩 중...'}
-            </Text>
-
-            {/* 건강도 경고 */}
-            {isCurrentChild && plant.health < 50 && (
-              <View className="bg-red-50 px-2 py-1 mt-2 rounded flex-row items-center justify-center">
-                <MaterialIcons name="warning" size={12} color="#EF4444" />
-                <Text className="text-xs text-red-500 ml-1">
-                  자녀에게 물주기를 권해보세요!
-                </Text>
-              </View>
-            )}
-          </View>
+          )}
         </Pressable>
       </View>
     );
@@ -401,13 +467,6 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
                   index === currentChildIndex ? 'bg-blue-500' : 'bg-gray-300'
                 }`}
               />
-              {/* <Text 
-                className={`text-xs ${
-                  index === currentChildIndex ? 'text-blue-600 font-medium' : 'text-gray-500'
-                }`}
-              >
-                {childName}
-              </Text> */}
             </Pressable>
           );
         })}
