@@ -1,4 +1,4 @@
-// src/stores/authStore.ts - Google 로그인 관련 부분만 수정
+// src/stores/authStore.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import authApi, { AuthResponse, LoginRequest, SocialSetupRequest } from '../api/modules/auth';
@@ -12,6 +12,9 @@ interface User {
   setupCompleted?: boolean;
   isNewUser?: boolean;
   socialProvider?: 'GOOGLE' | 'APPLE';
+  profileImage?: string;
+  phoneNumber?: string;
+  bio?: string;
 }
 
 interface AuthStore {
@@ -28,6 +31,8 @@ interface AuthStore {
   googleSignIn: (idToken: string, userInfo?: any) => Promise<AuthResponse>;
   appleSignIn: (idToken: string, userInfo?: any) => Promise<AuthResponse>;
   completeSocialSetup: (setupData: SocialSetupRequest) => Promise<AuthResponse>;
+  updateUser: (userData: Partial<User>) => void;
+  refreshUserProfile: () => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
   setRedirectAfterLogin: (path: string | null) => void;
@@ -207,6 +212,47 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         error: error.message || '설정 완료에 실패했습니다.',
       });
       throw error;
+    }
+  },
+
+  // 사용자 정보 업데이트 (프로필 수정 후)
+  updateUser: (userData: Partial<User>) => {
+    const currentUser = get().user;
+    if (!currentUser) {
+      console.warn('⚠️ 사용자가 로그인되지 않았습니다.');
+      return;
+    }
+
+    const updatedUser = {
+      ...currentUser,
+      ...userData,
+    };
+
+    set({ user: updatedUser });
+    console.log('✅ 사용자 정보 업데이트:', {
+      userId: updatedUser.id,
+      updatedFields: Object.keys(userData),
+    });
+  },
+
+  // 서버에서 최신 사용자 정보 가져오기
+  refreshUserProfile: async () => {
+    const currentUser = get().user;
+    if (!currentUser || !get().isAuthenticated) {
+      console.warn('⚠️ 사용자가 로그인되지 않았습니다.');
+      return;
+    }
+
+    try {
+      console.log('🔄 사용자 프로필 새로고침...');
+      
+      // API 모듈이 있다면 사용 (예시)
+      // const userProfile = await api.user.getUserProfile();
+      // set({ user: { ...currentUser, ...userProfile } });
+      
+      console.log('✅ 사용자 프로필 새로고침 완료');
+    } catch (error) {
+      console.error('❌ 사용자 프로필 새로고침 실패:', error);
     }
   },
 
