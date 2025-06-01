@@ -1,4 +1,4 @@
-// src/components/gallery/GalleryItem.tsx
+// src/components/gallery/GalleryItem.tsx - 안전한 날짜 처리 적용
 import React, { useState } from 'react';
 import { View, Pressable, Text, Alert, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
@@ -15,6 +15,7 @@ interface GalleryItemProps {
   id: string;
   imageUrl: string;
   promiseTitle: string;
+  createdAt: string; // 날짜 추가
   isFavorite: boolean;
   childName?: string;
   showChildInfo?: boolean; // 부모 화면에서만 자녀 정보 표시
@@ -22,11 +23,78 @@ interface GalleryItemProps {
   onDelete: (imageId: string) => Promise<void>;
 }
 
+// 안전한 날짜 포맷팅 함수
+const formatDate = (dateString: string): string => {
+  try {
+    // 빈 문자열이나 null/undefined 체크
+    if (!dateString || dateString.trim() === '') {
+      return '';
+    }
+
+    // 날짜 객체 생성
+    const date = new Date(dateString);
+    
+    // 유효한 날짜인지 확인
+    if (isNaN(date.getTime())) {
+      console.warn('유효하지 않은 날짜 형식:', dateString);
+      return '';
+    }
+    
+    const now = new Date();
+    
+    // 미래 날짜 체크
+    if (date.getTime() > now.getTime()) {
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      return `${month}월 ${day}일`;
+    }
+    
+    // 날짜 차이 계산
+    const diffTime = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    // 오늘
+    if (diffDays === 0) {
+      return '오늘';
+    }
+    // 어제
+    else if (diffDays === 1) {
+      return '어제';
+    }
+    // 1주일 이내
+    else if (diffDays <= 7) {
+      return `${diffDays}일 전`;
+    }
+    // 1개월 이내
+    else if (diffDays <= 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return `${weeks}주 전`;
+    }
+    // 1년 이내
+    else if (diffDays <= 365) {
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      return `${month}월 ${day}일`;
+    }
+    // 1년 이상
+    else {
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      return `${year}년 ${month}월 ${day}일`;
+    }
+  } catch (error) {
+    console.error('날짜 포맷팅 오류:', error, 'Original date string:', dateString);
+    return '';
+  }
+};
+
 // 갤러리 아이템 컴포넌트
 const GalleryItem: React.FC<GalleryItemProps> = ({
   id,
   imageUrl,
   promiseTitle,
+  createdAt,
   isFavorite,
   childName,
   showChildInfo = false,
@@ -122,13 +190,16 @@ const GalleryItem: React.FC<GalleryItemProps> = ({
     setShowOptions(false);
   };
 
+  // 안전한 날짜 포맷팅 적용
+  const formattedDate = formatDate(createdAt);
+
   return (
-    <View className="relative overflow-hidden rounded-xl mb-2">
+    <View className="relative overflow-hidden rounded-xl">
       {/* 갤러리 이미지 */}
       <Pressable onPress={handleImagePress} className="relative">
         <Image
           source={getImageUrl(imageUrl)}
-          style={{ width: '100%', height: 200 }}
+          style={{ width: '100%', aspectRatio: 1 }} // 정사각형 비율로 변경
           contentFit="cover"
           transition={150}
           className="bg-gray-100 rounded-xl"
@@ -141,52 +212,73 @@ const GalleryItem: React.FC<GalleryItemProps> = ({
           </View>
         )}
         
+        {/* 즐겨찾기 아이콘 */}
+        <Pressable 
+          onPress={handleToggleFavorite}
+          className="absolute top-2 right-2 bg-black/30 w-7 h-7 rounded-full items-center justify-center"
+          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+        >
+          <FontAwesome5
+            name="heart"
+            solid={isLocalFavorite}
+            size={12}
+            color={isLocalFavorite ? "#FF4B4B" : "white"}
+          />
+        </Pressable>
+        
         {/* 로딩 인디케이터 */}
         {loading && (
           <View className="absolute inset-0 flex items-center justify-center bg-black/10">
             <ActivityIndicator size="small" color={Colors.light.primary} />
           </View>
         )}
-        
-        {/* 즐겨찾기 아이콘 */}
-        {/* <Pressable 
-          onPress={handleToggleFavorite}
-          className="absolute top-2 right-2 bg-black/30 w-8 h-8 rounded-full items-center justify-center"
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <FontAwesome5
-            name="heart"
-            solid={isLocalFavorite}
-            size={16}
-            color={isLocalFavorite ? "#FF4B4B" : "white"}
-          />
-        </Pressable> */}
       </Pressable>
       
-      {/* 약속 제목 */}
-      <View className="py-2 px-2">
-        <Text className="text-sm font-medium text-gray-800 truncate">{promiseTitle}</Text>
+      {/* 약속 제목과 날짜 */}
+      <View className="py-2 px-1">
+        <Text 
+          className="text-sm font-medium text-gray-800 leading-4"
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
+          {promiseTitle}
+        </Text>
+        
+        {/* 날짜 정보 - 안전한 포맷팅 적용 */}
+        {formattedDate && (
+          <View className="flex-row items-center mt-1">
+            <FontAwesome5 
+              name="calendar-alt" 
+              size={10} 
+              color="#9CA3AF" 
+              style={{ marginRight: 4 }}
+            />
+            <Text className="text-xs text-gray-500">
+              {formattedDate}
+            </Text>
+          </View>
+        )}
       </View>
       
       {/* 옵션 오버레이 (이미지 터치 시 표시) */}
       {showOptions && (
-        <View className="absolute inset-0 bg-black/50 flex items-center justify-center">
+        <View className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
           <View className="flex-row">
             {/* 상세 보기 버튼 */}
             <Pressable 
               onPress={handleViewDetail}
-              className="bg-white/20 mx-2 w-16 h-16 rounded-full items-center justify-center"
+              className="bg-white/20 mx-1 w-12 h-12 rounded-full items-center justify-center"
             >
-              <FontAwesome5 name="search" size={20} color="white" />
-              <Text className="text-white text-xs mt-1">상세보기</Text>
+              <FontAwesome5 name="search" size={16} color="white" />
+              <Text className="text-white text-xs mt-1">보기</Text>
             </Pressable>
             
             {/* 삭제 버튼 */}
             <Pressable 
               onPress={handleDelete}
-              className="bg-white/20 mx-2 w-16 h-16 rounded-full items-center justify-center"
+              className="bg-white/20 mx-1 w-12 h-12 rounded-full items-center justify-center"
             >
-              <FontAwesome5 name="trash-alt" size={20} color="white" />
+              <FontAwesome5 name="trash-alt" size={16} color="white" />
               <Text className="text-white text-xs mt-1">삭제</Text>
             </Pressable>
           </View>

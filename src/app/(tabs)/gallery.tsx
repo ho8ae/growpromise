@@ -1,4 +1,4 @@
-// src/app/(tabs)/gallery.tsx
+// src/app/(tabs)/gallery.tsx - 개선된 버전
 import React, { useState, useCallback } from 'react';
 import {
   ActivityIndicator,
@@ -32,9 +32,12 @@ import { getImageUrl } from '../../utils/imageUrl';
 import Colors from '../../constants/Colors';
 import SafeStatusBar from '@/src/components/common/SafeStatusBar';
 
-// 화면 너비 구하기
+// 화면 너비 구하기 - 3열로 변경
 const { width } = Dimensions.get('window');
-const columnWidth = width / 2 - 16; // 2열 그리드, 패딩 고려
+const COLUMNS = 3;
+const PADDING = 12;
+const ITEM_SPACING = 8;
+const columnWidth = (width - (PADDING * 2) - (ITEM_SPACING * (COLUMNS - 1))) / COLUMNS;
 
 export default function GalleryScreen() {
   const insets = useSafeAreaInsets();
@@ -250,10 +253,38 @@ export default function GalleryScreen() {
       </View>
     );
   };
+
+  // 3열 그리드 렌더링을 위한 아이템 렌더러
+  const renderGalleryItem = ({ item, index }: { item: GalleryImage; index: number }) => {
+    // 3열 그리드에서 마지막 열이 아닌 경우 오른쪽 마진 추가
+    const isLastColumn = (index + 1) % COLUMNS === 0;
+    
+    return (
+      <View 
+        style={{ 
+          width: columnWidth,
+          marginRight: isLastColumn ? 0 : ITEM_SPACING,
+          marginBottom: ITEM_SPACING 
+        }}
+      >
+        <GalleryItem
+          id={item.id}
+          imageUrl={item.imageUrl}
+          promiseTitle={item.promiseTitle}
+          createdAt={item.verificationTime} // 날짜 추가
+          isFavorite={item.isFavorite}
+          childName={item.childName}
+          showChildInfo={user?.userType === 'PARENT'}
+          onToggleFavorite={handleToggleFavorite}
+          onDelete={handleDeleteImage}
+        />
+      </View>
+    );
+  };
   
   return (
     <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
-     <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
+      <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       
       <Stack.Screen
         options={{
@@ -265,6 +296,15 @@ export default function GalleryScreen() {
       <View className="pt-2 pb-1 px-4 border-b border-gray-200 bg-white">
         <View className="flex-row items-center justify-between">
           <Text className="text-xl font-bold text-gray-800">약속 갤러리</Text>
+          
+          {/* 갤러리 수 표시 */}
+          {galleryImages.length > 0 && (
+            <View className="bg-gray-100 px-2 py-1 rounded-full">
+              <Text className="text-xs text-gray-600 font-medium">
+                {galleryImages.length}장
+              </Text>
+            </View>
+          )}
         </View>
         
         {/* 설명 */}
@@ -278,27 +318,17 @@ export default function GalleryScreen() {
       {/* 자녀 필터 (부모 계정만) */}
       {renderChildFilters()}
       
-      {/* 갤러리 목록 */}
+      {/* 갤러리 목록 - 3열 그리드 */}
       <FlatList
         data={galleryImages}
         keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 12 }}
-        contentContainerStyle={{ paddingVertical: 12 }}
-        renderItem={({ item }) => (
-          <View style={{ width: columnWidth, marginBottom: 12 }}>
-            <GalleryItem
-              id={item.id}
-              imageUrl={item.imageUrl}
-              promiseTitle={item.promiseTitle}
-              isFavorite={item.isFavorite}
-              childName={item.childName}
-              showChildInfo={user?.userType === 'PARENT'}
-              onToggleFavorite={handleToggleFavorite}
-              onDelete={handleDeleteImage}
-            />
-          </View>
-        )}
+        numColumns={COLUMNS}
+        renderItem={renderGalleryItem}
+        contentContainerStyle={{ 
+          padding: PADDING,
+          paddingTop: ITEM_SPACING 
+        }}
+        columnWrapperStyle={null} // numColumns > 1일 때 기본 스타일 제거
         ListEmptyComponent={renderEmptyState}
         refreshControl={
           <RefreshControl
@@ -308,6 +338,17 @@ export default function GalleryScreen() {
             colors={[Colors.light.primary]}
           />
         }
+        showsVerticalScrollIndicator={false}
+        // 성능 최적화
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={15} // 3열 × 5행
+        windowSize={10}
+        initialNumToRender={15}
+        getItemLayout={(data, index) => ({
+          length: columnWidth + ITEM_SPACING,
+          offset: (columnWidth + ITEM_SPACING) * index,
+          index,
+        })}
       />
     </View>
   );
