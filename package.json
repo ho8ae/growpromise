@@ -26,11 +26,13 @@
     "axios": "^1.9.0",
     "date-fns": "^4.1.0",
     "expo": "~53.0.7",
+    "expo-apple-authentication": "~7.2.4",
     "expo-auth-session": "^6.1.5",
     "expo-blur": "~14.1.4",
     "expo-camera": "~16.1.6",
     "expo-constants": "~17.1.5",
     "expo-crypto": "^14.1.4",
+    "expo-dev-client": "~5.1.8",
     "expo-device": "^7.1.4",
     "expo-font": "~13.3.1",
     "expo-haptics": "~14.1.4",
@@ -54,6 +56,7 @@
     "react-native-gesture-handler": "~2.24.0",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-maps": "1.20.1",
+    "react-native-modal-datetime-picker": "^18.0.0",
     "react-native-reanimated": "~3.17.4",
     "react-native-reanimated-carousel": "^4.0.2",
     "react-native-safe-area-context": "5.4.0",
@@ -62,9 +65,7 @@
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
     "tailwindcss": "^3.4.17",
-    "zustand": "^5.0.4",
-    "expo-dev-client": "~5.1.8",
-    "expo-apple-authentication": "~7.2.4"
+    "zustand": "^5.0.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

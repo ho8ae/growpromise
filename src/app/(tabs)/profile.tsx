@@ -143,15 +143,50 @@ export default function ProfileScreen() {
   // 설정 메뉴 항목 처리
   const handleSettingPress = (settingName: string) => {
     if (handleAuthRequired()) return;
-
+  
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    if (settingName === '연결된 계정') {
-      handleConnectedAccounts();
-      return;
+  
+    switch (settingName) {
+      case '프로필 정보':
+      case '프로필 정보 변경':
+        // 프로필 정보 변경 화면으로 이동
+        router.push('/(settings)/edit-profile');
+        break;
+        
+      case '연결된 계정':
+        handleConnectedAccounts();
+        break;
+        
+      case '비밀번호':
+      case '비밀번호 변경':
+        // 비밀번호 변경 화면으로 이동 (다음에 구현)
+        router.push('/(settings)/change-password');
+        break;
+        
+      case '테마':
+      case '테마 설정':
+        // 테마 설정 화면으로 이동 (다음에 구현)
+        router.push('/(settings)/theme');
+        break;
+        
+      case '도움말':
+        // 도움말 화면으로 이동 (다음에 구현)
+        router.push('/(settings)/help');
+        break;
+        
+      case '문의하기':
+        // 문의하기 화면으로 이동 (다음에 구현)
+        router.push('/(settings)/contact');
+        break;
+        
+      case '앱 정보':
+        // 앱 정보 화면으로 이동 (다음에 구현)
+        router.push('/(settings)/app-info');
+        break;
+        
+      default:
+        Alert.alert('알림', `${settingName} 설정은 아직 개발 중입니다.`);
     }
-
-    Alert.alert('알림', `${settingName} 설정은 아직 개발 중입니다.`);
   };
 
   // 스위치 토글 핸들러
