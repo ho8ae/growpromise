@@ -45,7 +45,9 @@
           "iosUrlScheme": "com.googleusercontent.apps.584178392628-loms8bh6egsfr1q2fl9om43i9i51530g"
         }
       ],
-      ["expo-apple-authentication"],
+      [
+        "expo-apple-authentication"
+      ],
       [
         "expo-splash-screen",
         {
@@ -60,10 +62,22 @@
         {
           "mediaTypes": "photo",
           "allowsEditing": true,
-          "aspect": [4, 3],
+          "aspect": [
+            4,
+            3
+          ],
           "quality": 1
         }
-      ]
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./src/assets/images/icon.png",
+          "color": "#58CC02",
+          "mode": "production"
+        }
+      ],
+      "expo-mail-composer"
     ],
     "experiments": {
       "typedRoutes": true

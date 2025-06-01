@@ -1,3 +1,4 @@
+// src/app/(tabs)/profile.tsx - 업데이트된 버전
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -17,13 +18,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../api';
 import Colors from '../../constants/Colors';
+import { useNotifications } from '../../hooks/useNotifications';
 import { useAuthStore } from '../../stores/authStore';
+import PrivacyPolicyModal from '../../components/common/PrivacyPolicyModal';
+import TermsOfServiceModal from '../../components/common/TermsOfServiceModal';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, isAuthenticated } = useAuthStore();
-  const [notifications, setNotifications] = useState(true);
-  const [soundEffects, setSoundEffects] = useState(true);
+  const { 
+    settings: notificationSettings, 
+    toggleNotifications, 
+    sendTestNotification,
+    sendImmediateTestNotification,
+    checkScheduledNotifications,
+    debugPermissions,
+    isLoading: isNotificationLoading 
+  } = useNotifications();
+  
+  // 모달 상태
+  const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
+  const [termsModalVisible, setTermsModalVisible] = useState(false);
+  
   const [userProfile, setUserProfile] = useState({
     name: '',
     userType: '',
@@ -64,7 +80,7 @@ export default function ProfileScreen() {
     }
   }, [isAuthenticated, user]);
 
-  // 연결된 계정 정보 가져오기 (부모인 경우 자녀 목록, 자녀인 경우 부모 정보)
+  // 연결된 계정 정보 가져오기
   const {
     data: connectedAccounts,
     isLoading: isLoadingConnections,
@@ -75,10 +91,8 @@ export default function ProfileScreen() {
       if (!isAuthenticated || !user) return null;
       try {
         if (user.userType === 'PARENT') {
-          // 부모 계정인 경우 연결된 자녀 목록 가져오기
           return await api.user.getParentChildren();
         } else {
-          // 자녀 계정인 경우 연결된 부모 정보 가져오기
           return await api.user.getChildParents();
         }
       } catch (error) {
@@ -92,14 +106,7 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      // 1. 모든 쿼리 캐시 무효화 (이전 데이터 제거)
-      // queryClient.clear();
-
-      // 2. 로그아웃 처리
       await logout();
-
-      // 3. 로그인 화면으로 이동 - replace 대신 navigate 사용
       router.replace({ pathname: '/', params: { fromLogout: '1' } });
     } catch (error) {
       console.error('로그아웃 오류:', error);
@@ -132,10 +139,8 @@ export default function ProfileScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (user?.userType === 'PARENT') {
-      // 부모 계정인 경우 연결 코드 생성 화면으로 이동
       router.push('/(parent)/generate-code');
     } else {
-      // 자녀 계정인 경우 연결 코드 입력 화면으로 이동
       router.push('/(auth)/connect');
     }
   };
@@ -149,7 +154,6 @@ export default function ProfileScreen() {
     switch (settingName) {
       case '프로필 정보':
       case '프로필 정보 변경':
-        // 프로필 정보 변경 화면으로 이동
         router.push('/(settings)/edit-profile');
         break;
         
@@ -159,29 +163,32 @@ export default function ProfileScreen() {
         
       case '비밀번호':
       case '비밀번호 변경':
-        // 비밀번호 변경 화면으로 이동 (다음에 구현)
         router.push('/(settings)/change-password');
         break;
         
       case '테마':
       case '테마 설정':
-        // 테마 설정 화면으로 이동 (다음에 구현)
-        router.push('/(settings)/theme');
+        Alert.alert('알림', '테마 설정 기능은 곧 출시될 예정입니다.');
         break;
         
       case '도움말':
-        // 도움말 화면으로 이동 (다음에 구현)
         router.push('/(settings)/help');
         break;
         
       case '문의하기':
-        // 문의하기 화면으로 이동 (다음에 구현)
         router.push('/(settings)/contact');
         break;
         
       case '앱 정보':
-        // 앱 정보 화면으로 이동 (다음에 구현)
         router.push('/(settings)/app-info');
+        break;
+        
+      case '개인정보처리방침':
+        setPrivacyModalVisible(true);
+        break;
+        
+      case '이용약관':
+        setTermsModalVisible(true);
         break;
         
       default:
@@ -189,13 +196,77 @@ export default function ProfileScreen() {
     }
   };
 
-  // 스위치 토글 핸들러
-  const handleSwitchToggle = (type: 'notifications' | 'sound') => {
+  // 알림 테스트 메뉴 선택 핸들러
+  const handleNotificationTest = () => {
+    if (notificationSettings.permissionStatus !== 'granted') {
+      Alert.alert('알림 권한 필요', '먼저 알림 권한을 허용해주세요.');
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (type === 'notifications') {
-      setNotifications((prev) => !prev);
+    
+    if (__DEV__) {
+      Alert.alert(
+        '알림 테스트 선택',
+        '어떤 테스트를 실행하시겠습니까?',
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '일반 테스트 (2초 후)',
+            onPress: sendTestNotification,
+          },
+          {
+            text: '즉시 테스트',
+            onPress: sendImmediateTestNotification,
+          },
+          {
+            text: '예약된 알림 확인',
+            onPress: checkScheduledNotifications,
+          },
+          {
+            text: '권한 디버깅',
+            onPress: debugPermissions,
+          },
+        ]
+      );
     } else {
-      setSoundEffects((prev) => !prev);
+      sendTestNotification();
+    }
+  };
+
+  // 알림 토글 핸들러
+  const handleNotificationToggle = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    if (notificationSettings.isEnabled) {
+      Alert.alert(
+        '알림 끄기',
+        '알림을 끄려면 설정에서 알림 권한을 해제해주세요.',
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '설정으로 이동',
+            onPress: () => {
+              import('expo-linking').then(({ default: Linking }) => {
+                Linking.openSettings();
+              });
+            },
+          },
+        ]
+      );
+    } else {
+      const success = await toggleNotifications();
+      
+      if (success) {
+        Alert.alert(
+          '알림 설정 완료', 
+          '알림이 활성화되었습니다! 테스트 알림을 보내보시겠습니까?',
+          [
+            { text: '나중에', style: 'cancel' },
+            { text: '테스트', onPress: sendTestNotification },
+          ]
+        );
+      }
     }
   };
 
@@ -299,7 +370,6 @@ export default function ProfileScreen() {
                 transform: [{ translateY: slideAnim }],
               }}
               className="mb-6 p-4 rounded-xl"
-              // style={{ backgroundColor: '#F5F5F5' }}
             >
               <View className="flex-row items-center mb-3">
                 <View className="bg-gray-200 rounded-full p-2 mr-3">
@@ -434,7 +504,6 @@ export default function ProfileScreen() {
                           : '부모님 계정 연결'}
                       </Text>
 
-                      {/* 연결 상태 표시 */}
                       {isLoadingConnections ? (
                         <ActivityIndicator
                           size="small"
@@ -469,112 +538,7 @@ export default function ProfileScreen() {
                     color="#BDBDBD"
                   />
                 </Pressable>
-
-                {/* 연결된 계정 정보 표시 */}
-                {(user?.userType === 'PARENT' &&
-                  Array.isArray(connectedAccounts) &&
-                  connectedAccounts.length > 0) ||
-                (user?.userType === 'CHILD' &&
-                  connectedAccounts &&
-                  !Array.isArray(connectedAccounts)) ? (
-                  <View
-                    className="mx-4 my-2 p-3 rounded-lg"
-                    style={{ backgroundColor: '#F8F8F8' }}
-                  >
-                    <Text
-                      className="text-xs font-medium mb-2"
-                      style={{ color: Colors.light.textSecondary }}
-                    >
-                      {user?.userType === 'PARENT'
-                        ? '연결된 자녀'
-                        : '연결된 부모님'}
-                    </Text>
-
-                    {user?.userType === 'PARENT' &&
-                    Array.isArray(connectedAccounts) ? (
-                      connectedAccounts.map((child, index) => (
-                        <View
-                          key={child.id}
-                          className={`flex-row items-center py-2 ${
-                            index < connectedAccounts.length - 1
-                              ? 'border-b border-gray-100'
-                              : ''
-                          }`}
-                        >
-                          <View
-                            className="p-1 rounded-full mr-2"
-                            style={{ backgroundColor: '#EFEFEF' }}
-                          >
-                            <Ionicons
-                              name="person"
-                              size={16}
-                              color={Colors.light.secondary}
-                            />
-                          </View>
-                          <Text style={{ color: Colors.light.text }}>
-                            {child.id}
-                          </Text>
-                        </View>
-                      ))
-                    ) : (
-                      <View className="flex-row items-center py-2">
-                        <View
-                          className="p-1 rounded-full mr-2"
-                          style={{ backgroundColor: '#EFEFEF' }}
-                        >
-                          <Ionicons
-                            name="person"
-                            size={16}
-                            color={Colors.light.tertiary}
-                          />
-                        </View>
-                        {/* <Text style={{ color: Colors.light.text }}>{connectedAccounts?.userId}</Text> */}
-                      </View>
-                    )}
-                  </View>
-                ) : null}
               </View>
-
-              {/* 계정 연결 안내 메시지 */}
-              {(user?.userType === 'PARENT' &&
-                (!connectedAccounts ||
-                  !Array.isArray(connectedAccounts) ||
-                  connectedAccounts.length === 0)) ||
-              (user?.userType === 'CHILD' &&
-                (!connectedAccounts || connectedAccounts === null)) ? (
-                <View
-                  className="mt-3 p-4 rounded-lg"
-                  style={{ backgroundColor: '#F8F8F8' }}
-                >
-                  <Text
-                    className="text-sm font-medium mb-2"
-                    style={{ color: Colors.light.text }}
-                  >
-                    {user?.userType === 'PARENT'
-                      ? '아직 연결된 자녀 계정이 없습니다'
-                      : '아직 부모님 계정과 연결되지 않았습니다'}
-                  </Text>
-                  <Text
-                    className="text-sm mb-3"
-                    style={{ color: Colors.light.textSecondary }}
-                  >
-                    {user?.userType === 'PARENT'
-                      ? '자녀 계정을 연결하면 약속을 관리할 수 있어요.'
-                      : '부모님 계정과 연결하면 약속을 인증하고 스티커를 모을 수 있어요.'}
-                  </Text>
-                  <Pressable
-                    className="py-2.5 rounded-lg active:opacity-90"
-                    style={{ backgroundColor: Colors.light.primary }}
-                    onPress={handleConnectedAccounts}
-                  >
-                    <Text className="text-white text-center font-medium">
-                      {user?.userType === 'PARENT'
-                        ? '자녀 계정 연결하기'
-                        : '부모님 계정 연결하기'}
-                    </Text>
-                  </Pressable>
-                </View>
-              ) : null}
             </Animated.View>
           )}
 
@@ -594,65 +558,99 @@ export default function ProfileScreen() {
             </Text>
 
             <View className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              {/* 알림 설정 */}
               <View className="flex-row items-center justify-between p-4">
-                <View className="flex-row items-center">
+                <View className="flex-row items-center flex-1">
                   <Ionicons
                     name="notifications-outline"
                     size={18}
                     color={Colors.light.text}
                     className="mr-3"
                   />
-                  <Text
-                    className="text-base"
-                    style={{ color: Colors.light.text }}
-                  >
-                    알림
-                  </Text>
+                  <View className="flex-1">
+                    <Text
+                      className="text-base"
+                      style={{ color: Colors.light.text }}
+                    >
+                      알림
+                    </Text>
+                    <Text
+                      className="text-xs mt-0.5"
+                      style={{ 
+                        color: notificationSettings.permissionStatus === 'granted' 
+                          ? Colors.light.primary
+                          : notificationSettings.permissionStatus === 'denied'
+                          ? Colors.light.error
+                          : Colors.light.textSecondary
+                      }}
+                    >
+                      {notificationSettings.permissionStatus === 'granted' 
+                        ? '허용됨' 
+                        : notificationSettings.permissionStatus === 'denied'
+                        ? '거부됨'
+                        : '미설정'}
+                    </Text>
+                  </View>
                 </View>
-                <Switch
-                  value={notifications}
-                  onValueChange={() => handleSwitchToggle('notifications')}
-                  trackColor={{
-                    false: '#E5E5E5',
-                    true: `${Colors.light.primary}80`,
-                  }}
-                  thumbColor={notifications ? Colors.light.primary : '#FFFFFF'}
-                  ios_backgroundColor="#E5E5E5"
-                />
-              </View>
-
-              <View className="h-px bg-gray-100 mx-4" />
-
-              <View className="flex-row items-center justify-between p-4">
-                <View className="flex-row items-center">
-                  <Ionicons
-                    name="volume-medium-outline"
-                    size={18}
-                    color={Colors.light.text}
-                    className="mr-3"
+                
+                {isNotificationLoading ? (
+                  <ActivityIndicator 
+                    size="small" 
+                    color={Colors.light.primary} 
+                    style={{ marginRight: 8 }}
                   />
-                  <Text
-                    className="text-base"
-                    style={{ color: Colors.light.text }}
-                  >
-                    효과음
-                  </Text>
-                </View>
-                <Switch
-                  value={soundEffects}
-                  onValueChange={() => handleSwitchToggle('sound')}
-                  trackColor={{
-                    false: '#E5E5E5',
-                    true: `${Colors.light.primary}80`,
-                  }}
-                  thumbColor={soundEffects ? Colors.light.primary : '#FFFFFF'}
-                  ios_backgroundColor="#E5E5E5"
-                />
+                ) : (
+                  <Switch
+                    value={notificationSettings.isEnabled}
+                    onValueChange={handleNotificationToggle}
+                    trackColor={{
+                      false: '#E5E5E5',
+                      true: `${Colors.light.primary}80`,
+                    }}
+                    thumbColor={notificationSettings.isEnabled ? Colors.light.primary : '#FFFFFF'}
+                    ios_backgroundColor="#E5E5E5"
+                  />
+                )}
               </View>
+
+              {/* 알림 테스트 버튼 */}
+              {notificationSettings.isEnabled && (
+                <>
+                  <View className="h-px bg-gray-100 mx-4" />
+                  <Pressable
+                    className="flex-row items-center justify-between p-4 active:bg-gray-50"
+                    onPress={handleNotificationTest}
+                  >
+                    <View className="flex-row items-center">
+                      <Ionicons
+                        name="send-outline"
+                        size={18}
+                        color={Colors.light.info}
+                        className="mr-3"
+                      />
+                      <View>
+                        <Text
+                          className="text-base"
+                          style={{ color: Colors.light.text }}
+                        >
+                          알림 테스트
+                        </Text>
+                        <Text
+                          className="text-xs mt-0.5"
+                          style={{ color: Colors.light.textSecondary }}
+                        >
+                          {__DEV__ ? '개발 모드: 다양한 테스트 옵션' : '2초 후 테스트 알림 전송'}
+                        </Text>
+                      </View>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
+                  </Pressable>
+                </>
+              )}
 
               <View className="h-px bg-gray-100 mx-4" />
 
-              <Pressable
+              {/* <Pressable
                 className="flex-row items-center justify-between p-4 active:bg-gray-50"
                 onPress={() => handleSettingPress('테마')}
               >
@@ -671,7 +669,7 @@ export default function ProfileScreen() {
                   </Text>
                 </View>
                 <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
-              </Pressable>
+              </Pressable> */}
             </View>
           </Animated.View>
 
@@ -760,6 +758,68 @@ export default function ProfileScreen() {
             </View>
           </Animated.View>
 
+          {/* 약관 및 정책 섹션 */}
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            }}
+            className="mb-6"
+          >
+            <Text
+              className="text-base font-bold mb-3 px-1"
+              style={{ color: Colors.light.text }}
+            >
+              약관 및 정책
+            </Text>
+
+            <View className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <Pressable
+                className="flex-row items-center justify-between p-4 active:bg-gray-50"
+                onPress={() => handleSettingPress('개인정보처리방침')}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={18}
+                    color={Colors.light.text}
+                    className="mr-3"
+                  />
+                  <Text
+                    className="text-base"
+                    style={{ color: Colors.light.text }}
+                  >
+                    개인정보처리방침
+                  </Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
+              </Pressable>
+
+              <View className="h-px bg-gray-100 mx-4" />
+
+              <Pressable
+                className="flex-row items-center justify-between p-4 active:bg-gray-50"
+                onPress={() => handleSettingPress('이용약관')}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons
+                    name="document-text-outline"
+                    size={18}
+                    color={Colors.light.text}
+                    className="mr-3"
+                  />
+                  <Text
+                    className="text-base"
+                    style={{ color: Colors.light.text }}
+                  >
+                    서비스 이용약관
+                  </Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
+              </Pressable>
+            </View>
+          </Animated.View>
+
           {/* 로그아웃 버튼 */}
           {isAuthenticated && (
             <Animated.View
@@ -797,9 +857,26 @@ export default function ProfileScreen() {
             >
               쑥쑥약속 v1.0.0
             </Text>
+            <Text
+              className="text-xs mt-1"
+              style={{ color: Colors.light.textSecondary }}
+            >
+              Made with ❤️ for families
+            </Text>
           </Animated.View>
         </View>
       </ScrollView>
+
+      {/* 모달들 */}
+      <PrivacyPolicyModal
+        visible={privacyModalVisible}
+        onClose={() => setPrivacyModalVisible(false)}
+      />
+      
+      <TermsOfServiceModal
+        visible={termsModalVisible}
+        onClose={() => setTermsModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }

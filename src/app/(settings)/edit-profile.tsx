@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { format } from 'date-fns';
+import { ko } from 'date-fns/locale/ko';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -18,6 +18,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../api';
 import type { DetailUserProfile } from '../../api/modules/user';
@@ -28,25 +29,29 @@ export default function EditProfileScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, updateUser, isAuthenticated } = useAuthStore();
-  
+
   // 폼 상태
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [bio, setBio] = useState('');
-  
+
   // UI 상태
   const [hasChanges, setHasChanges] = useState(false);
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
-  
+
   // 애니메이션 값
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
   // 현재 프로필 정보 조회
-  const { data: profileData, isLoading, error } = useQuery({
+  const {
+    data: profileData,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['userDetailProfile'],
     queryFn: api.user.getUserDetailProfile,
     enabled: isAuthenticated,
@@ -57,7 +62,7 @@ export default function EditProfileScreen() {
     mutationFn: api.user.updateUserDetailProfile,
     onSuccess: (data: DetailUserProfile) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
+
       // Zustand 스토어 업데이트 (API 응답 데이터를 User 타입으로 변환)
       updateUser({
         id: data.id,
@@ -71,27 +76,25 @@ export default function EditProfileScreen() {
         bio: data.bio,
         setupCompleted: data.setupCompleted,
       });
-      
+
       // React Query 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['userDetailProfile'] });
       queryClient.invalidateQueries({ queryKey: ['userProfile'] });
-      
-      Alert.alert(
-        '저장 완료',
-        '프로필 정보가 성공적으로 업데이트되었습니다.',
-        [
-          {
-            text: '확인',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+
+      Alert.alert('저장 완료', '프로필 정보가 성공적으로 업데이트되었습니다.', [
+        {
+          text: '확인',
+          onPress: () => router.back(),
+        },
+      ]);
     },
     onError: (error: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       console.error('프로필 업데이트 오류:', error);
-      
-      const errorMessage = error?.response?.data?.message || '프로필 업데이트 중 오류가 발생했습니다.';
+
+      const errorMessage =
+        error?.response?.data?.message ||
+        '프로필 업데이트 중 오류가 발생했습니다.';
       Alert.alert('오류', errorMessage);
     },
   });
@@ -119,9 +122,12 @@ export default function EditProfileScreen() {
       setEmail(profileData.email || '');
       setPhoneNumber(profileData.phoneNumber || '');
       setBio(profileData.bio || '');
-      
+
       // 자녀인 경우 생일 정보 설정
-      if (profileData.userType === 'CHILD' && profileData.childProfile?.birthDate) {
+      if (
+        profileData.userType === 'CHILD' &&
+        profileData.childProfile?.birthDate
+      ) {
         setBirthDate(new Date(profileData.childProfile.birthDate));
       }
     }
@@ -130,52 +136,58 @@ export default function EditProfileScreen() {
   // 변경사항 감지
   useEffect(() => {
     if (!profileData) return;
-    
+
     const hasUsernameChanged = username !== (profileData.username || '');
     const hasEmailChanged = email !== (profileData.email || '');
     const hasPhoneChanged = phoneNumber !== (profileData.phoneNumber || '');
     const hasBioChanged = bio !== (profileData.bio || '');
-    
+
     let hasBirthDateChanged = false;
     if (profileData.userType === 'CHILD') {
       if (profileData.childProfile?.birthDate) {
         const originalDate = new Date(profileData.childProfile.birthDate);
-        hasBirthDateChanged = birthDate ? 
-          birthDate.getTime() !== originalDate.getTime() : 
-          false;
+        hasBirthDateChanged = birthDate
+          ? birthDate.getTime() !== originalDate.getTime()
+          : false;
       } else {
         hasBirthDateChanged = birthDate !== null;
       }
     }
-    
-    setHasChanges(hasUsernameChanged || hasEmailChanged || hasPhoneChanged || hasBioChanged || hasBirthDateChanged);
+
+    setHasChanges(
+      hasUsernameChanged ||
+        hasEmailChanged ||
+        hasPhoneChanged ||
+        hasBioChanged ||
+        hasBirthDateChanged,
+    );
   }, [username, email, phoneNumber, bio, birthDate, profileData]);
 
   // 유효성 검사
   const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
-    
+    const newErrors: { [key: string]: string } = {};
+
     if (!username.trim()) {
       newErrors.username = '이름을 입력해주세요.';
     } else if (username.trim().length < 2) {
       newErrors.username = '이름은 2글자 이상 입력해주세요.';
     }
-    
+
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = '올바른 이메일 형식을 입력해주세요.';
     }
-    
+
     if (phoneNumber && !/^[0-9\-\+\(\)\s]+$/.test(phoneNumber)) {
       newErrors.phoneNumber = '올바른 전화번호 형식을 입력해주세요.';
     }
-    
+
     if (birthDate && profileData?.userType === 'CHILD') {
       const today = new Date();
       const minDate = new Date();
       minDate.setFullYear(today.getFullYear() - 25); // 최대 25세
       const maxDate = new Date();
       maxDate.setFullYear(today.getFullYear() - 3); // 최소 3세
-      
+
       if (birthDate > today) {
         newErrors.birthDate = '생년월일은 오늘 이전 날짜여야 합니다.';
       } else if (birthDate < minDate) {
@@ -184,7 +196,7 @@ export default function EditProfileScreen() {
         newErrors.birthDate = '만 3세 이상이어야 합니다.';
       }
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -195,21 +207,21 @@ export default function EditProfileScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       return;
     }
-    
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     const updateData: any = {
       username: username.trim(),
       email: email.trim() || undefined,
       phoneNumber: phoneNumber.trim() || undefined,
       bio: bio.trim() || undefined,
     };
-    
+
     // 자녀인 경우 생일 정보 추가
     if (profileData?.userType === 'CHILD' && birthDate) {
       updateData.birthDate = birthDate.toISOString();
     }
-    
+
     updateProfileMutation.mutate(updateData);
   };
 
@@ -233,27 +245,23 @@ export default function EditProfileScreen() {
   // 날짜 포맷팅
   const formatDate = (date: Date | null) => {
     if (!date) return '';
-    return format(date, 'PPP');
+    return format(date, 'PPP', { locale: ko });
   };
 
   // 뒤로가기 처리
   const handleBack = () => {
     if (hasChanges) {
-      Alert.alert(
-        '변경사항이 있습니다',
-        '저장하지 않고 나가시겠습니까?',
-        [
-          { text: '취소', style: 'cancel' },
-          { 
-            text: '나가기', 
-            style: 'destructive',
-            onPress: () => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.back();
-            }
+      Alert.alert('변경사항이 있습니다', '저장하지 않고 나가시겠습니까?', [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '나가기',
+          style: 'destructive',
+          onPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.back();
           },
-        ]
-      );
+        },
+      ]);
     } else {
       router.back();
     }
@@ -265,7 +273,10 @@ export default function EditProfileScreen() {
       <SafeAreaView className="flex-1 bg-white">
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color={Colors.light.primary} />
-          <Text className="mt-4 text-base" style={{ color: Colors.light.textSecondary }}>
+          <Text
+            className="mt-4 text-base"
+            style={{ color: Colors.light.textSecondary }}
+          >
             프로필 정보를 불러오는 중...
           </Text>
         </View>
@@ -278,11 +289,21 @@ export default function EditProfileScreen() {
     return (
       <SafeAreaView className="flex-1 bg-white">
         <View className="flex-1 justify-center items-center px-5">
-          <Ionicons name="alert-circle-outline" size={48} color={Colors.light.error} />
-          <Text className="mt-4 text-lg font-medium text-center" style={{ color: Colors.light.text }}>
+          <Ionicons
+            name="alert-circle-outline"
+            size={48}
+            color={Colors.light.error}
+          />
+          <Text
+            className="mt-4 text-lg font-medium text-center"
+            style={{ color: Colors.light.text }}
+          >
             프로필 정보를 불러올 수 없습니다
           </Text>
-          <Text className="mt-2 text-base text-center" style={{ color: Colors.light.textSecondary }}>
+          <Text
+            className="mt-2 text-base text-center"
+            style={{ color: Colors.light.textSecondary }}
+          >
             네트워크 연결을 확인하고 다시 시도해주세요.
           </Text>
           <Pressable
@@ -299,8 +320,8 @@ export default function EditProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <KeyboardAvoidingView 
-        className="flex-1" 
+      <KeyboardAvoidingView
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* 헤더 */}
@@ -317,21 +338,25 @@ export default function EditProfileScreen() {
           >
             <Ionicons name="chevron-back" size={24} color={Colors.light.text} />
           </Pressable>
-          
-          <Text className="text-lg font-bold" style={{ color: Colors.light.text }}>
+
+          <Text
+            className="text-lg font-bold"
+            style={{ color: Colors.light.text }}
+          >
             프로필 수정
           </Text>
-          
+
           <Pressable
             className={`py-2 px-4 rounded-xl active:opacity-90 ${
               hasChanges && !updateProfileMutation.isPending
-                ? 'opacity-100' 
+                ? 'opacity-100'
                 : 'opacity-40'
             }`}
-            style={{ 
-              backgroundColor: hasChanges && !updateProfileMutation.isPending 
-                ? Colors.light.primary 
-                : Colors.light.disabled 
+            style={{
+              backgroundColor:
+                hasChanges && !updateProfileMutation.isPending
+                  ? Colors.light.primary
+                  : Colors.light.disabled,
             }}
             onPress={handleSave}
             disabled={!hasChanges || updateProfileMutation.isPending}
@@ -344,7 +369,7 @@ export default function EditProfileScreen() {
           </Pressable>
         </Animated.View>
 
-        <ScrollView 
+        <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 40 }}
@@ -362,14 +387,15 @@ export default function EditProfileScreen() {
                 <View
                   className="border-2 rounded-full p-0.5"
                   style={{
-                    borderColor: profileData.userType === 'PARENT' 
-                      ? Colors.light.tertiary 
-                      : Colors.light.secondary,
+                    borderColor:
+                      profileData.userType === 'PARENT'
+                        ? Colors.light.tertiary
+                        : Colors.light.secondary,
                   }}
                 >
                   <Image
                     source={
-                      profileData.profileImage 
+                      profileData.profileImage
                         ? { uri: profileData.profileImage }
                         : require('../../assets/images/react-logo.png')
                     }
@@ -383,13 +409,19 @@ export default function EditProfileScreen() {
                   style={{ backgroundColor: Colors.light.primary }}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    Alert.alert('알림', '프로필 이미지 변경 기능은 곧 추가될 예정입니다.');
+                    Alert.alert(
+                      '알림',
+                      '프로필 이미지 변경 기능은 곧 추가될 예정입니다.',
+                    );
                   }}
                 >
                   <Ionicons name="camera" size={16} color="white" />
                 </Pressable>
               </View>
-              <Text className="mt-3 text-sm" style={{ color: Colors.light.textSecondary }}>
+              <Text
+                className="mt-3 text-sm"
+                style={{ color: Colors.light.textSecondary }}
+              >
                 프로필 사진 변경
               </Text>
             </Animated.View>
@@ -402,16 +434,24 @@ export default function EditProfileScreen() {
               }}
               className="mb-6"
             >
-              <Text className="text-base font-bold mb-4" style={{ color: Colors.light.text }}>
+              <Text
+                className="text-base font-bold mb-4"
+                style={{ color: Colors.light.text }}
+              >
                 기본 정보
               </Text>
 
               {/* 이름 */}
               <View className="mb-4">
-                <Text className="text-sm font-medium mb-2" style={{ color: Colors.light.text }}>
+                <Text
+                  className="text-sm font-medium mb-2"
+                  style={{ color: Colors.light.text }}
+                >
                   이름 *
                 </Text>
-                <View className={`bg-gray-50 rounded-xl px-4 py-4 ${errors.username ? 'border border-red-300' : ''}`}>
+                <View
+                  className={`bg-gray-50 rounded-xl px-4 py-4 ${errors.username ? 'border border-red-300' : ''}`}
+                >
                   <TextInput
                     value={username}
                     onChangeText={setUsername}
@@ -424,7 +464,10 @@ export default function EditProfileScreen() {
                   />
                 </View>
                 {errors.username && (
-                  <Text className="text-sm mt-1" style={{ color: Colors.light.error }}>
+                  <Text
+                    className="text-sm mt-1"
+                    style={{ color: Colors.light.error }}
+                  >
                     {errors.username}
                   </Text>
                 )}
@@ -432,10 +475,15 @@ export default function EditProfileScreen() {
 
               {/* 이메일 */}
               <View className="mb-4">
-                <Text className="text-sm font-medium mb-2" style={{ color: Colors.light.text }}>
+                <Text
+                  className="text-sm font-medium mb-2"
+                  style={{ color: Colors.light.text }}
+                >
                   이메일
                 </Text>
-                <View className={`bg-gray-50 rounded-xl px-4 py-4 ${errors.email ? 'border border-red-300' : ''}`}>
+                <View
+                  className={`bg-gray-50 rounded-xl px-4 py-4 ${errors.email ? 'border border-red-300' : ''}`}
+                >
                   <TextInput
                     value={email}
                     onChangeText={setEmail}
@@ -449,7 +497,10 @@ export default function EditProfileScreen() {
                   />
                 </View>
                 {errors.email && (
-                  <Text className="text-sm mt-1" style={{ color: Colors.light.error }}>
+                  <Text
+                    className="text-sm mt-1"
+                    style={{ color: Colors.light.error }}
+                  >
                     {errors.email}
                   </Text>
                 )}
@@ -457,10 +508,15 @@ export default function EditProfileScreen() {
 
               {/* 전화번호 */}
               <View className="mb-4">
-                <Text className="text-sm font-medium mb-2" style={{ color: Colors.light.text }}>
+                <Text
+                  className="text-sm font-medium mb-2"
+                  style={{ color: Colors.light.text }}
+                >
                   전화번호
                 </Text>
-                <View className={`bg-gray-50 rounded-xl px-4 py-4 ${errors.phoneNumber ? 'border border-red-300' : ''}`}>
+                <View
+                  className={`bg-gray-50 rounded-xl px-4 py-4 ${errors.phoneNumber ? 'border border-red-300' : ''}`}
+                >
                   <TextInput
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
@@ -473,7 +529,10 @@ export default function EditProfileScreen() {
                   />
                 </View>
                 {errors.phoneNumber && (
-                  <Text className="text-sm mt-1" style={{ color: Colors.light.error }}>
+                  <Text
+                    className="text-sm mt-1"
+                    style={{ color: Colors.light.error }}
+                  >
                     {errors.phoneNumber}
                   </Text>
                 )}
@@ -482,7 +541,10 @@ export default function EditProfileScreen() {
               {/* 자녀인 경우 생년월일 */}
               {profileData.userType === 'CHILD' && (
                 <View className="mb-4">
-                  <Text className="text-sm font-medium mb-2" style={{ color: Colors.light.text }}>
+                  <Text
+                    className="text-sm font-medium mb-2"
+                    style={{ color: Colors.light.text }}
+                  >
                     생년월일
                   </Text>
                   <Pressable
@@ -494,10 +556,14 @@ export default function EditProfileScreen() {
                     <Text
                       className="text-base flex-1"
                       style={{
-                        color: birthDate ? Colors.light.text : Colors.light.textSecondary,
+                        color: birthDate
+                          ? Colors.light.text
+                          : Colors.light.textSecondary,
                       }}
                     >
-                      {birthDate ? formatDate(birthDate) : '생년월일을 선택해주세요'}
+                      {birthDate
+                        ? formatDate(birthDate)
+                        : '생년월일을 선택해주세요'}
                     </Text>
                     <Ionicons
                       name="calendar-outline"
@@ -506,7 +572,10 @@ export default function EditProfileScreen() {
                     />
                   </Pressable>
                   {errors.birthDate && (
-                    <Text className="text-sm mt-1" style={{ color: Colors.light.error }}>
+                    <Text
+                      className="text-sm mt-1"
+                      style={{ color: Colors.light.error }}
+                    >
                       {errors.birthDate}
                     </Text>
                   )}
@@ -515,7 +584,10 @@ export default function EditProfileScreen() {
 
               {/* 자기소개 */}
               <View className="mb-4">
-                <Text className="text-sm font-medium mb-2" style={{ color: Colors.light.text }}>
+                <Text
+                  className="text-sm font-medium mb-2"
+                  style={{ color: Colors.light.text }}
+                >
                   자기소개
                 </Text>
                 <View className="bg-gray-50 rounded-xl px-4 py-4">
@@ -542,29 +614,37 @@ export default function EditProfileScreen() {
               }}
               className="mb-6"
             >
-              <Text className="text-base font-bold mb-4" style={{ color: Colors.light.text }}>
+              <Text
+                className="text-base font-bold mb-4"
+                style={{ color: Colors.light.text }}
+              >
                 계정 정보
               </Text>
 
               <View className="bg-gray-50 rounded-xl p-4 space-y-3">
                 <View className="flex-row justify-between items-center">
-                  <Text className="text-sm" style={{ color: Colors.light.textSecondary }}>
+                  <Text
+                    className="text-sm"
+                    style={{ color: Colors.light.textSecondary }}
+                  >
                     계정 유형
                   </Text>
                   <View
                     className="px-3 py-1 rounded-full"
                     style={{
-                      backgroundColor: profileData.userType === 'PARENT' 
-                        ? `${Colors.light.tertiary}15` 
-                        : `${Colors.light.secondary}15`,
+                      backgroundColor:
+                        profileData.userType === 'PARENT'
+                          ? `${Colors.light.tertiary}15`
+                          : `${Colors.light.secondary}15`,
                     }}
                   >
                     <Text
                       className="text-sm font-medium"
                       style={{
-                        color: profileData.userType === 'PARENT' 
-                          ? Colors.light.tertiary 
-                          : Colors.light.secondary,
+                        color:
+                          profileData.userType === 'PARENT'
+                            ? Colors.light.tertiary
+                            : Colors.light.secondary,
                       }}
                     >
                       {profileData.userType === 'PARENT' ? '부모' : '아이'} 계정
@@ -574,36 +654,52 @@ export default function EditProfileScreen() {
 
                 {profileData.socialProvider && (
                   <View className="flex-row justify-between items-center">
-                    <Text className="text-sm" style={{ color: Colors.light.textSecondary }}>
+                    <Text
+                      className="text-sm"
+                      style={{ color: Colors.light.textSecondary }}
+                    >
                       로그인 방식
                     </Text>
-                    <Text className="text-sm font-medium" style={{ color: Colors.light.text }}>
-                      {profileData.socialProvider === 'GOOGLE' ? 'Google' : 'Apple'} 로그인
+                    <Text
+                      className="text-sm font-medium"
+                      style={{ color: Colors.light.text }}
+                    >
+                      {profileData.socialProvider === 'GOOGLE'
+                        ? 'Google'
+                        : 'Apple'}{' '}
+                      로그인
                     </Text>
                   </View>
                 )}
 
                 <View className="flex-row justify-between items-center">
-                  <Text className="text-sm" style={{ color: Colors.light.textSecondary }}>
+                  <Text
+                    className="text-sm"
+                    style={{ color: Colors.light.textSecondary }}
+                  >
                     가입일
                   </Text>
-                  <Text className="text-sm font-medium" style={{ color: Colors.light.text }}>
-                    {new Date(profileData.createdAt).toLocaleDateString('ko-KR')}
+                  <Text
+                    className="text-sm font-medium"
+                    style={{ color: Colors.light.text }}
+                  >
+                    {new Date(profileData.createdAt).toLocaleDateString(
+                      'ko-KR',
+                    )}
                   </Text>
                 </View>
               </View>
             </Animated.View>
           </View>
         </ScrollView>
-        
+
         {/* DateTimePickerModal */}
         <DateTimePickerModal
           isVisible={showDatePicker}
           mode="date"
-          display="spinner"
           onConfirm={handleDateConfirm}
           onCancel={handleDateCancel}
-          date={birthDate || new Date(2000, 0, 1)}
+          date={birthDate || new Date(2010, 0, 1)}
           maximumDate={new Date()}
           minimumDate={new Date(1990, 0, 1)}
           locale="ko_KR"
