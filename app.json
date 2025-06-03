@@ -7,10 +7,10 @@
     "icon": "./src/assets/images/icon.png",
     "scheme": "growpromise",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.low_k.growpromise",
+      "bundleIdentifier": "com.low-k.growpromise",
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
         "UIStatusBarStyle": "UIStatusBarStyleDefault",
@@ -38,7 +38,7 @@
         "foregroundImage": "./src/assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
+     
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
@@ -50,8 +50,7 @@
         "VIBRATE",
         "WAKE_LOCK"
       ],
-      "package": "com.low_k.growpromise",
-      "usesCleartextTraffic": false
+      "package": "com.low_k.growpromise"
     },
     "web": {
       "bundler": "metro",
