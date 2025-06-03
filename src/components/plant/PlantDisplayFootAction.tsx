@@ -51,8 +51,7 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
           );
         }
       } else {
-        console.warn('자녀 ID가 없습니다');
-        Alert.alert('오류', '자녀 ID를 찾을 수 없습니다.');
+        toast.error('자녀 ID를 찾을 수 없습니다.');
       }
     };
 

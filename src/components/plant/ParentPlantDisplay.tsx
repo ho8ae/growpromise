@@ -221,6 +221,7 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
           />
         </View>
         <Text className="text-sm text-gray-500 mt-2">아직 식물이 없어요</Text>
+        <Text className="text-sm text-gray-500 mt-2">자녀와 계정 연결은 하셨나요?</Text>
       </View>
 
       {/* 정보 영역 */}
@@ -231,7 +232,7 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
         
         <View className="bg-blue-50 px-3 py-2 rounded-lg">
           <Text className="text-sm text-blue-600 text-center">
-            자녀가 앱에서 식물을 선택하면{'\n'}여기에 표시됩니다 🌱
+            자녀 계정을 연결하고 자녀가 앱에서 {'\n'}식물을 선택하면여기에 표시됩니다 🌱
           </Text>
         </View>
       </View>
