@@ -119,12 +119,23 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
       />
       
       <View className="mt-4 flex-row gap-6 items-center justify-center">
+      {plant !== null ? (
         <ActionButton
           icon="opacity"
           label="물주기"
           color={Colors.light.info}
           onPress={onWaterPress}
         />
+      ) : (
+        <ActionButton
+          icon="opacity"
+          label="물주기"
+          color={Colors.light.textSecondary}
+          onPress={() => {
+            toast.warning('식물이 없습니다.');
+          }}
+        />
+      )}
         <ActionButton
           icon="eco"
           label="영양제"
