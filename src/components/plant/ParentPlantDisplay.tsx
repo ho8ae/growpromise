@@ -12,22 +12,12 @@ import {
 import { FlatList } from 'react-native-gesture-handler';
 import Colors from '../../constants/Colors';
 import PlantDisplayFootAction from './PlantDisplayFootAction';
+import { Plant } from '@/src/api/modules/plant';
 
 const { width } = Dimensions.get('window');
 
 // API와 컴포넌트 간의 Plant 인터페이스 통합
-interface Plant {
-  id?: string;
-  name?: string;
-  imageUrl?: string;
-  plantTypeId?: string;
-  plantType?: PlantType;
-  experience: number;
-  experienceToGrow: number;
-  currentStage: number;
-  health: number;
-  canGrow: boolean;
-}
+
 
 interface PlantType {
   name?: string;
@@ -395,6 +385,7 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
         
         {/* 액션 버튼 영역 */}
         <PlantDisplayFootAction
+          plant={plant || null}
           userType="parent"
           onInfoPress={onInfoPress}
           childId={childId}
@@ -475,6 +466,7 @@ const ParentPlantDisplay: React.FC<ParentPlantDisplayProps> = ({
 
       {/* 액션 버튼 영역 */}
       <PlantDisplayFootAction
+        plant={plant || null}
         userType="parent"
         onInfoPress={onInfoPress}
         childId={childId}
