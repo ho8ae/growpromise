@@ -145,13 +145,13 @@ export default function SocialLoginButtons({
       )}
 
       {/* 안내 텍스트 */}
-      <Text className="text-gray-400 text-center text-sm mt-4 leading-5">
+      {/* <Text className="text-gray-400 text-center text-sm mt-4 leading-5">
         소셜 로그인으로 간편하게 회원가입하고{'\n'}
         바로 쑥쑥약속을 시작하세요!
-      </Text>
+      </Text> */}
 
       {/* 디버그 정보 (개발 중에만) */}
-      {__DEV__ && (
+      {/* {__DEV__ && (
         <View className="mt-2">
           <Text className="text-gray-300 text-center text-xs">
             Google: {isGoogleConfigured ? '✅' : '❌'} | Apple: {isAppleSupported ? (isAppleAvailable ? '✅' : '⚠️') : '❌'} | Platform: {Platform.OS}
@@ -162,7 +162,7 @@ export default function SocialLoginButtons({
             </Text>
           )}
         </View>
-      )}
+      )} */}
     </View>
   );
 }
