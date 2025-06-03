@@ -1,5 +1,6 @@
 // components/plant/ChildPlantDisplay.tsx - 모달 사용 버전
 import { MaterialIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -10,13 +11,12 @@ import {
   Text,
   View,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import stickerApi from '../../api/modules/sticker';
 import Colors from '../../constants/Colors';
 import { usePlant } from '../../hooks/usePlant';
+import RewardAchievementModal from '../common/modal/RewardAchievementModal';
+import WateringSuccessModal from '../common/modal/WateringSuccessModal';
 import PlantDisplayFootAction from './PlantDisplayFootAction';
-import RewardAchievementModal from '../common/RewardAchievementModal';
-import WateringSuccessModal from '../common/WateringSuccessModal';
 
 // 스티커 통계 타입
 interface StickerStats {
@@ -56,7 +56,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     availableStickers: 0,
   });
   const [isLoadingStickers, setIsLoadingStickers] = useState(false);
-  
+
   // 액션 로딩 상태
   const [isWatering, setIsWatering] = useState(false);
   const [isGrowing, setIsGrowing] = useState(false);
@@ -65,7 +65,10 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
   const [wateringModalVisible, setWateringModalVisible] = useState(false);
   const [rewardModalVisible, setRewardModalVisible] = useState(false);
   const [wateringResult, setWateringResult] = useState<any>(null);
-  const [rewardData, setRewardData] = useState<{ title: string; stickerCount: number } | null>(null);
+  const [rewardData, setRewardData] = useState<{
+    title: string;
+    stickerCount: number;
+  } | null>(null);
 
   // 스티커 개수 로드
   const loadStickerStats = async () => {
@@ -158,7 +161,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
       loadStickerStats();
     } catch (error) {
       console.error('물주기 실패:', error);
-      
+
       if (error instanceof Error) {
         if (error.message.includes('already watered')) {
           Alert.alert(
@@ -319,7 +322,9 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
                 />
               ) : (
                 <View className=" p-10 rounded-full">
-                  <Text className="text-gray-500 text-center">식물을 선택하세요 !</Text>
+                  <Text className="text-gray-500 text-center">
+                    식물을 선택하세요 !
+                  </Text>
                 </View>
               )}
             </Animated.View>
@@ -398,7 +403,9 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
             {/* 경험치 진행 바 - 포켓몬 카드의 에너지 바 느낌 */}
             <View className="mt-2 mb-1">
               <View className="flex-row justify-between mb-1">
-                <Text className="text-xs font-medium text-gray-600">경험치</Text>
+                <Text className="text-xs font-medium text-gray-600">
+                  경험치
+                </Text>
                 <Text className="text-xs font-medium text-green-600">
                   {experience}/{experienceToGrow}
                 </Text>

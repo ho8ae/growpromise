@@ -19,7 +19,7 @@ import promiseApi, {
   PromiseAssignment,
   PromiseStatus,
 } from '../../api/modules/promise';
-import PromiseSuccessModal from '../../components/common/PromiseSuccessModal';
+import PromiseSuccessModal from '../../components/common/modal/PromiseSuccessModal';
 import { usePromiseRealtime } from '../../hooks/usePromiseRealtime';
 
 export default function VerifyPromise() {
@@ -45,7 +45,7 @@ export default function VerifyPromise() {
     [],
   );
   const [error, setError] = useState<string | null>(null);
-  
+
   // 성공 모달 상태
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -164,12 +164,12 @@ export default function VerifyPromise() {
   // 성공 모달 닫기 핸들러
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
-    
+
     // ✨ 모달 닫을 때도 한 번 더 업데이트 (확실히 하기 위해)
     setTimeout(() => {
       onPromiseVerificationSubmitted(assignmentId || selectedPromise);
     }, 300);
-    
+
     router.back();
   };
 

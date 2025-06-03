@@ -3,23 +3,21 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
-import * as Linking from 'expo-linking';
 import { Image } from 'expo-image';
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
+  Share,
   Text,
   View,
-  Share,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Colors from '../../constants/Colors';
-import PrivacyPolicyModal from '../../components/common/PrivacyPolicyModal';
-import TermsOfServiceModal from '../../components/common/TermsOfServiceModal';
 
 const appInfo = {
   name: '쑥쑥약속',
@@ -87,7 +85,9 @@ export default function AppInfoScreen() {
         osName: Device.osName || 'Unknown',
         osVersion: Device.osVersion || 'Unknown',
         platformApiLevel: Device.platformApiLevel || 'Unknown',
-        totalMemory: Device.totalMemory ? `${Math.round(Device.totalMemory / 1024 / 1024 / 1024)}GB` : 'Unknown',
+        totalMemory: Device.totalMemory
+          ? `${Math.round(Device.totalMemory / 1024 / 1024 / 1024)}GB`
+          : 'Unknown',
         appVersion: Application.nativeApplicationVersion || 'Unknown',
         buildVersion: Application.nativeBuildVersion || 'Unknown',
       };
@@ -101,7 +101,7 @@ export default function AppInfoScreen() {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const supported = await Linking.canOpenURL(url);
-      
+
       if (supported) {
         await Linking.openURL(url);
       } else {
@@ -116,10 +116,11 @@ export default function AppInfoScreen() {
   const handleShareApp = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
-      const storeUrl = Platform.OS === 'ios'
-        ? 'https://apps.apple.com/app/id[APP_ID]' // 실제 App Store ID로 변경 필요
-        : 'https://play.google.com/store/apps/details?id=com.low_k.growpromise';
+
+      const storeUrl =
+        Platform.OS === 'ios'
+          ? 'https://apps.apple.com/app/id[APP_ID]' // 실제 App Store ID로 변경 필요
+          : 'https://play.google.com/store/apps/details?id=com.low_k.growpromise';
 
       await Share.share({
         message: `쑥쑥약속 - 부모와 아이를 위한 약속 관리 앱\n\n${storeUrl}`,
@@ -134,19 +135,21 @@ export default function AppInfoScreen() {
   const handleRateApp = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
-      const storeUrl = Platform.OS === 'ios'
-        ? 'itms-apps://itunes.apple.com/app/id[APP_ID]?action=write-review'
-        : 'market://details?id=com.low_k.growpromise';
+
+      const storeUrl =
+        Platform.OS === 'ios'
+          ? 'itms-apps://itunes.apple.com/app/id[APP_ID]?action=write-review'
+          : 'market://details?id=com.low_k.growpromise';
 
       const canOpen = await Linking.canOpenURL(storeUrl);
-      
+
       if (canOpen) {
         await Linking.openURL(storeUrl);
       } else {
-        const webUrl = Platform.OS === 'ios'
-          ? 'https://apps.apple.com/app/id[APP_ID]'
-          : 'https://play.google.com/store/apps/details?id=com.low_k.growpromise';
+        const webUrl =
+          Platform.OS === 'ios'
+            ? 'https://apps.apple.com/app/id[APP_ID]'
+            : 'https://play.google.com/store/apps/details?id=com.low_k.growpromise';
         await Linking.openURL(webUrl);
       }
     } catch (error) {
@@ -155,7 +158,7 @@ export default function AppInfoScreen() {
     }
   };
 
-  const handleLicensePress = (license: typeof openSourceLicenses[0]) => {
+  const handleLicensePress = (license: (typeof openSourceLicenses)[0]) => {
     Alert.alert(
       license.name,
       `버전: ${license.version}\n라이센스: ${license.license}\n\n오픈소스 라이브러리 페이지를 열까요?`,
@@ -165,7 +168,7 @@ export default function AppInfoScreen() {
           text: '열기',
           onPress: () => handleLinkPress(license.url),
         },
-      ]
+      ],
     );
   };
 
@@ -316,7 +319,7 @@ export default function AppInfoScreen() {
                 {appInfo.developer}
               </Text>
             </View>
-            
+
             <Pressable
               onPress={() => handleLinkPress(`mailto:${appInfo.supportEmail}`)}
               className="flex-row items-center justify-between mb-3 active:opacity-70"
@@ -327,10 +330,7 @@ export default function AppInfoScreen() {
               >
                 지원 이메일
               </Text>
-              <Text
-                className="text-sm"
-                style={{ color: Colors.light.info }}
-              >
+              <Text className="text-sm" style={{ color: Colors.light.info }}>
                 {appInfo.supportEmail}
               </Text>
             </Pressable>
@@ -345,10 +345,7 @@ export default function AppInfoScreen() {
               >
                 웹사이트
               </Text>
-              <Text
-                className="text-sm"
-                style={{ color: Colors.light.info }}
-              >
+              <Text className="text-sm" style={{ color: Colors.light.info }}>
                 {appInfo.website}
               </Text>
             </Pressable>
@@ -366,7 +363,10 @@ export default function AppInfoScreen() {
             </Text>
             <View className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
               <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-sm" style={{ color: Colors.light.textSecondary }}>
+                <Text
+                  className="text-sm"
+                  style={{ color: Colors.light.textSecondary }}
+                >
                   기기명
                 </Text>
                 <Text className="text-sm" style={{ color: Colors.light.text }}>
@@ -374,7 +374,10 @@ export default function AppInfoScreen() {
                 </Text>
               </View>
               <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-sm" style={{ color: Colors.light.textSecondary }}>
+                <Text
+                  className="text-sm"
+                  style={{ color: Colors.light.textSecondary }}
+                >
                   제조사
                 </Text>
                 <Text className="text-sm" style={{ color: Colors.light.text }}>
@@ -382,7 +385,10 @@ export default function AppInfoScreen() {
                 </Text>
               </View>
               <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-sm" style={{ color: Colors.light.textSecondary }}>
+                <Text
+                  className="text-sm"
+                  style={{ color: Colors.light.textSecondary }}
+                >
                   모델
                 </Text>
                 <Text className="text-sm" style={{ color: Colors.light.text }}>
@@ -390,7 +396,10 @@ export default function AppInfoScreen() {
                 </Text>
               </View>
               <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-sm" style={{ color: Colors.light.textSecondary }}>
+                <Text
+                  className="text-sm"
+                  style={{ color: Colors.light.textSecondary }}
+                >
                   OS
                 </Text>
                 <Text className="text-sm" style={{ color: Colors.light.text }}>
@@ -398,7 +407,10 @@ export default function AppInfoScreen() {
                 </Text>
               </View>
               <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-sm" style={{ color: Colors.light.textSecondary }}>
+                <Text
+                  className="text-sm"
+                  style={{ color: Colors.light.textSecondary }}
+                >
                   메모리
                 </Text>
                 <Text className="text-sm" style={{ color: Colors.light.text }}>
@@ -406,7 +418,10 @@ export default function AppInfoScreen() {
                 </Text>
               </View>
               <View className="flex-row items-center justify-between">
-                <Text className="text-sm" style={{ color: Colors.light.textSecondary }}>
+                <Text
+                  className="text-sm"
+                  style={{ color: Colors.light.textSecondary }}
+                >
                   앱 버전
                 </Text>
                 <Text className="text-sm" style={{ color: Colors.light.text }}>

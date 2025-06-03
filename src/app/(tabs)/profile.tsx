@@ -17,29 +17,29 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../api';
+import PrivacyPolicyModal from '../../components/common/modal/PrivacyPolicyModal';
+import TermsOfServiceModal from '../../components/common/modal/TermsOfServiceModal';
 import Colors from '../../constants/Colors';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useAuthStore } from '../../stores/authStore';
-import PrivacyPolicyModal from '../../components/common/PrivacyPolicyModal';
-import TermsOfServiceModal from '../../components/common/TermsOfServiceModal';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, isAuthenticated } = useAuthStore();
-  const { 
-    settings: notificationSettings, 
-    toggleNotifications, 
+  const {
+    settings: notificationSettings,
+    toggleNotifications,
     sendTestNotification,
     sendImmediateTestNotification,
     checkScheduledNotifications,
     debugPermissions,
-    isLoading: isNotificationLoading 
+    isLoading: isNotificationLoading,
   } = useNotifications();
-  
+
   // 모달 상태
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
   const [termsModalVisible, setTermsModalVisible] = useState(false);
-  
+
   const [userProfile, setUserProfile] = useState({
     name: '',
     userType: '',
@@ -148,49 +148,49 @@ export default function ProfileScreen() {
   // 설정 메뉴 항목 처리
   const handleSettingPress = (settingName: string) => {
     if (handleAuthRequired()) return;
-  
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  
+
     switch (settingName) {
       case '프로필 정보':
       case '프로필 정보 변경':
         router.push('/(settings)/edit-profile');
         break;
-        
+
       case '연결된 계정':
         handleConnectedAccounts();
         break;
-        
+
       case '비밀번호':
       case '비밀번호 변경':
         router.push('/(settings)/change-password');
         break;
-        
+
       case '테마':
       case '테마 설정':
         Alert.alert('알림', '테마 설정 기능은 곧 출시될 예정입니다.');
         break;
-        
+
       case '도움말':
         router.push('/(settings)/help');
         break;
-        
+
       case '문의하기':
         router.push('/(settings)/contact');
         break;
-        
+
       case '앱 정보':
         router.push('/(settings)/app-info');
         break;
-        
+
       case '개인정보처리방침':
         setPrivacyModalVisible(true);
         break;
-        
+
       case '이용약관':
         setTermsModalVisible(true);
         break;
-        
+
       default:
         Alert.alert('알림', `${settingName} 설정은 아직 개발 중입니다.`);
     }
@@ -204,31 +204,27 @@ export default function ProfileScreen() {
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     if (__DEV__) {
-      Alert.alert(
-        '알림 테스트 선택',
-        '어떤 테스트를 실행하시겠습니까?',
-        [
-          { text: '취소', style: 'cancel' },
-          {
-            text: '일반 테스트 (2초 후)',
-            onPress: sendTestNotification,
-          },
-          {
-            text: '즉시 테스트',
-            onPress: sendImmediateTestNotification,
-          },
-          {
-            text: '예약된 알림 확인',
-            onPress: checkScheduledNotifications,
-          },
-          {
-            text: '권한 디버깅',
-            onPress: debugPermissions,
-          },
-        ]
-      );
+      Alert.alert('알림 테스트 선택', '어떤 테스트를 실행하시겠습니까?', [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '일반 테스트 (2초 후)',
+          onPress: sendTestNotification,
+        },
+        {
+          text: '즉시 테스트',
+          onPress: sendImmediateTestNotification,
+        },
+        {
+          text: '예약된 알림 확인',
+          onPress: checkScheduledNotifications,
+        },
+        {
+          text: '권한 디버깅',
+          onPress: debugPermissions,
+        },
+      ]);
     } else {
       sendTestNotification();
     }
@@ -237,7 +233,7 @@ export default function ProfileScreen() {
   // 알림 토글 핸들러
   const handleNotificationToggle = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     if (notificationSettings.isEnabled) {
       Alert.alert(
         '알림 끄기',
@@ -252,19 +248,19 @@ export default function ProfileScreen() {
               });
             },
           },
-        ]
+        ],
       );
     } else {
       const success = await toggleNotifications();
-      
+
       if (success) {
         Alert.alert(
-          '알림 설정 완료', 
+          '알림 설정 완료',
           '알림이 활성화되었습니다! 테스트 알림을 보내보시겠습니까?',
           [
             { text: '나중에', style: 'cancel' },
             { text: '테스트', onPress: sendTestNotification },
-          ]
+          ],
         );
       }
     }
@@ -576,27 +572,28 @@ export default function ProfileScreen() {
                     </Text>
                     <Text
                       className="text-xs mt-0.5"
-                      style={{ 
-                        color: notificationSettings.permissionStatus === 'granted' 
-                          ? Colors.light.primary
-                          : notificationSettings.permissionStatus === 'denied'
-                          ? Colors.light.error
-                          : Colors.light.textSecondary
+                      style={{
+                        color:
+                          notificationSettings.permissionStatus === 'granted'
+                            ? Colors.light.primary
+                            : notificationSettings.permissionStatus === 'denied'
+                              ? Colors.light.error
+                              : Colors.light.textSecondary,
                       }}
                     >
-                      {notificationSettings.permissionStatus === 'granted' 
-                        ? '허용됨' 
+                      {notificationSettings.permissionStatus === 'granted'
+                        ? '허용됨'
                         : notificationSettings.permissionStatus === 'denied'
-                        ? '거부됨'
-                        : '미설정'}
+                          ? '거부됨'
+                          : '미설정'}
                     </Text>
                   </View>
                 </View>
-                
+
                 {isNotificationLoading ? (
-                  <ActivityIndicator 
-                    size="small" 
-                    color={Colors.light.primary} 
+                  <ActivityIndicator
+                    size="small"
+                    color={Colors.light.primary}
                     style={{ marginRight: 8 }}
                   />
                 ) : (
@@ -607,7 +604,11 @@ export default function ProfileScreen() {
                       false: '#E5E5E5',
                       true: `${Colors.light.primary}80`,
                     }}
-                    thumbColor={notificationSettings.isEnabled ? Colors.light.primary : '#FFFFFF'}
+                    thumbColor={
+                      notificationSettings.isEnabled
+                        ? Colors.light.primary
+                        : '#FFFFFF'
+                    }
                     ios_backgroundColor="#E5E5E5"
                   />
                 )}
@@ -639,11 +640,17 @@ export default function ProfileScreen() {
                           className="text-xs mt-0.5"
                           style={{ color: Colors.light.textSecondary }}
                         >
-                          {__DEV__ ? '개발 모드: 다양한 테스트 옵션' : '2초 후 테스트 알림 전송'}
+                          {__DEV__
+                            ? '개발 모드: 다양한 테스트 옵션'
+                            : '2초 후 테스트 알림 전송'}
                         </Text>
                       </View>
                     </View>
-                    <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
+                    <MaterialIcons
+                      name="chevron-right"
+                      size={22}
+                      color="#BDBDBD"
+                    />
                   </Pressable>
                 </>
               )}
@@ -872,7 +879,7 @@ export default function ProfileScreen() {
         visible={privacyModalVisible}
         onClose={() => setPrivacyModalVisible(false)}
       />
-      
+
       <TermsOfServiceModal
         visible={termsModalVisible}
         onClose={() => setTermsModalVisible(false)}

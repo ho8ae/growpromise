@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import Colors from '../../constants/Colors';
+import Colors from '../../../constants/Colors';
 
 interface TermsOfServiceModalProps {
   visible: boolean;
@@ -67,9 +67,9 @@ export default function TermsOfServiceModal({
                 className="text-sm leading-6"
                 style={{ color: Colors.light.text }}
               >
-                이 약관은 쑥쑥약속(growpromise) 서비스(이하 &quot;서비스&quot;)의 이용과
-                관련하여 회사와 이용자 간의 권리, 의무 및 책임사항, 기타 필요한
-                사항을 규정함을 목적으로 합니다.
+                이 약관은 쑥쑥약속(growpromise) 서비스(이하
+                &quot;서비스&quot;)의 이용과 관련하여 회사와 이용자 간의 권리,
+                의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.
               </Text>
             </View>
 
@@ -92,27 +92,29 @@ export default function TermsOfServiceModal({
                   className="text-sm leading-6 mb-2"
                   style={{ color: Colors.light.text }}
                 >
-                  1. &quot;서비스&quot;란 쑥쑥약속 모바일 애플리케이션을 통해 제공되는
-                  부모-자녀 약속 관리 서비스를 의미합니다.
+                  1. &quot;서비스&quot;란 쑥쑥약속 모바일 애플리케이션을 통해
+                  제공되는 부모-자녀 약속 관리 서비스를 의미합니다.
                 </Text>
                 <Text
                   className="text-sm leading-6 mb-2"
                   style={{ color: Colors.light.text }}
                 >
-                  2. &quot;이용자&quot;란 이 약관에 따라 회사가 제공하는 서비스를 받는
-                  부모 및 자녀 회원을 말합니다.
+                  2. &quot;이용자&quot;란 이 약관에 따라 회사가 제공하는
+                  서비스를 받는 부모 및 자녀 회원을 말합니다.
                 </Text>
                 <Text
                   className="text-sm leading-6 mb-2"
                   style={{ color: Colors.light.text }}
                 >
-                  3. &quot;약속&quot;이란 부모와 자녀 간에 설정한 이행 목표를 의미합니다.
+                  3. &quot;약속&quot;이란 부모와 자녀 간에 설정한 이행 목표를
+                  의미합니다.
                 </Text>
                 <Text
                   className="text-sm leading-6"
                   style={{ color: Colors.light.text }}
                 >
-                  4. &quot;스티커&quot;란 약속 이행 시 제공되는 디지털 보상을 의미합니다.
+                  4. &quot;스티커&quot;란 약속 이행 시 제공되는 디지털 보상을
+                  의미합니다.
                 </Text>
               </View>
             </View>

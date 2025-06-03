@@ -25,7 +25,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../api';
 import { PlantInventoryItem, PlantType } from '../../api/modules/plant';
-import PlantTutorialModal from '../../components/common/PlantTutorialModal';
+import PlantTutorialModal from '../../components/common/modal/PlantTutorialModal';
 import Colors from '../../constants/Colors';
 import { useAuthStore } from '../../stores/authStore';
 import { getPlantFallbackImage, getPlantImageUrl } from '../../utils/imageUrl';

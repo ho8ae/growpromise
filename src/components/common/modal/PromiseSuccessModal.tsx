@@ -1,36 +1,30 @@
-// src/components/common/PromiseApprovalModal.tsx
-import React, { useEffect, useRef } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  Pressable,
-  Animated,
-  Dimensions,
-} from 'react-native';
+// src/components/common/PromiseSuccessModal.tsx
 import { FontAwesome } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Colors from '../../constants/Colors';
+import React, { useEffect, useRef } from 'react';
+import {
+  Animated,
+  Dimensions,
+  Modal,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
+import Colors from '../../../constants/Colors';
 
-interface PromiseApprovalModalProps {
+interface PromiseSuccessModalProps {
   visible: boolean;
   onClose: () => void;
-  approved: boolean; // true: 승인됨, false: 거절됨
-  childName?: string;
-  promiseTitle?: string;
-  experienceGained?: number;
+  message?: string;
 }
 
 const { width, height } = Dimensions.get('window');
 
-export default function PromiseApprovalModal({
+export default function PromiseSuccessModal({
   visible,
   onClose,
-  approved,
-  childName = '자녀',
-  promiseTitle = '약속',
-  experienceGained = 0,
-}: PromiseApprovalModalProps) {
+  message = '부모님께 인증 요청을 보냈어요! 승인되면 식물이 경험치를 얻게 됩니다.',
+}: PromiseSuccessModalProps) {
   // 애니메이션 값들
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
@@ -41,12 +35,8 @@ export default function PromiseApprovalModal({
   useEffect(() => {
     if (visible) {
       // 햅틱 피드백
-      Haptics.notificationAsync(
-        approved 
-          ? Haptics.NotificationFeedbackType.Success
-          : Haptics.NotificationFeedbackType.Warning
-      );
-      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
       // 순차적인 애니메이션 시작
       Animated.sequence([
         // 1. 모달 배경 페이드인
@@ -64,42 +54,39 @@ export default function PromiseApprovalModal({
         }),
       ]).start();
 
-      // 승인된 경우에만 축하 애니메이션
-      if (approved) {
-        // 3. 바운스 효과
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(bounceAnim, {
-              toValue: 1,
-              duration: 800,
-              useNativeDriver: true,
-            }),
-            Animated.timing(bounceAnim, {
-              toValue: 0,
-              duration: 800,
-              useNativeDriver: true,
-            }),
-          ]),
-          { iterations: 3 }
-        ).start();
-
-        // 4. 반짝이 효과
-        Animated.loop(
-          Animated.timing(sparkleAnim, {
+      // 3. 바운스 효과
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(bounceAnim, {
             toValue: 1,
-            duration: 1500,
+            duration: 800,
             useNativeDriver: true,
           }),
-          { iterations: 2 }
-        ).start();
+          Animated.timing(bounceAnim, {
+            toValue: 0,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ]),
+        { iterations: 3 },
+      ).start();
 
-        // 5. 색종이 효과
-        Animated.timing(confettiAnim, {
+      // 4. 반짝이 효과
+      Animated.loop(
+        Animated.timing(sparkleAnim, {
           toValue: 1,
-          duration: 2000,
+          duration: 1500,
           useNativeDriver: true,
-        }).start();
-      }
+        }),
+        { iterations: 2 },
+      ).start();
+
+      // 5. 색종이 효과
+      Animated.timing(confettiAnim, {
+        toValue: 1,
+        duration: 2000,
+        useNativeDriver: true,
+      }).start();
     } else {
       // 초기화
       scaleAnim.setValue(0);
@@ -108,11 +95,11 @@ export default function PromiseApprovalModal({
       sparkleAnim.setValue(0);
       confettiAnim.setValue(0);
     }
-  }, [visible, approved]);
+  }, [visible]);
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     // 닫기 애니메이션
     Animated.parallel([
       Animated.timing(scaleAnim, {
@@ -145,22 +132,15 @@ export default function PromiseApprovalModal({
     outputRange: [0.8, 1.2, 0.8],
   });
 
-  // 색종이 위치들 (승인된 경우에만)
-  const confettiPositions = approved ? [
+  // 색종이 위치들
+  const confettiPositions = [
     { left: width * 0.1, top: height * 0.2 },
     { left: width * 0.3, top: height * 0.15 },
     { left: width * 0.7, top: height * 0.18 },
     { left: width * 0.9, top: height * 0.22 },
     { left: width * 0.2, top: height * 0.7 },
     { left: width * 0.8, top: height * 0.75 },
-  ] : [];
-
-  const iconColor = approved ? Colors.light.primary : Colors.light.error;
-  const iconName = approved ? 'check' : 'times';
-  const title = approved ? '🎉 승인 완료!' : '😔 거절됨';
-  const message = approved 
-    ? `${childName}의 "${promiseTitle}" 약속을 승인했습니다!`
-    : `${childName}의 "${promiseTitle}" 약속을 거절했습니다.`;
+  ];
 
   return (
     <Modal
@@ -178,8 +158,8 @@ export default function PromiseApprovalModal({
           opacity: fadeAnim,
         }}
       >
-        {/* 색종이 효과 (승인된 경우에만) */}
-        {approved && confettiPositions.map((pos, index) => (
+        {/* 색종이 효과 */}
+        {confettiPositions.map((pos, index) => (
           <Animated.View
             key={index}
             style={{
@@ -210,7 +190,10 @@ export default function PromiseApprovalModal({
               style={{
                 width: 8,
                 height: 8,
-                backgroundColor: index % 2 === 0 ? Colors.light.secondary : Colors.light.primary,
+                backgroundColor:
+                  index % 2 === 0
+                    ? Colors.light.secondary
+                    : Colors.light.primary,
                 borderRadius: 4,
               }}
             />
@@ -230,19 +213,13 @@ export default function PromiseApprovalModal({
             shadowOpacity: 0.25,
             shadowRadius: 20,
             elevation: 10,
-            transform: [
-              { scale: scaleAnim },
-              { translateY: bounceTransform },
-            ],
+            transform: [{ scale: scaleAnim }, { translateY: bounceTransform }],
           }}
         >
-          {/* 상태 아이콘 */}
+          {/* 반짝이는 아이콘 */}
           <Animated.View
             style={{
-              transform: approved ? [
-                { rotate: sparkleRotate },
-                { scale: sparkleScale },
-              ] : [{ scale: scaleAnim }],
+              transform: [{ rotate: sparkleRotate }, { scale: sparkleScale }],
               marginBottom: 20,
             }}
           >
@@ -251,17 +228,17 @@ export default function PromiseApprovalModal({
                 width: 80,
                 height: 80,
                 borderRadius: 40,
-                backgroundColor: iconColor,
+                backgroundColor: Colors.light.primary,
                 justifyContent: 'center',
                 alignItems: 'center',
-                shadowColor: iconColor,
+                shadowColor: Colors.light.primary,
                 shadowOffset: { width: 0, height: 0 },
                 shadowOpacity: 0.3,
                 shadowRadius: 10,
                 elevation: 8,
               }}
             >
-              <FontAwesome name={iconName} size={40} color="white" />
+              <FontAwesome name="check" size={40} color="white" />
             </View>
           </Animated.View>
 
@@ -270,12 +247,12 @@ export default function PromiseApprovalModal({
             style={{
               fontSize: 24,
               fontWeight: 'bold',
-              color: iconColor,
+              color: Colors.light.primary,
               marginBottom: 12,
               textAlign: 'center',
             }}
           >
-            {title}
+            🎉 약속 완료!
           </Text>
 
           {/* 메시지 */}
@@ -285,51 +262,21 @@ export default function PromiseApprovalModal({
               color: Colors.light.text,
               textAlign: 'center',
               lineHeight: 24,
-              marginBottom: approved ? 8 : 16,
+              marginBottom: 8,
             }}
           >
             {message}
           </Text>
 
-          {/* 경험치 정보 (승인된 경우에만) */}
-          {approved && experienceGained > 0 && (
-            <View
-              style={{
-                backgroundColor: Colors.light.primary + '15',
-                borderRadius: 12,
-                padding: 16,
-                marginVertical: 16,
-                borderWidth: 1,
-                borderColor: Colors.light.primary + '30',
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: Colors.light.primary }}>
-                  🌱 +{experienceGained} 경험치 획득!
-                </Text>
-              </View>
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: Colors.light.textSecondary,
-                  textAlign: 'center',
-                  marginTop: 4,
-                }}
-              >
-                식물이 성장했어요!
-              </Text>
-            </View>
-          )}
-
-          {/* 부모용 추가 정보 */}
-          <View
+          {/* 경험치 정보 */}
+          {/* <View
             style={{
-              backgroundColor: approved ? Colors.light.primary + '10' : Colors.light.error + '10',
+              backgroundColor: Colors.light.primary + '15',
               borderRadius: 12,
               padding: 16,
-              marginVertical: 8,
+              marginVertical: 16,
               borderWidth: 1,
-              borderColor: approved ? Colors.light.primary + '20' : Colors.light.error + '20',
+              borderColor: Colors.light.primary + '30',
             }}
           >
             <Text
@@ -340,27 +287,29 @@ export default function PromiseApprovalModal({
                 fontWeight: '500',
               }}
             >
-              {approved 
-                ? '✨ 자녀에게 스티커가 지급되었습니다'
-                : '📝 자녀에게 거절 사유가 전달되었습니다'
-              }
+              💡 약속 유형에 따른 경험치
             </Text>
-          </View>
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 13, color: Colors.light.textSecondary, textAlign: 'center' }}>
+                일회성: 20XP • 월간: 15XP • 주간: 10XP • 일일: 5XP
+              </Text>
+            </View>
+          </View> */}
 
           {/* 확인 버튼 */}
           <Pressable
             onPress={handleClose}
             style={{
-              backgroundColor: iconColor,
+              backgroundColor: Colors.light.primary,
               paddingHorizontal: 32,
               paddingVertical: 12,
               borderRadius: 25,
-              shadowColor: iconColor,
+              shadowColor: Colors.light.primary,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.3,
               shadowRadius: 8,
               elevation: 6,
-              marginTop: 8,
+              marginTop: 10,
             }}
           >
             <Text
@@ -370,7 +319,7 @@ export default function PromiseApprovalModal({
                 fontWeight: '600',
               }}
             >
-              확인 👍
+              확인 ✨
             </Text>
           </Pressable>
         </Animated.View>

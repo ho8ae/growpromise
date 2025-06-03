@@ -1,17 +1,16 @@
 // src/components/common/PlantTutorialModal.tsx
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  Pressable,
-  Animated,
-  Dimensions,
-  ScrollView,
-} from 'react-native';
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Colors from '../../constants/Colors';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Dimensions,
+  Modal,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
+import Colors from '../../../constants/Colors';
 
 interface PlantTutorialModalProps {
   visible: boolean;
@@ -36,7 +35,8 @@ const tutorialPages: TutorialPage[] = [
   {
     id: 1,
     title: '🌱 식물 키우기 시작!',
-    description: '축하해요! 새로운 식물 친구가 생겼어요.\n약속을 지키며 함께 성장해보세요!',
+    description:
+      '축하해요! 새로운 식물 친구가 생겼어요.\n약속을 지키며 함께 성장해보세요!',
     icon: 'seedling',
     iconLibrary: 'FontAwesome',
     color: Colors.light.primary,
@@ -45,7 +45,8 @@ const tutorialPages: TutorialPage[] = [
   {
     id: 2,
     title: '💧 물주기로 경험치 획득',
-    description: '매일 식물에게 물을 주면\n경험치를 얻을 수 있어요!\n꾸준히 관리해주세요.',
+    description:
+      '매일 식물에게 물을 주면\n경험치를 얻을 수 있어요!\n꾸준히 관리해주세요.',
     icon: 'opacity',
     iconLibrary: 'MaterialIcons',
     color: Colors.light.info,
@@ -54,7 +55,8 @@ const tutorialPages: TutorialPage[] = [
   {
     id: 3,
     title: '✅ 약속 완료로 빠른 성장',
-    description: '약속을 지키고 인증하면\n더 많은 경험치를 얻어요!\n식물이 더 빨리 자라납니다.',
+    description:
+      '약속을 지키고 인증하면\n더 많은 경험치를 얻어요!\n식물이 더 빨리 자라납니다.',
     icon: 'check-circle',
     iconLibrary: 'FontAwesome',
     color: Colors.light.secondary,
@@ -63,7 +65,8 @@ const tutorialPages: TutorialPage[] = [
   {
     id: 4,
     title: '🌿 성장 단계별 진화',
-    description: '경험치가 100이 되면\n식물이 다음 단계로 성장해요!\n최종 진화까지 키워보세요!',
+    description:
+      '경험치가 100이 되면\n식물이 다음 단계로 성장해요!\n최종 진화까지 키워보세요!',
     icon: 'trending-up',
     iconLibrary: 'MaterialIcons',
     color: Colors.light.accent,
@@ -72,7 +75,8 @@ const tutorialPages: TutorialPage[] = [
   {
     id: 5,
     title: '🏆 완성된 식물 수집',
-    description: '완전히 자란 식물은\n컬렉션에 저장돼요!\n다양한 식물을 모아보세요!',
+    description:
+      '완전히 자란 식물은\n컬렉션에 저장돼요!\n다양한 식물을 모아보세요!',
     icon: 'trophy',
     iconLibrary: 'FontAwesome',
     color: Colors.light.warning,
@@ -87,7 +91,7 @@ export default function PlantTutorialModal({
   plantType,
 }: PlantTutorialModalProps) {
   const [currentPage, setCurrentPage] = useState(0);
-  
+
   // 애니메이션 값들
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -145,7 +149,7 @@ export default function PlantTutorialModal({
           duration: 600,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
 
     // 웨이브 애니메이션
@@ -161,7 +165,7 @@ export default function PlantTutorialModal({
           duration: 1000,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
 
     // 펄스 애니메이션
@@ -177,7 +181,7 @@ export default function PlantTutorialModal({
           duration: 800,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
 
     // 회전 애니메이션
@@ -186,13 +190,13 @@ export default function PlantTutorialModal({
         toValue: 1,
         duration: 2000,
         useNativeDriver: true,
-      })
+      }),
     ).start();
   };
 
   const nextPage = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     if (currentPage < tutorialPages.length - 1) {
       // 페이지 전환 애니메이션
       Animated.sequence([
@@ -207,7 +211,7 @@ export default function PlantTutorialModal({
           useNativeDriver: true,
         }),
       ]).start();
-      
+
       setCurrentPage(currentPage + 1);
     } else {
       // 마지막 페이지에서 완료
@@ -217,7 +221,7 @@ export default function PlantTutorialModal({
 
   const prevPage = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     if (currentPage > 0) {
       // 페이지 전환 애니메이션
       Animated.sequence([
@@ -232,14 +236,14 @@ export default function PlantTutorialModal({
           useNativeDriver: true,
         }),
       ]).start();
-      
+
       setCurrentPage(currentPage - 1);
     }
   };
 
   const handleComplete = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    
+
     // 완료 애니메이션
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -306,8 +310,9 @@ export default function PlantTutorialModal({
   };
 
   const renderIcon = (page: TutorialPage) => {
-    const IconComponent = page.iconLibrary === 'FontAwesome' ? FontAwesome : MaterialIcons;
-    
+    const IconComponent =
+      page.iconLibrary === 'FontAwesome' ? FontAwesome : MaterialIcons;
+
     return (
       <Animated.View
         style={[
@@ -325,11 +330,7 @@ export default function PlantTutorialModal({
           getAnimationStyle(page.animation),
         ]}
       >
-        <IconComponent
-          name={page.icon as any}
-          size={50}
-          color={page.color}
-        />
+        <IconComponent name={page.icon as any} size={50} color={page.color} />
       </Animated.View>
     );
   };
@@ -366,10 +367,7 @@ export default function PlantTutorialModal({
             shadowOpacity: 0.25,
             shadowRadius: 20,
             elevation: 10,
-            transform: [
-              { scale: scaleAnim },
-              { translateY: slideAnim },
-            ],
+            transform: [{ scale: scaleAnim }, { translateY: slideAnim }],
           }}
         >
           {/* 페이지 인디케이터 */}
@@ -381,7 +379,10 @@ export default function PlantTutorialModal({
                   width: 8,
                   height: 8,
                   borderRadius: 4,
-                  backgroundColor: index === currentPage ? Colors.light.primary : Colors.light.disabled,
+                  backgroundColor:
+                    index === currentPage
+                      ? Colors.light.primary
+                      : Colors.light.disabled,
                   marginHorizontal: 4,
                 }}
               />
@@ -391,19 +392,23 @@ export default function PlantTutorialModal({
           {/* 식물 정보 (첫 페이지에만) */}
           {currentPage === 0 && (
             <View style={{ marginBottom: 20, alignItems: 'center' }}>
-              <Text style={{ 
-                fontSize: 18, 
-                fontWeight: '600', 
-                color: Colors.light.text,
-                textAlign: 'center',
-              }}>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: '600',
+                  color: Colors.light.text,
+                  textAlign: 'center',
+                }}
+              >
                 {plantName}
               </Text>
-              <Text style={{ 
-                fontSize: 14, 
-                color: Colors.light.textSecondary,
-                textAlign: 'center',
-              }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: Colors.light.textSecondary,
+                  textAlign: 'center',
+                }}
+              >
                 {plantType}
               </Text>
             </View>
@@ -439,12 +444,14 @@ export default function PlantTutorialModal({
           </Text>
 
           {/* 하단 버튼 영역 */}
-          <View style={{ 
-            flexDirection: 'row', 
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: '100%',
-          }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              width: '100%',
+            }}
+          >
             {/* 이전 버튼 */}
             <Pressable
               onPress={prevPage}
@@ -455,20 +462,24 @@ export default function PlantTutorialModal({
                 borderRadius: 12,
               }}
             >
-              <Text style={{ 
-                color: Colors.light.textSecondary,
-                fontSize: 16,
-                fontWeight: '500',
-              }}>
+              <Text
+                style={{
+                  color: Colors.light.textSecondary,
+                  fontSize: 16,
+                  fontWeight: '500',
+                }}
+              >
                 이전
               </Text>
             </Pressable>
 
             {/* 페이지 정보 */}
-            <Text style={{ 
-              color: Colors.light.textSecondary,
-              fontSize: 14,
-            }}>
+            <Text
+              style={{
+                color: Colors.light.textSecondary,
+                fontSize: 14,
+              }}
+            >
               {currentPage + 1} / {tutorialPages.length}
             </Text>
 
@@ -487,12 +498,16 @@ export default function PlantTutorialModal({
                 elevation: 6,
               }}
             >
-              <Text style={{
-                color: 'white',
-                fontSize: 16,
-                fontWeight: '600',
-              }}>
-                {currentPage === tutorialPages.length - 1 ? '시작하기 🚀' : '다음'}
+              <Text
+                style={{
+                  color: 'white',
+                  fontSize: 16,
+                  fontWeight: '600',
+                }}
+              >
+                {currentPage === tutorialPages.length - 1
+                  ? '시작하기 🚀'
+                  : '다음'}
               </Text>
             </Pressable>
           </View>
@@ -505,11 +520,13 @@ export default function PlantTutorialModal({
               padding: 8,
             }}
           >
-            <Text style={{
-              color: Colors.light.textSecondary,
-              fontSize: 14,
-              textDecorationLine: 'underline',
-            }}>
+            <Text
+              style={{
+                color: Colors.light.textSecondary,
+                fontSize: 14,
+                textDecorationLine: 'underline',
+              }}
+            >
               건너뛰기
             </Text>
           </Pressable>
