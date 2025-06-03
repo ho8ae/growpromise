@@ -8,8 +8,8 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
 
 // API 클라이언트 생성
 const apiClient = axios.create({
-  // 개발 환경에서는 로컬 IP, 프로덕션에서는 실제 서버 주소로 변경 필요
-  baseURL: 'https://growpromise.com/api', //172.30.1.1 172.30.1.85
+  
+  baseURL: process.env.EXPO_PUBLIC_API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
