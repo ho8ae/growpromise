@@ -27,7 +27,7 @@ const contactMethods = [
     icon: 'mail-outline' as keyof typeof Ionicons.glyphMap,
     color: Colors.light.info,
     action: 'email',
-    contact: 'support@growpromise.com',
+    contact: 'whoiswhat.team@gmail.com',
   },
   {
     id: 'feedback',
@@ -104,7 +104,7 @@ export default function ContactScreen() {
       
       if (isAvailable) {
         const result = await MailComposer.composeAsync({
-          recipients: ['support@growpromise.com'],
+          recipients: ['whoiswhat.team@gmail.com'],
           subject: '쑥쑥약속 문의',
           body: `
 안녕하세요. 쑥쑥약속 관련 문의드립니다.
@@ -127,7 +127,7 @@ export default function ContactScreen() {
         }
       } else {
         // 메일 앱이 없는 경우 외부 링크로 이동
-        const emailUrl = `mailto:support@growpromise.com?subject=쑥쑥약속 문의&body=안녕하세요. 쑥쑥약속 관련 문의드립니다.`;
+        const emailUrl = `mailto:whoiswhat.team@gmail.com?subject=쑥쑥약속 문의&body=안녕하세요. 쑥쑥약속 관련 문의드립니다.`;
         const canOpen = await Linking.canOpenURL(emailUrl);
         
         if (canOpen) {
@@ -199,7 +199,7 @@ export default function ContactScreen() {
       
       if (isAvailable) {
         await MailComposer.composeAsync({
-          recipients: ['support@growpromise.com'],
+          recipients: ['whoiswhat.team@gmail.com'],
           subject: `쑥쑥약속 ${selectedQuestionTitle}`,
           body: `
 [문의 유형] ${selectedQuestionTitle}

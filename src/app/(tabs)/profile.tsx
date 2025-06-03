@@ -615,7 +615,7 @@ export default function ProfileScreen() {
               </View>
 
               {/* 알림 테스트 버튼 */}
-              {notificationSettings.isEnabled && (
+              {/* {notificationSettings.isEnabled && (
                 <>
                   <View className="h-px bg-gray-100 mx-4" />
                   <Pressable
@@ -653,7 +653,7 @@ export default function ProfileScreen() {
                     />
                   </Pressable>
                 </>
-              )}
+              )} */}
 
               <View className="h-px bg-gray-100 mx-4" />
 
@@ -719,7 +719,7 @@ export default function ProfileScreen() {
 
               <View className="h-px bg-gray-100 mx-4" />
 
-              <Pressable
+              {/* <Pressable
                 className="flex-row items-center justify-between p-4 active:bg-gray-50"
                 onPress={() => handleSettingPress('문의하기')}
               >
@@ -738,7 +738,7 @@ export default function ProfileScreen() {
                   </Text>
                 </View>
                 <MaterialIcons name="chevron-right" size={22} color="#BDBDBD" />
-              </Pressable>
+              </Pressable> */}
 
               <View className="h-px bg-gray-100 mx-4" />
 
