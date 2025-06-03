@@ -431,6 +431,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
 
         {/* 액션 버튼 영역 */}
         <PlantDisplayFootAction
+          plant={plant || null}
           userType="child"
           onWaterPress={handleWaterPress}
           onFertilizePress={handleGrowPress}

@@ -7,7 +7,6 @@ import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Animated,
   Modal,
   Pressable,
   RefreshControl,
@@ -22,95 +21,21 @@ import rewardApi, {
   CreateRewardRequest,
   Reward,
 } from '../../api/modules/reward';
-
-// 간단한 토스트 컴포넌트
-const Toast: React.FC<{
-  visible: boolean;
-  message: string;
-  type: 'success' | 'error';
-  onHide: () => void;
-}> = ({ visible, message, type, onHide }) => {
-  const translateY = useRef(new Animated.Value(-100)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // 3초 후 자동 숨김
-      setTimeout(() => {
-        Animated.parallel([
-          Animated.timing(translateY, {
-            toValue: -100,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          onHide();
-        });
-      }, 3000);
-    }
-  }, [visible]);
-
-  if (!visible) return null;
-
-  return (
-    <Animated.View
-      style={{
-        position: 'absolute',
-        top: 60,
-        left: 20,
-        right: 20,
-        zIndex: 1000,
-        transform: [{ translateY }],
-        opacity,
-      }}
-      className={`p-4 rounded-xl shadow-lg ${
-        type === 'success' ? 'bg-green-500' : 'bg-red-500'
-      }`}
-    >
-      <View className="flex-row items-center">
-        <FontAwesome5
-          name={type === 'success' ? 'check-circle' : 'exclamation-circle'}
-          size={20}
-          color="white"
-        />
-        <Text className="text-white font-medium ml-3 flex-1">{message}</Text>
-      </View>
-    </Animated.View>
-  );
-};
+import { Toast } from '../../components/common/Toast';
+import { useToast } from '../../hooks/useToast';
 
 export default function SetRewardsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const toast = useToast();
+
+  // 폼 상태
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [stickerGoal, setStickerGoal] = useState('10');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filterType, setFilterType] = useState('active'); // 'active', 'achieved', 'all'
   const [stickerPickerVisible, setStickerPickerVisible] = useState(false);
-
-  // 토스트 상태
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   // 수정 모달 상태
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -126,13 +51,6 @@ export default function SetRewardsScreen() {
   const stickerOptions = Array.from({ length: 20 }, (_, i) =>
     (i + 1).toString(),
   );
-
-  // 토스트 표시 함수
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToastMessage(message);
-    setToastType(type);
-    setToastVisible(true);
-  };
 
   // 데이터 쿼리
   const {
@@ -182,11 +100,10 @@ export default function SetRewardsScreen() {
     await Promise.all([refetchRewards(), refetchHistory()]);
   };
 
-  // 보상 생성 함수 - Alert 제거하고 토스트 사용
+  // 보상 생성 함수 - 토스트 사용
   const handleCreate = async () => {
     if (!title.trim()) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      showToast('보상 이름을 입력해주세요.', 'error');
+      toast.error('보상 이름을 입력해주세요.');
       return;
     }
 
@@ -203,8 +120,7 @@ export default function SetRewardsScreen() {
       await rewardApi.createReward(createRewardData);
 
       // 성공 처리
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showToast('보상이 성공적으로 생성되었습니다! 🎉', 'success');
+      toast.success('보상이 성공적으로 생성되었습니다! 🎉');
 
       setTitle('');
       setDescription('');
@@ -214,8 +130,7 @@ export default function SetRewardsScreen() {
       handleRefresh();
     } catch (error) {
       console.error('보상 생성 중 오류:', error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast('보상 생성 중 문제가 발생했습니다.', 'error');
+      toast.error('보상 생성 중 문제가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
     }
@@ -231,12 +146,12 @@ export default function SetRewardsScreen() {
     setIsEditModalVisible(true);
   };
 
-  // 수정 제출 함수 - Alert 제거하고 토스트 사용
+  // 수정 제출 함수 - 토스트 사용
   const handleSubmitEdit = async () => {
     if (!editReward) return;
 
     if (!editTitle.trim()) {
-      showToast('보상 이름을 입력해주세요.', 'error');
+      toast.error('보상 이름을 입력해주세요.');
       return;
     }
 
@@ -252,8 +167,7 @@ export default function SetRewardsScreen() {
       await rewardApi.updateReward(editReward.id, updateData);
 
       // 성공 처리
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showToast('보상이 성공적으로 수정되었습니다! ✨', 'success');
+      toast.success('보상이 성공적으로 수정되었습니다! ✨');
 
       // 모달 닫기
       setIsEditModalVisible(false);
@@ -263,14 +177,13 @@ export default function SetRewardsScreen() {
       handleRefresh();
     } catch (error) {
       console.error('보상 수정 중 오류:', error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast('보상 수정 중 문제가 발생했습니다.', 'error');
+      toast.error('보상 수정 중 문제가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 보상 상태 전환 (활성화/비활성화) - Alert 제거하고 토스트 사용
+  // 보상 상태 전환 (활성화/비활성화) - 토스트 사용
   const toggleRewardActive = async (reward: Reward) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -281,22 +194,18 @@ export default function SetRewardsScreen() {
 
       await rewardApi.updateReward(reward.id, updateData);
 
-      // 성공 처리
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
       // 상태에 따른 토스트 메시지
       const message = reward.isActive
         ? '보상이 비활성화되었습니다. 💤'
         : '보상이 활성화되었습니다! 🎯';
 
-      showToast(message, 'success');
+      toast.success(message);
 
       // 목록 새로고침
       handleRefresh();
     } catch (error) {
       console.error('보상 상태 변경 중 오류:', error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast('보상 상태 변경 중 문제가 발생했습니다.', 'error');
+      toast.error('보상 상태 변경 중 문제가 발생했습니다.');
     }
   };
 
@@ -313,12 +222,10 @@ export default function SetRewardsScreen() {
             await rewardApi.deleteReward(rewardId);
 
             // 성공 처리 및 목록 새로고침
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            showToast('보상이 삭제되었습니다. 🗑️', 'success');
+            toast.success('보상이 삭제되었습니다. 🗑️');
             handleRefresh();
           } catch (error: any) {
             console.error('보상 삭제 중 오류:', error);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
             // 연결된 스티커가 있는 경우 삭제 불가 메시지
             if (error.response?.status === 400) {
@@ -327,7 +234,7 @@ export default function SetRewardsScreen() {
                 '이 보상에 연결된 스티커가 있습니다. 자녀가 이미 받은 보상은 삭제할 수 없습니다.\n\n대신 보상을 비활성화하여 더 이상 새로운 달성이 불가능하게 할 수 있습니다.',
               );
             } else {
-              showToast('보상 삭제 중 문제가 발생했습니다.', 'error');
+              toast.error('보상 삭제 중 문제가 발생했습니다.');
             }
           }
         },
@@ -379,16 +286,18 @@ export default function SetRewardsScreen() {
       ],
     );
   };
-
   return (
     <SafeAreaView className="flex-1 bg-white">
       {/* 토스트 메시지 */}
       <Toast
-        visible={toastVisible}
-        message={toastMessage}
-        type={toastType}
-        onHide={() => setToastVisible(false)}
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        translateY={toast.translateY}
+        opacity={toast.opacity}
+        onHide={toast.hideToast}
       />
+
       <ScrollView
         className="flex-1"
         refreshControl={
@@ -420,6 +329,8 @@ export default function SetRewardsScreen() {
               <FontAwesome5 name="history" size={20} color="#10b981" />
             </Pressable>
           </View>
+
+          {/* 새 보상 만들기 섹션 */}
           <View className="bg-gray-50 rounded-xl p-4 mb-6">
             <Text className="text-lg font-medium mb-2">새 보상 만들기</Text>
             <View className="mb-3">
