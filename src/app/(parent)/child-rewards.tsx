@@ -269,10 +269,10 @@ export default function ChildRewardsScreen() {
                     source={
                       childInfo?.profileImage
                         ? { uri: childInfo.profileImage }
-                        : require('../../assets/images/react-logo.png')
+                        : require('../../assets/images/icon/help_icon.png')
                     }
                     style={{ width: 60, height: 60 }}
-                    contentFit="cover"
+                    contentFit="contain"
                     className="rounded-full bg-white border-2 border-emerald-200"
                     transition={200}
                   />
@@ -330,7 +330,7 @@ export default function ChildRewardsScreen() {
                             source={
                               sticker.imageUrl
                                 ? { uri: sticker.imageUrl }
-                                : require('../../assets/images/react-logo.png')
+                                : require('../../assets/images/icon/help_icon.png')
                             }
                             style={{ width: 60, height: 60 }}
                             contentFit="contain"

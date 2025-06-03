@@ -546,9 +546,9 @@ export default function ChildDashboard() {
                   onPress={() => router.push('/(tabs)/profile')}
                 >
                   <Image
-                    source={require('../../assets/images/react-logo.png')}
+                    source={require('../../assets/images/icon/help_icon.png')}
                     style={{ width: 32, height: 32 }}
-                    contentFit="cover"
+                    contentFit="contain"
                     className="rounded-full"
                   />
                 </TouchableOpacity>
@@ -701,7 +701,7 @@ export default function ChildDashboard() {
                                   source={
                                     sticker.imageUrl
                                       ? { uri: sticker.imageUrl }
-                                      : require('../../assets/images/react-logo.png')
+                                      : require('../../assets/images/icon/help_icon.png')
                                   }
                                   style={{ width: 40, height: 40 }}
                                   contentFit="contain"

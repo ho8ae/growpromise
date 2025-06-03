@@ -172,7 +172,7 @@ export default function RewardsScreen() {
     if (imageUrl) {
       return { uri: imageUrl };
     }
-    return require('../../assets/images/react-logo.png');
+    return require('../../assets/images/icon/help_icon.png');
   };
 
   // 사용 가능한 스티커 (보상에 사용되지 않은 스티커)

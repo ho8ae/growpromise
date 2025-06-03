@@ -397,10 +397,10 @@ export default function EditProfileScreen() {
                     source={
                       profileData.profileImage
                         ? { uri: profileData.profileImage }
-                        : require('../../assets/images/react-logo.png')
+                        : require('../../assets/images/icon/help_icon.png')
                     }
                     style={{ width: 80, height: 80 }}
-                    contentFit="cover"
+                    contentFit="contain"
                     className="rounded-full"
                   />
                 </View>

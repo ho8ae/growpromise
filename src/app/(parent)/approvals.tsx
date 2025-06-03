@@ -500,10 +500,10 @@ export default function ApprovalsScreen() {
                     source={
                       verification.child?.user.profileImage
                         ? getImageUrl(verification.child.user.profileImage)
-                        : require('../../assets/images/react-logo.png')
+                        : require('../../assets/images/icon/help_icon.png')
                     }
                     style={{ width: 40, height: 40 }}
-                    contentFit="cover"
+                    contentFit="contain"
                     className="rounded-full bg-gray-200"
                   />
                   <View className="ml-3 flex-1">

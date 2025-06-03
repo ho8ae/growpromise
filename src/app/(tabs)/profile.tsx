@@ -310,9 +310,9 @@ export default function ProfileScreen() {
                   }}
                 >
                   <Image
-                    source={require('../../assets/images/react-logo.png')}
+                    source={require('../../assets/images/icon/help_icon.png')}
                     style={{ width: 60, height: 60 }}
-                    contentFit="cover"
+                    contentFit="contain"
                     className="rounded-full"
                   />
                 </View>

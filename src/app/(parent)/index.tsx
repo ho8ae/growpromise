@@ -112,7 +112,7 @@ export default function ParentDashboard() {
 
   // 이미지 URL 변환
   const getImageUrl = useCallback((imagePath?: string) => {
-    if (!imagePath) return require('../../assets/images/react-logo.png');
+    if (!imagePath) return require('../../assets/images/icon/help_icon.png');
 
     // 서버 URL과 이미지 경로 결합
     if (imagePath.startsWith('http')) {
@@ -296,10 +296,10 @@ export default function ParentDashboard() {
                               ? getImageUrl(
                                   verification.child.user.profileImage,
                                 )
-                              : require('../../assets/images/react-logo.png')
+                              : require('../../assets/images/icon/help_icon.png')
                           }
                           style={{ width: 50, height: 50 }}
-                          contentFit="cover"
+                          contentFit="contain"
                           className="mr-3 rounded-full bg-gray-200"
                         />
                         <View className="flex-1">
