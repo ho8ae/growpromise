@@ -448,6 +448,10 @@ export default function EditProfileScreen() {
                   style={{ color: Colors.light.text }}
                 >
                   이름 *
+                  <Text className="text-[10px] text-gray-500">
+                    {' '}
+                    (아이디로 사용되오니 변경에 주의해주세요)
+                  </Text>
                 </Text>
                 <View
                   className={`bg-gray-50 rounded-xl px-4 py-4 ${errors.username ? 'border border-red-300' : ''}`}
