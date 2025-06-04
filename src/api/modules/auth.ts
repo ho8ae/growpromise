@@ -103,6 +103,29 @@ export interface AccountStatusResponse {
   isActive: boolean;
 }
 
+export interface ChildForPasswordReset {
+  childId: string;
+  childProfileId: string;
+  username: string;
+  profileImage?: string;
+}
+
+export interface ResetChildPasswordRequest {
+  childId: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ResetChildPasswordTemporaryRequest {
+  childId: string;
+}
+
+export interface ResetChildPasswordResponse {
+  message: string;
+  childUsername: string;
+  temporaryPassword?: string; // 임시 비밀번호 생성 시만
+}
+
 // 인증 관련 API 함수들
 const authApi = {
   // 로그인
@@ -419,6 +442,62 @@ const authApi = {
   // 현재 사용자 프로필 ID 가져오기
   getProfileId: async (): Promise<string | null> => {
     return await AsyncStorage.getItem('profile_id');
+  },
+
+  // 비밀번호 재설정 가능한 자녀 목록 조회 (부모용)
+  getChildrenForPasswordReset: async (): Promise<ChildForPasswordReset[]> => {
+    try {
+      const response = await apiClient.get<ApiResponse<ChildForPasswordReset[]>>(
+        '/auth/parent/children-for-reset'
+      );
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else {
+        throw new Error(response.data.message || '자녀 목록 조회에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('자녀 목록 조회 오류:', error);
+      throw error;
+    }
+  },
+
+  // 자녀 비밀번호 재설정 (부모가 직접 설정)
+  resetChildPassword: async (data: ResetChildPasswordRequest): Promise<ResetChildPasswordResponse> => {
+    try {
+      const response = await apiClient.post<ApiResponse<ResetChildPasswordResponse>>(
+        '/auth/parent/reset-child-password',
+        data
+      );
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else {
+        throw new Error(response.data.message || '자녀 비밀번호 재설정에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('자녀 비밀번호 재설정 오류:', error);
+      throw error;
+    }
+  },
+
+  // 임시 비밀번호로 자녀 비밀번호 재설정
+  resetChildPasswordTemporary: async (data: ResetChildPasswordTemporaryRequest): Promise<ResetChildPasswordResponse> => {
+    try {
+      const response = await apiClient.post<ApiResponse<ResetChildPasswordResponse>>(
+        '/auth/parent/reset-child-password-temporary',
+        data
+      );
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else {
+        throw new Error(response.data.message || '임시 비밀번호 생성에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('임시 비밀번호 생성 오류:', error);
+      throw error;
+    }
   },
 };
 
