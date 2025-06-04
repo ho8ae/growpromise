@@ -38,7 +38,6 @@
         "foregroundImage": "./src/assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-     
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
@@ -50,7 +49,9 @@
         "VIBRATE",
         "WAKE_LOCK"
       ],
-      "package": "com.low_k.growpromise"
+      "package": "com.low_k.growpromise",
+      "usesCleartextTraffic": true,
+      "networkSecurityConfig": "@xml/network_security_config"
     },
     "web": {
       "bundler": "metro",
@@ -59,6 +60,18 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "networkSecurityConfig": "network_security_config"
+          },
+          "ios": {
+            "allowsArbitraryLoads": true
+          }
+        }
+      ],
       [
         "@react-native-google-signin/google-signin",
         {

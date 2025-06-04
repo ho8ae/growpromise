@@ -176,6 +176,7 @@ export default function ApprovalsScreen() {
   }, []);
 
   // 인증 승인 처리
+  // 인증 승인 처리 - 간단화
   const handleApprove = useCallback(async () => {
     if (!selectedStickerId) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -219,26 +220,28 @@ export default function ApprovalsScreen() {
             // ✨ 핵심: 실시간 업데이트 트리거
             onPromiseVerificationResponded(id as string, true);
 
-            // 경험치 획득 정보 처리
-            const gainedExp = response.experienceGained || 0;
-
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-            // Alert 대신 모달 데이터 설정
-            setApprovalResult({
-              approved: true,
-              childName: verification?.child?.user.username || '자녀',
-              promiseTitle: verification?.promise?.title || '약속',
-              experienceGained: gainedExp,
-            });
-
             setIsSubmitting(false);
-            setShowApprovalModal(true); // 모달 표시
+
+            // 성공 알림 및 뒤로가기
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert(
+              '승인 완료',
+              `${verification?.child?.user.username || '자녀'}의 약속 인증이 승인되었습니다!`,
+              [
+                {
+                  text: '확인',
+                  onPress: () => {
+                    router.back();
+                  }
+                }
+              ]
+            );
+
           } catch (error) {
             console.error('인증 승인 중 오류:', error);
+            setIsSubmitting(false);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert('오류', '인증 승인 중 문제가 발생했습니다.');
-            setIsSubmitting(false);
           }
         },
       },
@@ -249,6 +252,7 @@ export default function ApprovalsScreen() {
     verification,
     formatDate,
     onPromiseVerificationResponded,
+    router,
   ]);
 
   // 인증 거절 처리
@@ -278,26 +282,33 @@ export default function ApprovalsScreen() {
             // ✨ 핵심: 실시간 업데이트 트리거
             onPromiseVerificationResponded(id as string, false);
 
-            // Alert 대신 모달 데이터 설정
-            setApprovalResult({
-              approved: false,
-              childName: verification?.child?.user.username || '자녀',
-              promiseTitle: verification?.promise?.title || '약속',
-              experienceGained: 0,
-            });
-
             setIsSubmitting(false);
-            setShowApprovalModal(true); // 모달 표시
+
+            // 거절 완료 알림 및 뒤로가기
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert(
+              '거절 완료',
+              `${verification?.child?.user.username || '자녀'}의 약속 인증이 거절되었습니다.`,
+              [
+                {
+                  text: '확인',
+                  onPress: () => {
+                    router.back();
+                  }
+                }
+              ]
+            );
+
           } catch (error) {
             console.error('인증 거절 중 오류:', error);
+            setIsSubmitting(false);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert('오류', '인증 거절 중 문제가 발생했습니다.');
-            setIsSubmitting(false);
           }
         },
       },
     ]);
-  }, [rejectionReason, id, router]);
+  }, [rejectionReason, id, verification, onPromiseVerificationResponded, router]);
 
   // 선택된 스티커 템플릿 찾기
   const selectedStickerTemplate = templates.find(
