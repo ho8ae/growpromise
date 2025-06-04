@@ -17,6 +17,7 @@ import {
   Text,
   TextInput,
   View,
+  Modal,
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,7 +29,7 @@ import { useAuthStore } from '../../stores/authStore';
 export default function EditProfileScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, updateUser, isAuthenticated } = useAuthStore();
+  const { user, updateUser, isAuthenticated, logout } = useAuthStore();
 
   // 폼 상태
   const [username, setUsername] = useState('');
@@ -41,6 +42,11 @@ export default function EditProfileScreen() {
   const [hasChanges, setHasChanges] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  // 🔥 새로 추가: 회원탈퇴 모달 상태
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
 
   // 애니메이션 값
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -63,7 +69,6 @@ export default function EditProfileScreen() {
     onSuccess: (data: DetailUserProfile) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Zustand 스토어 업데이트 (API 응답 데이터를 User 타입으로 변환)
       updateUser({
         id: data.id,
         username: data.username,
@@ -77,7 +82,6 @@ export default function EditProfileScreen() {
         setupCompleted: data.setupCompleted,
       });
 
-      // React Query 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['userDetailProfile'] });
       queryClient.invalidateQueries({ queryKey: ['userProfile'] });
 
@@ -95,6 +99,41 @@ export default function EditProfileScreen() {
       const errorMessage =
         error?.response?.data?.message ||
         '프로필 업데이트 중 오류가 발생했습니다.';
+      Alert.alert('오류', errorMessage);
+    },
+  });
+
+
+  
+
+  // 🔥 새로 추가: 회원탈퇴 뮤테이션
+  const deleteAccountMutation = useMutation({
+    mutationFn: api.auth.deleteAccount,
+    onSuccess: async () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowDeleteAccountModal(false);
+
+      Alert.alert(
+        '회원탈퇴 완료',
+        '계정이 성공적으로 삭제되었습니다.\n그동안 쑥쑥약속을 이용해 주셔서 감사합니다.',
+        [
+          {
+            text: '확인',
+            onPress: async () => {
+              await logout();
+              router.replace('/(auth)');
+            },
+          },
+        ]
+      );
+    },
+    onError: (error: any) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      console.error('회원탈퇴 오류:', error);
+
+      const errorMessage =
+        error?.response?.data?.message ||
+        '회원탈퇴 중 오류가 발생했습니다.';
       Alert.alert('오류', errorMessage);
     },
   });
@@ -123,7 +162,6 @@ export default function EditProfileScreen() {
       setPhoneNumber(profileData.phoneNumber || '');
       setBio(profileData.bio || '');
 
-      // 자녀인 경우 생일 정보 설정
       if (
         profileData.userType === 'CHILD' &&
         profileData.childProfile?.birthDate
@@ -163,6 +201,40 @@ export default function EditProfileScreen() {
     );
   }, [username, email, phoneNumber, bio, birthDate, profileData]);
 
+
+
+  // 🔥 새로 추가: 회원탈퇴 처리
+  const handleDeleteAccount = () => {
+    if (deleteConfirmText !== '삭제') {
+      Alert.alert('오류', "'삭제'라고 정확히 입력해주세요.");
+      return;
+    }
+
+    if (!profileData?.socialProvider && !deletePassword) {
+      Alert.alert('오류', '비밀번호를 입력해주세요.');
+      return;
+    }
+
+    Alert.alert(
+      '정말 탈퇴하시겠습니까?',
+      '계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '탈퇴',
+          style: 'destructive',
+          onPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            deleteAccountMutation.mutate({
+              password: deletePassword || undefined,
+              confirmText: deleteConfirmText,
+            });
+          },
+        },
+      ]
+    );
+  };
+
   // 유효성 검사
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -184,9 +256,9 @@ export default function EditProfileScreen() {
     if (birthDate && profileData?.userType === 'CHILD') {
       const today = new Date();
       const minDate = new Date();
-      minDate.setFullYear(today.getFullYear() - 25); // 최대 25세
+      minDate.setFullYear(today.getFullYear() - 25);
       const maxDate = new Date();
-      maxDate.setFullYear(today.getFullYear() - 3); // 최소 3세
+      maxDate.setFullYear(today.getFullYear() - 3);
 
       if (birthDate > today) {
         newErrors.birthDate = '생년월일은 오늘 이전 날짜여야 합니다.';
@@ -217,7 +289,6 @@ export default function EditProfileScreen() {
       bio: bio.trim() || undefined,
     };
 
-    // 자녀인 경우 생일 정보 추가
     if (profileData?.userType === 'CHILD' && birthDate) {
       updateData.birthDate = birthDate.toISOString();
     }
@@ -236,19 +307,16 @@ export default function EditProfileScreen() {
     setShowDatePicker(false);
   };
 
-  // 날짜 선택기 열기
   const openDatePicker = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowDatePicker(true);
   };
 
-  // 날짜 포맷팅
   const formatDate = (date: Date | null) => {
     if (!date) return '';
     return format(date, 'PPP', { locale: ko });
   };
 
-  // 뒤로가기 처리
   const handleBack = () => {
     if (hasChanges) {
       Alert.alert('변경사항이 있습니다', '저장하지 않고 나가시겠습니까?', [
@@ -694,8 +762,211 @@ export default function EditProfileScreen() {
                 </View>
               </View>
             </Animated.View>
+
+            {/* 🔥 새로 추가: 위험한 작업 섹션 */}
+            <Animated.View
+              style={{
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              }}
+              className="mb-6"
+            >
+              <Text
+                className="text-base font-bold mb-4"
+                style={{ color: Colors.light.text }}
+              >
+                위험한 작업
+              </Text>
+
+              {/* 회원탈퇴 */}
+              <Pressable
+                className="bg-red-50 rounded-xl p-4 flex-row items-center justify-between active:bg-red-100"
+                onPress={() => setShowDeleteAccountModal(true)}
+              >
+                <View className="flex-row items-center flex-1">
+                  <View
+                    className="w-10 h-10 rounded-full justify-center items-center mr-3"
+                    style={{ backgroundColor: `${Colors.light.error}15` }}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={20}
+                      color={Colors.light.error}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text
+                      className="text-base font-medium"
+                      style={{ color: Colors.light.error }}
+                    >
+                      회원탈퇴
+                    </Text>
+                    <Text
+                      className="text-sm mt-1"
+                      style={{ color: Colors.light.textSecondary }}
+                    >
+                      계정과 모든 데이터가 영구적으로 삭제됩니다
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={Colors.light.textSecondary}
+                />
+              </Pressable>
+            </Animated.View>
           </View>
         </ScrollView>
+
+      
+
+        {/* 🔥 새로 추가: 회원탈퇴 모달 */}
+        <Modal
+          visible={showDeleteAccountModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowDeleteAccountModal(false)}
+        >
+          <View className="flex-1 bg-black/50 justify-end">
+            <View className="bg-white rounded-t-3xl">
+              <View className="p-6">
+                <View className="flex-row items-center justify-between mb-6">
+                  <Text
+                    className="text-xl font-bold"
+                    style={{ color: Colors.light.error }}
+                  >
+                    회원탈퇴
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      setShowDeleteAccountModal(false);
+                      setDeleteConfirmText('');
+                      setDeletePassword('');
+                    }}
+                  >
+                    <Ionicons
+                      name="close"
+                      size={24}
+                      color={Colors.light.textSecondary}
+                    />
+                  </Pressable>
+                </View>
+
+                <View className="bg-red-50 rounded-xl p-4 mb-6">
+                  <View className="flex-row items-start">
+                    <Ionicons
+                      name="warning"
+                      size={20}
+                      color={Colors.light.error}
+                      style={{ marginTop: 1, marginRight: 8 }}
+                    />
+                    <View className="flex-1">
+                      <Text
+                        className="text-sm font-medium mb-2"
+                        style={{ color: Colors.light.error }}
+                      >
+                        ⚠️ 주의사항
+                      </Text>
+                      <Text
+                        className="text-xs"
+                        style={{ color: Colors.light.error }}
+                      >
+                        • 모든 약속 데이터가 영구적으로 삭제됩니다{'\n'}
+                        • 스티커와 보상 기록이 사라집니다{'\n'}
+                        • 키운 식물 정보가 모두 삭제됩니다{'\n'}
+                        • 삭제된 데이터는 복구할 수 없습니다
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View className="mb-4">
+                  <Text
+                    className="text-sm font-medium mb-2"
+                    style={{ color: Colors.light.text }}
+                  >
+                    확인 문구 입력
+                  </Text>
+                  <Text
+                    className="text-xs mb-2"
+                    style={{ color: Colors.light.textSecondary }}
+                  >
+                    정말로 탈퇴하시려면 &quot;삭제&quot;라고 입력해주세요
+                  </Text>
+                  <View className="bg-gray-50 rounded-xl px-4 py-4">
+                    <TextInput
+                      value={deleteConfirmText}
+                      onChangeText={setDeleteConfirmText}
+                      placeholder="삭제"
+                      placeholderTextColor={Colors.light.textSecondary}
+                      className="text-base"
+                      style={{ color: Colors.light.text }}
+                      autoCapitalize="none"
+                      returnKeyType="next"
+                    />
+                  </View>
+                </View>
+
+                {!profileData?.socialProvider && (
+                  <View className="mb-6">
+                    <Text
+                      className="text-sm font-medium mb-2"
+                      style={{ color: Colors.light.text }}
+                    >
+                      비밀번호 확인
+                    </Text>
+                    <View className="bg-gray-50 rounded-xl px-4 py-4">
+                      <TextInput
+                        value={deletePassword}
+                        onChangeText={setDeletePassword}
+                        placeholder="현재 비밀번호를 입력해주세요"
+                        placeholderTextColor={Colors.light.textSecondary}
+                        className="text-base"
+                        style={{ color: Colors.light.text }}
+                        secureTextEntry
+                        returnKeyType="done"
+                      />
+                    </View>
+                  </View>
+                )}
+
+                <View className="flex-row space-x-3">
+                  <Pressable
+                    className="flex-1 py-4 rounded-xl active:opacity-90"
+                    style={{ backgroundColor: Colors.light.disabled }}
+                    onPress={() => {
+                      setShowDeleteAccountModal(false);
+                      setDeleteConfirmText('');
+                      setDeletePassword('');
+                    }}
+                  >
+                    <Text className="text-gray-600 text-center font-medium">
+                      취소
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    className="flex-1 py-4 rounded-xl active:opacity-90"
+                    style={{
+                      backgroundColor: Colors.light.error,
+                      opacity: deleteAccountMutation.isPending ? 0.7 : 1,
+                    }}
+                    onPress={handleDeleteAccount}
+                    disabled={deleteAccountMutation.isPending}
+                  >
+                    {deleteAccountMutation.isPending ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <Text className="text-white text-center font-medium">
+                        탈퇴하기
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* DateTimePickerModal */}
         <DateTimePickerModal

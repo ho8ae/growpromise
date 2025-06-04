@@ -166,6 +166,15 @@ export default function ProfileScreen() {
         router.push('/(settings)/change-password');
         break;
 
+      // 🔥 새로 추가: 자녀 비밀번호 재설정 케이스
+      case '자녀 비밀번호 재설정':
+        if (user?.userType === 'PARENT') {
+          router.push('/(settings)/child-password-reset');
+        } else {
+          Alert.alert('알림', '부모 계정만 사용할 수 있는 기능입니다.');
+        }
+        break;
+
       case '테마':
       case '테마 설정':
         Alert.alert('알림', '테마 설정 기능은 곧 출시될 예정입니다.');
@@ -476,6 +485,45 @@ export default function ProfileScreen() {
                     color="#BDBDBD"
                   />
                 </Pressable>
+
+                {/* 🔥 새로 추가: 부모만 볼 수 있는 자녀 비밀번호 재설정 메뉴 */}
+                {user?.userType === 'PARENT' && (
+                  <>
+                    <View className="h-px bg-gray-100 mx-4" />
+                    <Pressable
+                      className="flex-row items-center justify-between p-4 active:bg-gray-50"
+                      onPress={() => handleSettingPress('자녀 비밀번호 재설정')}
+                    >
+                      <View className="flex-row items-center">
+                        <Ionicons
+                          name="key-outline"
+                          size={18}
+                          color={Colors.light.tertiary}
+                          className="mr-3"
+                        />
+                        <View className="flex-1">
+                          <Text
+                            className="text-base"
+                            style={{ color: Colors.light.text }}
+                          >
+                            자녀 비밀번호 재설정
+                          </Text>
+                          <Text
+                            className="text-xs mt-0.5"
+                            style={{ color: Colors.light.textSecondary }}
+                          >
+                            비밀번호를 잊은 자녀를 위한 기능
+                          </Text>
+                        </View>
+                        <MaterialIcons
+                          name="chevron-right"
+                          size={22}
+                          color="#BDBDBD"
+                        />
+                      </View>
+                    </Pressable>
+                  </>
+                )}
 
                 <View className="h-px bg-gray-100 mx-4" />
 
