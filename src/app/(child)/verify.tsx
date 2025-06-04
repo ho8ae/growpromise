@@ -22,6 +22,14 @@ import promiseApi, {
 import PromiseSuccessModal from '../../components/common/modal/PromiseSuccessModal';
 import { usePromiseRealtime } from '../../hooks/usePromiseRealtime';
 
+// 🆕 이미지 압축 유틸리티 import
+import {
+  compressCameraImage,
+  compressGalleryImage,
+  bytesToMB,
+  getImageSize
+} from '../../utils/imageCompression';
+
 export default function VerifyPromise() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -45,6 +53,9 @@ export default function VerifyPromise() {
     [],
   );
   const [error, setError] = useState<string | null>(null);
+
+  // 🆕 이미지 압축 관련 상태
+  const [isCompressing, setIsCompressing] = useState(false);
 
   // 성공 모달 상태
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -84,36 +95,82 @@ export default function VerifyPromise() {
     }
   };
 
+  // 🆕 이미지 크기 확인 및 로깅 함수
+  const logImageInfo = async (uri: string, label: string) => {
+    const size = await getImageSize(uri);
+    const sizeMB = bytesToMB(size);
+    console.log(`📸 ${label} 크기: ${sizeMB.toFixed(2)}MB`);
+  };
+
+  // 🔄 카메라 촬영 함수 (이미지 압축 적용)
   const takePicture = async () => {
     if (cameraRef.current) {
       try {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        const photo = await cameraRef.current.takePictureAsync();
-        setPhotoUri(photo?.uri);
+        
+        // 카메라로 사진 촬영
+        const photo = await cameraRef.current.takePictureAsync({
+          quality: 0.8, // 초기 품질 설정
+        });
+        
+        if (photo?.uri) {
+          setIsCompressing(true);
+          
+          // 원본 이미지 크기 로깅
+          await logImageInfo(photo.uri, '원본 카메라 이미지');
+          
+          // 🆕 이미지 압축 적용
+          const compressedUri = await compressCameraImage(photo.uri);
+          
+          // 압축된 이미지 크기 로깅
+          await logImageInfo(compressedUri, '압축된 카메라 이미지');
+          
+          setPhotoUri(compressedUri);
+          setIsCompressing(false);
+        }
+        
         setIsCameraActive(false);
       } catch (error) {
         console.error('Failed to take picture:', error);
+        setIsCompressing(false);
         Alert.alert('오류', '사진 촬영 중 문제가 발생했습니다.');
       }
     }
   };
 
+  // 🔄 갤러리 이미지 선택 함수 (이미지 압축 적용)
   const pickImage = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
       // 갤러리에서 이미지 선택
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 1,
+        quality: 0.8, // 초기 품질 설정
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setPhotoUri(result.assets[0].uri);
+        setIsCompressing(true);
+        
+        const originalUri = result.assets[0].uri;
+        
+        // 원본 이미지 크기 로깅
+        await logImageInfo(originalUri, '원본 갤러리 이미지');
+        
+        // 🆕 이미지 압축 적용
+        const compressedUri = await compressGalleryImage(originalUri);
+        
+        // 압축된 이미지 크기 로깅
+        await logImageInfo(compressedUri, '압축된 갤러리 이미지');
+        
+        setPhotoUri(compressedUri);
+        setIsCompressing(false);
       }
     } catch (error) {
       console.error('이미지 선택 중 오류:', error);
+      setIsCompressing(false);
       Alert.alert('오류', '이미지를 선택하는 중 문제가 발생했습니다.');
     }
   };
@@ -137,6 +194,9 @@ export default function VerifyPromise() {
 
       const currentAssignmentId = assignmentId || selectedPromise;
 
+      // 🆕 제출 전 최종 이미지 크기 확인
+      await logImageInfo(photoUri, '제출할 이미지');
+
       // API 호출하여 인증 제출
       await promiseApi.submitVerification(
         currentAssignmentId,
@@ -153,10 +213,20 @@ export default function VerifyPromise() {
     } catch (error) {
       console.error('인증 제출 중 오류:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        '오류',
-        '인증 요청을 보내는 중 오류가 발생했습니다. 다시 시도해주세요.',
-      );
+      
+      // 🆕 413 오류 특별 처리
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage.includes('파일이 너무 큽니다') || errorMessage.includes('413')) {
+        Alert.alert(
+          '파일 크기 오류',
+          '이미지 파일이 여전히 너무 큽니다. 다른 이미지를 선택해보세요.',
+        );
+      } else {
+        Alert.alert(
+          '오류',
+          '인증 요청을 보내는 중 오류가 발생했습니다. 다시 시도해주세요.',
+        );
+      }
       setIsSubmitting(false);
     }
   };
@@ -268,7 +338,18 @@ export default function VerifyPromise() {
                 </View>
               ) : (
                 <View className="bg-emerald-50 border-2 border-emerald-200 rounded-xl aspect-square items-center justify-center mb-4 overflow-hidden mx-auto">
-                  {photoUri ? (
+                  {/* 🆕 이미지 압축 중 로딩 표시 */}
+                  {isCompressing ? (
+                    <View className="items-center">
+                      <ActivityIndicator size="large" color="#10b981" />
+                      <Text className="text-emerald-700 mt-3 text-lg">
+                        이미지 최적화 중...
+                      </Text>
+                      <Text className="text-emerald-600 mt-1 text-sm">
+                        잠시만 기다려주세요
+                      </Text>
+                    </View>
+                  ) : photoUri ? (
                     <Image
                       source={{ uri: photoUri }}
                       style={{ width: '100%', height: '100%' }}
@@ -290,6 +371,7 @@ export default function VerifyPromise() {
                         <Pressable
                           className="bg-emerald-500 px-6 py-3 rounded-full mr-3 shadow-sm"
                           onPress={() => setIsCameraActive(true)}
+                          disabled={isCompressing}
                         >
                           <Text className="text-white font-medium">
                             사진 찍기
@@ -298,6 +380,7 @@ export default function VerifyPromise() {
                         <Pressable
                           className="bg-emerald-400 px-6 py-3 rounded-full shadow-sm"
                           onPress={pickImage}
+                          disabled={isCompressing}
                         >
                           <Text className="text-white font-medium">
                             앨범에서 선택
@@ -387,7 +470,8 @@ export default function VerifyPromise() {
                   (assignmentId ||
                     selectedPromise ||
                     pendingPromises.length === 0) &&
-                  !isSubmitting
+                  !isSubmitting &&
+                  !isCompressing
                     ? 'bg-emerald-500'
                     : 'bg-gray-300'
                 }`}
@@ -399,7 +483,8 @@ export default function VerifyPromise() {
                     selectedPromise ||
                     pendingPromises.length === 0
                   ) ||
-                  isSubmitting
+                  isSubmitting ||
+                  isCompressing
                 }
               >
                 {isSubmitting ? (
@@ -424,7 +509,7 @@ export default function VerifyPromise() {
                     setPhotoUri(null);
                     setIsCameraActive(false);
                   }}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isCompressing}
                 >
                   <Text className="text-center text-emerald-500">
                     다시 찍기
