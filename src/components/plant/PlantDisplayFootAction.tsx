@@ -136,11 +136,11 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
         />
       )}
         <ActionButton
-          icon="eco"
-          label="영양제"
+          icon="book"
+          label="식물 도감"
           color={Colors.light.primary}
           onPress={() => {
-            toast.warning('영양제 기능은 출시 예정입니다.');
+            router.push('/(child)/plant-collection')
           }}
         />
         <ActionButton
