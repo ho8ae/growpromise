@@ -444,11 +444,11 @@ const authApi = {
     return await AsyncStorage.getItem('profile_id');
   },
 
-  // 비밀번호 재설정 가능한 자녀 목록 조회 (부모용)
+  // 비밀번호 재설정 가능한 자녀 목록 조회 (부모용) - 
   getChildrenForPasswordReset: async (): Promise<ChildForPasswordReset[]> => {
     try {
       const response = await apiClient.get<ApiResponse<ChildForPasswordReset[]>>(
-        '/auth/parent/children-for-reset'
+        '/auth/parent/children-for-reset' 
       );
       
       if (response.data.success && response.data.data) {
@@ -466,7 +466,7 @@ const authApi = {
   resetChildPassword: async (data: ResetChildPasswordRequest): Promise<ResetChildPasswordResponse> => {
     try {
       const response = await apiClient.post<ApiResponse<ResetChildPasswordResponse>>(
-        '/auth/parent/reset-child-password',
+        '/auth/parent/reset-child-password', // 기존과 동일
         data
       );
       
@@ -485,7 +485,7 @@ const authApi = {
   resetChildPasswordTemporary: async (data: ResetChildPasswordTemporaryRequest): Promise<ResetChildPasswordResponse> => {
     try {
       const response = await apiClient.post<ApiResponse<ResetChildPasswordResponse>>(
-        '/auth/parent/reset-child-password-temporary',
+        '/auth/parent/reset-child-password-temporary', 
         data
       );
       
