@@ -22,6 +22,8 @@ import TermsOfServiceModal from '../../components/common/modal/TermsOfServiceMod
 import Colors from '../../constants/Colors';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useAuthStore } from '../../stores/authStore';
+import * as Linking from 'expo-linking';
+
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -252,9 +254,7 @@ export default function ProfileScreen() {
           {
             text: '설정으로 이동',
             onPress: () => {
-              import('expo-linking').then(({ default: Linking }) => {
-                Linking.openSettings();
-              });
+              Linking.openSettings();
             },
           },
         ],
