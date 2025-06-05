@@ -30,19 +30,32 @@ export const PlantCompletionModal: React.FC<PlantCompletionModalProps> = ({
 }) => {
   const { navigateToHome, navigateToCollection } = useNavigation();
 
-  // 변경
-const handleConfirm = () => {
-    console.log('🎉 Plant completion modal confirm');
-    
+  const handleRegisterToCollection = () => {
+    console.log('🎉 Plant completion modal - register to collection');
+
     const isCompleted = growthResult.isCompleted || growthResult.isMaxStage;
-    
+
+    // 모달 먼저 닫기
+    if (isCompleted) {
+      onContinue(); // 이것이 ModalManager의 hidePlantCompletion을 호출하고 도감으로 이동
+    } else {
+      onClose();
+    }
+  };
+
+  // 변경
+  const handleConfirm = () => {
+    console.log('🎉 Plant completion modal confirm');
+
+    const isCompleted = growthResult.isCompleted || growthResult.isMaxStage;
+
     // 모달 먼저 닫기
     if (isCompleted) {
       onContinue(); // 이것이 ModalManager의 hidePlantCompletion을 호출
     } else {
       onClose();
     }
-    
+
     // 완료된 경우에만 홈으로 이동 (ModalManager에서 처리하도록)
   };
 
@@ -269,15 +282,18 @@ const handleConfirm = () => {
               <Text className="font-bold text-green-600">
                 {plant.name || plant.plantType?.name || '식물'}
               </Text>
-              이{'\n'}무럭무럭 자랐어요!
+              이{'\n'}무럭무럭 자랐어요!{'\n'}무
+              <Text className="text-sm text-gray-500">
+                식물 도감에 등록해보세요!
+              </Text>
             </Text>
           </Animated.View>
 
           {/* 🏠 돌아가기 버튼 */}
           <Animated.View style={buttonAnimatedStyle} className="w-full">
             <Pressable
-              onPress={handleConfirm}
-              className="bg-green-500 rounded-2xl py-4 px-8 items-center active:scale-95 shadow-lg"
+              onPress={handleRegisterToCollection}
+              className="bg-yellow-500 rounded-2xl py-4 px-8 items-center active:scale-95 shadow-lg"
               style={{
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 4 },
@@ -287,9 +303,13 @@ const handleConfirm = () => {
               }}
             >
               <View className="flex-row items-center">
-                <MaterialIcons name="home" size={24} color="white" />
+                <MaterialIcons
+                  name="collections-bookmark"
+                  size={24}
+                  color="white"
+                />
                 <Text className="text-white font-bold text-lg ml-2">
-                  돌아가기
+                  도감에 등록하기!
                 </Text>
               </View>
             </Pressable>

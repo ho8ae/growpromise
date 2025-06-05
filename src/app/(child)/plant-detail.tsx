@@ -28,7 +28,6 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { useModalManager } from '../../managers/ModalManager';
 
-
 export default function PlantDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -40,7 +39,6 @@ export default function PlantDetailScreen() {
   const [experienceGained, setExperienceGained] = useState(10);
 
   const { showPlantCompletion } = useModalManager();
-  
 
   // 상태 추가 (상단에)
   const queryClient = useQueryClient();
@@ -139,8 +137,6 @@ export default function PlantDetailScreen() {
     ).start();
   }, []);
 
-
-
   // 물주기 처리
   const handleWaterPlant = async () => {
     if (isWatering || !plant) return;
@@ -207,6 +203,7 @@ export default function PlantDetailScreen() {
   };
 
   // 식물 성장시키기
+  // 식물 성장시키기 (수정된 버전)
   const handleGrowPlant = async () => {
     if (isGrowing || !plant) return;
 
@@ -214,14 +211,33 @@ export default function PlantDetailScreen() {
       setIsGrowing(true);
       const result = await growPlant();
 
-      // 🎉 식물 완성 시 ModalManager를 통해 모달 표시
-      if (result?.isMaxStage || result?.isCompleted) {
-        showPlantCompletion(result?.plant || plant, result);
+      // 🎉 식물 완성 조건 확인 (최대 레벨이면서 경험치도 최대일 때)
+      const isPlantCompleted =
+        result?.isCompleted ||
+        (result?.isMaxStage &&
+          result?.plant?.experience >= result?.plant?.experienceToGrow);
+
+      if (isPlantCompleted) {
+        // 1. 먼저 홈으로 이동
+        router.replace('/(tabs)');
+
+        // 2. 짧은 딜레이 후 모달 표시 (홈 화면이 완전히 로드된 후)
+        setTimeout(() => {
+          showPlantCompletion(result?.plant || plant, result);
+        }, 500);
       } else {
-        Alert.alert(
-          '식물 성장!',
-          `식물이 ${result?.plant?.currentStage || plant.currentStage + 1}단계로 성장했어요!`,
-        );
+        // 일반 성장 메시지
+        const newStage = result?.plant?.currentStage || plant.currentStage;
+        const isLevelUp = newStage > plant.currentStage;
+
+        if (isLevelUp) {
+          Alert.alert('레벨 업! 🎉', `식물이 ${newStage}단계로 성장했어요!`);
+        } else {
+          Alert.alert(
+            '경험치 획득!',
+            `경험치를 획득했어요! (${result?.plant?.experience || plant.experience}/${result?.plant?.experienceToGrow || plant.experienceToGrow})`,
+          );
+        }
       }
 
       // 팝 애니메이션

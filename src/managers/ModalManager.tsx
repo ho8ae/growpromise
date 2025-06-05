@@ -55,9 +55,9 @@ export const ModalManagerProvider: React.FC<ModalManagerProviderProps> = ({ chil
     },
   });
 
-  // 🎯 식물 완료 모달 확인 핸들러 (데이터 새로고침 추가)
+  // 🎯 식물 완료 모달 확인 핸들러 (도감으로 이동하도록 수정)
   const handlePlantCompletionConfirm = () => {
-    console.log('🎉 Plant completion confirmed in ModalManager');
+    console.log('🎉 Plant completion confirmed - navigating to collection');
   
     const isCompleted =
       modalState.plantCompletion.growthResult?.isCompleted ||
@@ -71,12 +71,11 @@ export const ModalManagerProvider: React.FC<ModalManagerProviderProps> = ({ chil
     queryClient.invalidateQueries({ queryKey: ['promiseStats'] });
     queryClient.invalidateQueries({ queryKey: ['plantCollection'] });
   
-    // 🎯 완성된 식물의 경우 선택지 제공
+    // 🎯 완성된 식물의 경우 도감으로 이동
     if (isCompleted) {
       setTimeout(() => {
-        // 새 식물 선택하기 vs 홈으로 가기 선택지 제공
-        console.log('🌱 Redirecting to plant selection or home');
-        navigateToHome(); // 또는 특별한 완성 페이지로
+        console.log('🌱 Redirecting to plant collection');
+        navigateToCollection(); // 도감으로 이동
       }, 500);
     }
   };
