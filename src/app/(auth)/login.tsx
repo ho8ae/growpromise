@@ -447,7 +447,7 @@ export default function LoginScreen() {
                   isAnyLoading
                     ? 'bg-[#AEDBAE]'
                     : 'bg-[#58CC02]'
-                } py-4 rounded-xl shadow-sm mb-4 active:opacity-90`}
+                } py-4 rounded-xl shadow-sm  active:opacity-90`}
                 onPress={handleLogin}
                 disabled={
                   !username ||
@@ -484,7 +484,8 @@ export default function LoginScreen() {
 
               {/* 소셜 로그인 버튼들 */}
               <Animated.View
-                className="mt-4"
+                className=
+                "mb-6"
                 style={{
                   opacity: formOpacity,
                   transform: [{ translateY: formTranslateY }],
