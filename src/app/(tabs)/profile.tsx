@@ -166,7 +166,7 @@ export default function ProfileScreen() {
         router.push('/(settings)/change-password');
         break;
 
-      // 🔥 새로 추가: 자녀 비밀번호 재설정 케이스
+      // 새로 추가: 자녀 비밀번호 재설정 케이스
       case '자녀 비밀번호 재설정':
         if (user?.userType === 'PARENT') {
           router.push('/(settings)/child-password-reset');

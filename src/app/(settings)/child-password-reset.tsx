@@ -19,9 +19,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../api';
-import type { ChildForPasswordReset } from '../../api/modules/auth';
+import type { ChildParentConnection } from '../../api/modules/user';
 import Colors from '../../constants/Colors';
 import { useAuthStore } from '../../stores/authStore';
+
+// 자녀 정보 타입 (비밀번호 재설정용)
+interface ChildForPasswordReset {
+  childId: string;
+  childProfileId: string;
+  username: string;
+  profileImage?: string;
+}
 
 export default function ChildPasswordResetScreen() {
   const router = useRouter();
@@ -54,16 +62,41 @@ export default function ChildPasswordResetScreen() {
     ]).start();
   }, []);
 
-  // 자녀 목록 조회
+  // 🔥 기존 API 사용 - 잘 작동하는 방식 그대로 유지
   const {
-    data: children,
+    data: childConnections,
     isLoading: isLoadingChildren,
     error: childrenError,
   } = useQuery({
-    queryKey: ['childrenForPasswordReset'],
-    queryFn: api.auth.getChildrenForPasswordReset,
+    queryKey: ['parentChildren'],
+    queryFn: api.user.getParentChildren,
     enabled: user?.userType === 'PARENT',
   });
+
+  // 🔥 연결된 자녀를 ChildForPasswordReset 형태로 변환 (소셜 로그인 사용자 필터링)
+  const children: ChildForPasswordReset[] = React.useMemo(() => {
+    if (!childConnections || !Array.isArray(childConnections)) {
+      return [];
+    }
+
+    return childConnections
+      .filter(connection => {
+        // 일반 로그인 사용자만 필터링 (소셜 로그인 사용자 제외)
+        const isValidChild = connection.child && connection.child.user
+        
+        if (!isValidChild) {
+          console.log('🔥 소셜 로그인 사용자 제외:', connection.child?.user?.username);
+        }
+        
+        return isValidChild;
+      })
+      .map(connection => ({
+        childId: connection.child!.user.id,
+        childProfileId: connection.child!.id,
+        username: connection.child!.user.username,
+        profileImage: connection.child!.user.profileImage,
+      }));
+  }, [childConnections]);
 
   // 직접 비밀번호 설정 뮤테이션
   const resetPasswordMutation = useMutation({
@@ -82,8 +115,9 @@ export default function ChildPasswordResetScreen() {
       );
     },
     onError: (error: any) => {
+      console.error('🔥 비밀번호 재설정 뮤테이션 오류:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('오류', error?.response?.data?.message || '비밀번호 변경에 실패했습니다.');
+      Alert.alert('오류', error?.message || '비밀번호 변경에 실패했습니다.');
     },
   });
 
@@ -111,8 +145,9 @@ export default function ChildPasswordResetScreen() {
       );
     },
     onError: (error: any) => {
+      console.error('🔥 임시 비밀번호 뮤테이션 오류:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('오류', error?.response?.data?.message || '임시 비밀번호 생성에 실패했습니다.');
+      Alert.alert('오류', error?.message || '임시 비밀번호 생성에 실패했습니다.');
     },
   });
 
@@ -144,6 +179,12 @@ export default function ChildPasswordResetScreen() {
       return;
     }
 
+    console.log('🔥 직접 비밀번호 설정 요청:', {
+      childId: selectedChild.childId,
+      newPassword: newPassword.length + '자리',
+      confirmPassword: confirmPassword.length + '자리'
+    });
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     resetPasswordMutation.mutate({
       childId: selectedChild.childId,
@@ -154,7 +195,15 @@ export default function ChildPasswordResetScreen() {
 
   // 임시 비밀번호 생성 처리
   const handleTemporaryReset = () => {
-    if (!selectedChild) return;
+    if (!selectedChild) {
+      console.error('🔥 선택된 자녀가 없습니다.');
+      return;
+    }
+
+    console.log('🔥 임시 비밀번호 생성 요청:', {
+      childId: selectedChild.childId,
+      username: selectedChild.username
+    });
 
     Alert.alert(
       '임시 비밀번호 생성',
@@ -166,7 +215,7 @@ export default function ChildPasswordResetScreen() {
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             temporaryPasswordMutation.mutate({
-              childId: selectedChild.childId,
+              childId: selectedChild.childId, // 🔥 올바른 childId 전달
             });
           },
         },
@@ -176,6 +225,7 @@ export default function ChildPasswordResetScreen() {
 
   // 자녀 선택 처리
   const handleChildSelect = (child: ChildForPasswordReset) => {
+    console.log('🔥 자녀 선택:', child);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedChild(child);
     setResetMethod(null);
@@ -186,6 +236,7 @@ export default function ChildPasswordResetScreen() {
 
   // 재설정 방법 선택 처리
   const handleMethodSelect = (method: 'manual' | 'temporary') => {
+    console.log('🔥 재설정 방법 선택:', method);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setResetMethod(method);
     setNewPassword('');
@@ -204,6 +255,15 @@ export default function ChildPasswordResetScreen() {
     }
   };
 
+  // 🔥 디버깅 로그 추가
+  console.log('🔥 자녀 목록 상태:', {
+    isLoading: isLoadingChildren,
+    hasError: !!childrenError,
+    rawChildrenCount: childConnections?.length || 0,
+    filteredChildrenCount: children?.length || 0,
+    children: children
+  });
+
   // 로딩 상태
   if (isLoadingChildren) {
     return (
@@ -219,7 +279,8 @@ export default function ChildPasswordResetScreen() {
   }
 
   // 오류 상태
-  if (childrenError || !children) {
+  if (childrenError) {
+    console.error('🔥 자녀 목록 조회 오류:', childrenError);
     return (
       <SafeAreaView className="flex-1 bg-white">
         <View className="flex-1 justify-center items-center px-5">
@@ -228,7 +289,7 @@ export default function ChildPasswordResetScreen() {
             자녀 목록을 불러올 수 없습니다
           </Text>
           <Text className="mt-2 text-base text-center" style={{ color: Colors.light.textSecondary }}>
-            네트워크 연결을 확인하고 다시 시도해주세요.
+            {childrenError.message || '네트워크 연결을 확인하고 다시 시도해주세요.'}
           </Text>
           <Pressable
             className="mt-6 py-3 px-6 rounded-xl active:opacity-90"
@@ -242,24 +303,64 @@ export default function ChildPasswordResetScreen() {
     );
   }
 
-  // 연결된 자녀가 없는 경우
-  if (children.length === 0) {
+  // 연결된 자녀가 없거나 비밀번호 재설정 가능한 자녀가 없는 경우
+  if (!isLoadingChildren && children.length === 0) {
+    const hasConnectedChildren = childConnections && childConnections.length > 0;
+    
     return (
       <SafeAreaView className="flex-1 bg-white">
+        {/* 헤더 */}
+        <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
+          <Pressable
+            className="p-2 rounded-xl active:bg-gray-100"
+            onPress={() => router.back()}
+          >
+            <Ionicons name="chevron-back" size={24} color={Colors.light.text} />
+          </Pressable>
+          <Text className="text-lg font-bold" style={{ color: Colors.light.text }}>
+            자녀 비밀번호 재설정
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+
         <View className="flex-1 justify-center items-center px-5">
           <Ionicons name="people-outline" size={48} color={Colors.light.textSecondary} />
           <Text className="mt-4 text-lg font-medium text-center" style={{ color: Colors.light.text }}>
-            연결된 자녀가 없습니다
+            {hasConnectedChildren ? 
+              '비밀번호 재설정 가능한 자녀가 없습니다' : 
+              '연결된 자녀가 없습니다'
+            }
           </Text>
           <Text className="mt-2 text-base text-center" style={{ color: Colors.light.textSecondary }}>
-            자녀와 계정을 연결한 후 이용해주세요.
+            {hasConnectedChildren ? 
+              '소셜 로그인(Google/Apple)으로 가입한 자녀는\n비밀번호 재설정이 불가능합니다.' :
+              '자녀와 계정을 연결한 후\n이 기능을 이용해주세요.'
+            }
           </Text>
+          
+          {/* 소셜 로그인 안내 */}
+          <View className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-6 w-full">
+            <View className="flex-row items-start">
+              <Ionicons name="information-circle" size={20} color={Colors.light.info} className="mr-2 mt-0.5" />
+              <View className="flex-1">
+                <Text className="text-sm font-medium mb-2" style={{ color: Colors.light.info }}>
+                  💡 더 안전한 로그인 방법
+                </Text>
+                <Text className="text-sm leading-5" style={{ color: Colors.light.info }}>
+                  Google 또는 Apple 소셜 로그인을 이용하시면 비밀번호를 잊어버릴 걱정이 없습니다!
+                </Text>
+              </View>
+            </View>
+          </View>
+
           <Pressable
             className="mt-6 py-3 px-6 rounded-xl active:opacity-90"
             style={{ backgroundColor: Colors.light.primary }}
             onPress={() => router.push('/(parent)/generate-code')}
           >
-            <Text className="text-white font-medium">자녀 연결하기</Text>
+            <Text className="text-white font-medium">
+              {hasConnectedChildren ? '돌아가기' : '자녀 연결하기'}
+            </Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -312,6 +413,23 @@ export default function ChildPasswordResetScreen() {
                 비밀번호를 재설정할 자녀를 선택해주세요
               </Text>
 
+              {/* 🔥 소셜 로그인 자녀가 있는 경우 안내 메시지 */}
+              {childConnections && childConnections.length > children.length && (
+                <View className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4">
+                  <View className="flex-row items-start">
+                    <Ionicons name="information-circle" size={20} color="#EA580C" className="mr-2 mt-0.5" />
+                    <View className="flex-1">
+                      <Text className="text-sm font-medium mb-1" style={{ color: '#EA580C' }}>
+                        일부 자녀는 목록에 표시되지 않습니다
+                      </Text>
+                      <Text className="text-sm" style={{ color: '#EA580C' }}>
+                        소셜 로그인(Google/Apple)으로 가입한 자녀는 비밀번호 재설정이 불가능합니다.
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
               <View className="space-y-3">
                 {children.map((child) => (
                   <Pressable
@@ -336,7 +454,7 @@ export default function ChildPasswordResetScreen() {
                         {child.username}
                       </Text>
                       <Text className="text-sm" style={{ color: Colors.light.textSecondary }}>
-                        아이 계정
+                        일반 로그인 계정
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
@@ -392,7 +510,7 @@ export default function ChildPasswordResetScreen() {
                 </View>
               </View>
 
-              <View className="space-y-4">
+              <View className="space-y-4 gap-2">
                 {/* 직접 비밀번호 설정 */}
                 <Pressable
                   className="p-4 bg-white rounded-xl border border-gray-200 active:bg-gray-50"
@@ -403,6 +521,11 @@ export default function ChildPasswordResetScreen() {
                     <Text className="text-base font-medium" style={{ color: Colors.light.text }}>
                       직접 비밀번호 설정
                     </Text>
+                    <View className="ml-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: `${Colors.light.secondary}15` }}>
+                      <Text className="text-xs font-medium" style={{ color: Colors.light.secondary }}>
+                        추천
+                      </Text>
+                    </View>
                   </View>
                   <Text className="text-sm ml-8" style={{ color: Colors.light.textSecondary }}>
                     새로운 비밀번호를 직접 입력하여 설정합니다.
@@ -419,11 +542,7 @@ export default function ChildPasswordResetScreen() {
                     <Text className="text-base font-medium" style={{ color: Colors.light.text }}>
                       임시 비밀번호 생성
                     </Text>
-                    <View className="ml-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: `${Colors.light.secondary}15` }}>
-                      <Text className="text-xs font-medium" style={{ color: Colors.light.secondary }}>
-                        추천
-                      </Text>
-                    </View>
+                    
                   </View>
                   <Text className="text-sm ml-8" style={{ color: Colors.light.textSecondary }}>
                     8자리 임시 비밀번호를 자동으로 생성합니다. 자녀가 로그인 후 변경해야 합니다.
@@ -516,7 +635,7 @@ export default function ChildPasswordResetScreen() {
                 </View>
 
                 {/* 비밀번호 요구사항 */}
-                <View className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <View className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-4">
                   <Text className="text-sm font-medium mb-2" style={{ color: Colors.light.info }}>
                     비밀번호 요구사항
                   </Text>
