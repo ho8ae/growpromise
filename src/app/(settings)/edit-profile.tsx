@@ -465,7 +465,7 @@ export default function EditProfileScreen() {
                     source={
                       profileData.profileImage
                         ? { uri: profileData.profileImage }
-                        : require('../../assets/images/icon/help_icon.png')
+                        : require('../../assets/images/icon/basicPeople_icon.png')
                     }
                     style={{ width: 80, height: 80 }}
                     contentFit="contain"

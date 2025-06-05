@@ -546,7 +546,7 @@ export default function ChildDashboard() {
                   onPress={() => router.push('/(tabs)/profile')}
                 >
                   <Image
-                    source={require('../../assets/images/icon/help_icon.png')}
+                    source={require('../../assets/images/icon/basicPeople_icon.png')}
                     style={{ width: 32, height: 32 }}
                     contentFit="contain"
                     className="rounded-full"

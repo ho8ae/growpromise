@@ -296,7 +296,7 @@ export default function ParentDashboard() {
                               ? getImageUrl(
                                   verification.child.user.profileImage,
                                 )
-                              : require('../../assets/images/icon/help_icon.png')
+                              : require('../../assets/images/icon/basicPeople_icon.png')
                           }
                           style={{ width: 50, height: 50 }}
                           contentFit="contain"

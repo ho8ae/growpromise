@@ -269,7 +269,7 @@ export default function ChildRewardsScreen() {
                     source={
                       childInfo?.profileImage
                         ? { uri: childInfo.profileImage }
-                        : require('../../assets/images/icon/help_icon.png')
+                        : require('../../assets/images/icon/basicPeople_icon.png')
                     }
                     style={{ width: 60, height: 60 }}
                     contentFit="contain"

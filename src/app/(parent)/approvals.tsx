@@ -511,7 +511,7 @@ export default function ApprovalsScreen() {
                     source={
                       verification.child?.user.profileImage
                         ? getImageUrl(verification.child.user.profileImage)
-                        : require('../../assets/images/icon/help_icon.png')
+                        : require('../../assets/images/icon/basicPeople_icon.png')
                     }
                     style={{ width: 40, height: 40 }}
                     contentFit="contain"
