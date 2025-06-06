@@ -131,8 +131,8 @@ export default function SelectPlantScreen() {
       console.error('식물 생성 실패:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        '오류',
-        '식물 생성 중 문제가 발생했습니다. 다시 시도해주세요.',
+        '잠깐 !',
+        '이미 식물을 키우고 있지 않나요?',
       );
     },
   });
