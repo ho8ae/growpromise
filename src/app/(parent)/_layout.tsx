@@ -50,6 +50,14 @@ export default function ParentLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="generate-code"
+        options={{
+          title: '연결 코드 생성',
+          animation: 'slide_from_right',
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }
