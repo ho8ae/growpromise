@@ -187,7 +187,7 @@ export default function ManagePromisesScreen() {
         </Pressable>
         
         {/* 필터 버튼 */}
-        <View className="flex-row mb-4">
+        {/* <View className="flex-row mb-4">
           <Pressable
             className={`flex-1 py-2 rounded-l-xl ${activeFilter === null ? 'bg-emerald-600' : 'bg-gray-200'}`}
             onPress={() => {
@@ -221,7 +221,7 @@ export default function ManagePromisesScreen() {
               비활성
             </Text>
           </Pressable>
-        </View>
+        </View> */}
         
         {/* 로딩 상태 */}
         {isLoading && (
@@ -310,7 +310,7 @@ export default function ManagePromisesScreen() {
                       <FontAwesome5 name="edit" size={16} color="#4b5563" />
                     </Pressable>
                     
-                    <Pressable 
+                    {/* <Pressable 
                       className="mr-2 p-2 rounded-full"
                       style={{ backgroundColor: promise.isActive ? '#fee2e2' : '#d1fae5' }}
                       onPress={() => togglePromiseStatus(promise)}
@@ -321,7 +321,7 @@ export default function ManagePromisesScreen() {
                         size={16} 
                         color={promise.isActive ? '#ef4444' : '#10b981'} 
                       />
-                    </Pressable>
+                    </Pressable> */}
                     
                     <Pressable 
                       className="p-2 bg-red-100 rounded-full"
