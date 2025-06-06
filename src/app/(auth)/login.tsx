@@ -1,7 +1,7 @@
 // app/(auth)/login.tsx - 완성된 소셜 로그인 (Google + Apple)
-import { FontAwesome5 } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
@@ -25,7 +25,8 @@ import { useAuthStore } from '../../../src/stores/authStore';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { isLoading, error, login, googleSignIn, appleSignIn, clearError } = useAuthStore();
+  const { isLoading, error, login, googleSignIn, appleSignIn, clearError } =
+    useAuthStore();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -150,7 +151,7 @@ export default function LoginScreen() {
   const googleLoginMutation = useMutation({
     mutationFn: async (userData: any) => {
       clearError();
-      
+
       if (!userData.idToken) {
         throw new Error('Google 인증 토큰을 받지 못했습니다.');
       }
@@ -179,26 +180,22 @@ export default function LoginScreen() {
         // 신규 회원인 경우
         if (response.needsSetup) {
           Alert.alert(
-            '환영합니다!', 
-            '쑥쑥약속에 가입해주셔서 감사합니다.\n초기 설정을 완료해주세요.', 
+            '환영합니다!',
+            '쑥쑥약속에 가입해주셔서 감사합니다.\n초기 설정을 완료해주세요.',
             [
               {
                 text: '설정하기',
                 onPress: () => router.push('/(auth)/social-setup'),
               },
-            ]
+            ],
           );
         } else {
-          Alert.alert(
-            '회원가입 완료!', 
-            '쑥쑥약속에 오신 것을 환영합니다!', 
-            [
-              {
-                text: '시작하기',
-                onPress: () => router.replace('/(tabs)'),
-              },
-            ]
-          );
+          Alert.alert('회원가입 완료!', '쑥쑥약속에 오신 것을 환영합니다!', [
+            {
+              text: '시작하기',
+              onPress: () => router.replace('/(tabs)'),
+            },
+          ]);
         }
       } else {
         // 기존 회원 로그인
@@ -226,7 +223,7 @@ export default function LoginScreen() {
   const appleLoginMutation = useMutation({
     mutationFn: async (appleData: any) => {
       clearError();
-      
+
       if (!appleData.identityToken) {
         throw new Error('Apple 인증 토큰을 받지 못했습니다.');
       }
@@ -252,26 +249,22 @@ export default function LoginScreen() {
         // 신규 회원인 경우
         if (response.needsSetup) {
           Alert.alert(
-            '환영합니다!', 
-            '쑥쑥약속에 가입해주셔서 감사합니다.\n초기 설정을 완료해주세요.', 
+            '환영합니다!',
+            '쑥쑥약속에 가입해주셔서 감사합니다.\n초기 설정을 완료해주세요.',
             [
               {
                 text: '설정하기',
                 onPress: () => router.push('/(auth)/social-setup'),
               },
-            ]
+            ],
           );
         } else {
-          Alert.alert(
-            '회원가입 완료!', 
-            '쑥쑥약속에 오신 것을 환영합니다!', 
-            [
-              {
-                text: '시작하기',
-                onPress: () => router.replace('/(tabs)'),
-              },
-            ]
-          );
+          Alert.alert('회원가입 완료!', '쑥쑥약속에 오신 것을 환영합니다!', [
+            {
+              text: '시작하기',
+              onPress: () => router.replace('/(tabs)'),
+            },
+          ]);
         }
       } else {
         // 기존 회원 로그인
@@ -316,7 +309,10 @@ export default function LoginScreen() {
   };
 
   const isAnyLoading =
-    loginMutation.isPending || googleLoginMutation.isPending || appleLoginMutation.isPending || isLoading;
+    loginMutation.isPending ||
+    googleLoginMutation.isPending ||
+    appleLoginMutation.isPending ||
+    isLoading;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -335,8 +331,11 @@ export default function LoginScreen() {
                 transform: [{ scale: logoScale }],
               }}
             >
-              <View className="bg-[#E6F4D7] p-6 rounded-full mb-6">
-                <FontAwesome5 name="seedling" size={50} color="#58CC02" />
+              <View className="">
+                <Image
+                  source={require('../../assets/images/icon.png')}
+                  style={{ width: 130, height: 130 }}
+                />
               </View>
               <Text className="text-2xl font-bold text-[#58CC02] mb-2">
                 쑥쑥약속
@@ -378,8 +377,8 @@ export default function LoginScreen() {
                     isUsernameFocused
                       ? 'border-2 border-[#58CC02]'
                       : usernameError
-                      ? 'border border-red-500'
-                      : ''
+                        ? 'border border-red-500'
+                        : ''
                   }`}
                   autoCapitalize="none"
                   returnKeyType="next"
@@ -421,8 +420,8 @@ export default function LoginScreen() {
                     isPasswordFocused
                       ? 'border-2 border-[#58CC02]'
                       : passwordError
-                      ? 'border border-red-500'
-                      : ''
+                        ? 'border border-red-500'
+                        : ''
                   }`}
                   secureTextEntry
                   returnKeyType="done"
@@ -484,8 +483,7 @@ export default function LoginScreen() {
 
               {/* 소셜 로그인 버튼들 */}
               <Animated.View
-                className=
-                "mb-6"
+                className="mb-6"
                 style={{
                   opacity: formOpacity,
                   transform: [{ translateY: formTranslateY }],
