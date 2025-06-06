@@ -45,7 +45,7 @@ export default function PlantCollectionScreen() {
 
   // 화면 너비 계산
   const screenWidth = Dimensions.get('window').width;
-  const cardWidth = (screenWidth - 48) / 2; // 양쪽 패딩 및 간격 고려
+  const cardWidth = (screenWidth - 24) / 2; // 양쪽 패딩 및 간격 고려
 
   // 자녀 목록 조회 (부모 계정용)
   const { data: connectedChildren, isLoading: isLoadingChildren } = useQuery({
@@ -308,7 +308,7 @@ export default function PlantCollectionScreen() {
           </Pressable>
 
           <Text
-            className="text-lg font-bold"
+            className="text-xl font-bold"
             style={{ color: Colors.light.text }}
           >
             식물 도감
@@ -325,25 +325,7 @@ export default function PlantCollectionScreen() {
               transform: [{ translateY: slideAnim }],
             }}
           >
-            {/* 상단 제목 */}
-            <View className="mb-5">
-              <Text
-                className="text-2xl font-bold"
-                style={{ color: Colors.light.text }}
-              >
-                {user?.userType === 'PARENT'
-                  ? '자녀의 식물 도감'
-                  : '나의 식물 도감'}
-              </Text>
-              <Text
-                className="text-base mt-1"
-                style={{ color: Colors.light.textSecondary }}
-              >
-                {hasPlants
-                  ? '지금까지 키운 모든 식물을 볼 수 있어요!'
-                  : '아직 완성한 식물이 없어요. 첫 번째 식물을 키워보세요!'}
-              </Text>
-            </View>
+           
 
             {/* 자녀 선택 (부모 계정용) */}
             {user?.userType === 'PARENT' &&
