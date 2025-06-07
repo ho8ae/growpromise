@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "growpromise",
+    "name": "쑥쑥약속",
     "slug": "kids-plan",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,6 +11,8 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.low-k.growpromise",
+      "buildNumber": "1",
+      "requireFullScreen": false,
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
         "UIStatusBarStyle": "UIStatusBarStyleDefault",
@@ -21,16 +23,16 @@
           "NSAllowsArbitraryLoads": true,
           "NSExceptionDomains": {
             "localhost": {
-              "NSExceptionAllowsInsecureHTTPLoads": true
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSExceptionMinimumTLSVersion": "1.0",
+              "NSIncludesSubdomains": true
             }
           }
         },
         "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
-        "com.apple.developer.applesignin": [
-          "Default"
-        ]
+        "com.apple.developer.applesignin": ["Default"]
       }
     },
     "android": {
@@ -50,6 +52,7 @@
         "WAKE_LOCK"
       ],
       "package": "com.low_k.growpromise",
+      "versionCode": 1,
       "usesCleartextTraffic": true,
       "networkSecurityConfig": "@xml/network_security_config"
     },
@@ -108,7 +111,15 @@
           "defaultChannel": "default"
         }
       ],
-      "expo-mail-composer"
+      "expo-mail-composer",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "약속 인증 사진을 저장하기 위해 사진 라이브러리에 접근합니다.",
+          "savePhotosPermission": "촬영한 약속 인증 사진을 저장하기 위해 사진 라이브러리에 접근합니다.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -119,6 +130,15 @@
         "projectId": "f7541177-1d8c-456d-8f63-3d3fbcf26f31"
       }
     },
-    "owner": "low_k"
+    "owner": "low_k",
+    "privacy": "public",
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }
