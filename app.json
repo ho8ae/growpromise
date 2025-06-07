@@ -11,7 +11,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.low-k.growpromise",
-      "buildNumber": "1",
       "requireFullScreen": false,
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
