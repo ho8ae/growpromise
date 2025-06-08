@@ -595,7 +595,7 @@ export default function ApprovalsScreen() {
                   className="mr-2"
                 />
                 <Text className="text-lg font-bold text-gray-800">
-                  인증 결정
+                  거절 사유
                 </Text>
               </View>
 

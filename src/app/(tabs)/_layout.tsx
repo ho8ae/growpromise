@@ -50,7 +50,7 @@ export default function TabLayout() {
         options={{
           title: '홈',
           tabBarIcon: ({ color, focused }) => (
-            <View className="p-2">
+            <View className="p-2 mb-2">
               <Image
                 source={require('../../assets/images/icon/home_icon.png')}
                 className="w-9 h-9"
@@ -69,7 +69,7 @@ export default function TabLayout() {
         options={{
           title: '갤러리',
           tabBarIcon: ({ color, focused }) => (
-            <View className="p-2">
+            <View className="p-2 mb-2">
               <Image
                 source={require('../../assets/images/icon/gallery_icon.png')}
                 className="w-9 h-9"
@@ -86,9 +86,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="store-tab"
         options={{
-          title: '상점',
+          title: '스토어',
           tabBarIcon: ({ color, focused }) => (
-            <View className="p-2">
+            <View className="p-2 mb-2">
               <Image
                 source={require('../../assets/images/icon/shop_icon.png')}
                 className="w-8 h-8"

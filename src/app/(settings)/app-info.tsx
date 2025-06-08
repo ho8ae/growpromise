@@ -352,7 +352,7 @@ export default function AppInfoScreen() {
           </View>
         </View>
 
-        {/* 기기 정보 */}
+        {/* 기기 정보
         {deviceInfo && (
           <View className="mx-4 mb-6">
             <Text
@@ -430,7 +430,7 @@ export default function AppInfoScreen() {
               </View>
             </View>
           </View>
-        )}
+        )} */}
       </ScrollView>
     </SafeAreaView>
   );

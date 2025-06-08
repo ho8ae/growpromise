@@ -353,7 +353,7 @@ export default function LoginScreen() {
             >
               <View className="mb-2">
                 <Text className="text-gray-700 mb-2 font-medium ml-1">
-                  아이디
+                  이름
                 </Text>
                 <TextInput
                   value={username}
@@ -372,7 +372,7 @@ export default function LoginScreen() {
                   onSubmitEditing={() => {
                     passwordInputRef.current?.focus();
                   }}
-                  placeholder="아이디를 입력하세요"
+                  placeholder="이름을 입력하세요"
                   className={`bg-gray-100 rounded-xl px-4 py-3.5 text-gray-800 ${
                     isUsernameFocused
                       ? 'border-2 border-[#58CC02]'

@@ -4,10 +4,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect } from 'react';
-import { Alert, Text, TouchableOpacity, View, ScrollView, RefreshControl } from 'react-native';
+import {
+  Alert,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTicketCounts, useTickets } from '../../hooks/useTickets';
 import { useAuthStore } from '../../stores/authStore';
-import { useTickets, useTicketCounts } from '../../hooks/useTickets';
 
 // 상점 아이템 타입
 interface StoreItem {
@@ -42,19 +49,19 @@ export default function StoreTabScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { isAuthenticated, user } = useAuthStore();
-  
+
   // 사용자 타입 확인 (대소문자 구분 없이)
   const isParent = user?.userType?.toUpperCase() === 'PARENT';
   const isChild = user?.userType?.toUpperCase() === 'CHILD';
-  
+
   // 🎯 자녀 계정일 때만 티켓 데이터 훅 사용
-  const { 
-    data: ticketData, 
-    isLoading: ticketsLoading, 
+  const {
+    data: ticketData,
+    isLoading: ticketsLoading,
     refetch: refetchTickets,
-    isRefetching
+    isRefetching,
   } = useTickets();
-  
+
   const { counts, total, hasTickets } = useTicketCounts();
 
   // 🎯 자녀 계정이고 인증 상태 변경 시 티켓 데이터 새로고침
@@ -69,13 +76,13 @@ export default function StoreTabScreen() {
   const handleRefresh = useCallback(async () => {
     console.log('🎯 수동 새로고침 시작');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     if (isAuthenticated && isChild) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['tickets'] }),
         queryClient.invalidateQueries({ queryKey: ['childStats'] }),
         queryClient.invalidateQueries({ queryKey: ['activeMissions'] }),
-        refetchTickets()
+        refetchTickets(),
       ]);
     }
   }, [isAuthenticated, isChild, queryClient, refetchTickets]);
@@ -100,16 +107,18 @@ export default function StoreTabScreen() {
       Alert.alert(
         '자녀 전용 기능',
         '식물 카드 선택은 자녀 계정에서만 가능해요.\n자녀와 함께 이용해주세요! 🌱',
-        [
-          { text: '확인', style: 'default' },
-        ]
+        [{ text: '확인', style: 'default' }],
       );
       return;
     }
 
     // 자녀 계정인 경우 기존 로직
     if (isChild) {
-      console.log('🎯 뽑기 시도 - 현재 티켓:', { total, counts, hasTickets: hasTickets() });
+      console.log('🎯 뽑기 시도 - 현재 티켓:', {
+        total,
+        counts,
+        hasTickets: hasTickets(),
+      });
 
       if (hasTickets()) {
         router.push('/store-packs');
@@ -127,11 +136,20 @@ export default function StoreTabScreen() {
               text: '새로고침',
               onPress: handleRefresh,
             },
-          ]
+          ],
         );
       }
     }
-  }, [isAuthenticated, isParent, isChild, router, total, counts, hasTickets, handleRefresh]);
+  }, [
+    isAuthenticated,
+    isParent,
+    isChild,
+    router,
+    total,
+    counts,
+    hasTickets,
+    handleRefresh,
+  ]);
 
   // 출시 예정 아이템 핸들러
   const handleComingSoon = useCallback(() => {
@@ -199,27 +217,20 @@ export default function StoreTabScreen() {
             </Text>
           </View>
           <View className="bg-white/20 rounded-full w-16 h-16 items-center justify-center">
-            <MaterialCommunityIcons 
-              name="account-child" 
-              size={32} 
-              color="white" 
+            <MaterialCommunityIcons
+              name="account-child"
+              size={32}
+              color="white"
             />
           </View>
         </View>
 
         <View className="bg-white/20 rounded-xl p-4">
           <View className="items-center">
-            <MaterialCommunityIcons 
-              name="heart" 
-              size={32} 
-              color="white" 
-            />
+            <MaterialCommunityIcons name="heart" size={32} color="white" />
             <Text className="text-white text-center mt-2 text-lg font-medium">
-              자녀와 함께 식물 카드를{'\n'}선택해보세요! 
+              자녀와 함께 식물 카드를{'\n'}선택해보세요!
             </Text>
-          
-            
-            
           </View>
         </View>
       </View>
@@ -244,31 +255,21 @@ export default function StoreTabScreen() {
             <Text className="text-white/90 text-lg">
               {hasTickets() ? '티켓으로 뽑기' : '티켓을 모아보세요!'}
             </Text>
-            
+
             {(ticketsLoading || isRefetching) && (
-              <Text className="text-white/70 text-sm mt-1">
-                업데이트 중...
-              </Text>
+              <Text className="text-white/70 text-sm mt-1">업데이트 중...</Text>
             )}
           </View>
           <View className="bg-white/20 rounded-full w-16 h-16 items-center justify-center">
-            <MaterialCommunityIcons 
-              name="cards" 
-              size={32} 
-              color="white" 
-            />
+            <MaterialCommunityIcons name="cards" size={32} color="white" />
           </View>
         </View>
 
         {/* 티켓 개수 표시 */}
-        {(ticketsLoading && !ticketData) ? (
+        {ticketsLoading && !ticketData ? (
           <View className="bg-white/20 rounded-xl p-4">
             <View className="flex-row items-center justify-center">
-              <MaterialCommunityIcons 
-                name="loading" 
-                size={20} 
-                color="white" 
-              />
+              <MaterialCommunityIcons name="loading" size={20} color="white" />
               <Text className="text-white ml-2">티켓 정보 로딩 중...</Text>
             </View>
           </View>
@@ -278,51 +279,54 @@ export default function StoreTabScreen() {
               <Text className="text-white text-lg font-semibold">
                 보유 티켓: {total}개
               </Text>
-              
+
               {isRefetching && (
                 <View className="ml-2">
-                  <MaterialCommunityIcons 
-                    name="sync" 
-                    size={16} 
-                    color="white" 
-                  />
+                  <MaterialCommunityIcons name="sync" size={16} color="white" />
                 </View>
               )}
             </View>
-            
+
             {total > 0 ? (
               <View className="flex-row justify-center space-x-4 gap-4">
-                {Object.entries(counts).map(([type, count]) => (
-                  count > 0 && (
-                    <View key={type} className="items-center">
-                      <View className={`w-12 h-12 rounded-full ${getTicketColor(type)} items-center justify-center mb-1`}>
-                        <MaterialCommunityIcons 
-                          name={getTicketIcon(type) as keyof typeof MaterialCommunityIcons.glyphMap} 
-                          size={20} 
-                          color="white" 
-                        />
+                {Object.entries(counts).map(
+                  ([type, count]) =>
+                    count > 0 && (
+                      <View key={type} className="items-center">
+                        <View
+                          className={`w-12 h-12 rounded-full ${getTicketColor(type)} items-center justify-center mb-1`}
+                        >
+                          <MaterialCommunityIcons
+                            name={
+                              getTicketIcon(
+                                type,
+                              ) as keyof typeof MaterialCommunityIcons.glyphMap
+                            }
+                            size={20}
+                            color="white"
+                          />
+                        </View>
+                        <Text className="text-white text-sm font-medium">
+                          {getTicketName(type)}
+                        </Text>
+                        <Text className="text-white text-lg font-bold">
+                          {count}개
+                        </Text>
                       </View>
-                      <Text className="text-white text-sm font-medium">
-                        {getTicketName(type)}
-                      </Text>
-                      <Text className="text-white text-lg font-bold">
-                        {count}개
-                      </Text>
-                    </View>
-                  )
-                ))}
+                    ),
+                )}
               </View>
             ) : (
               <View className="items-center">
-                <MaterialCommunityIcons 
-                  name="heart-outline" 
-                  size={32} 
-                  color="white" 
+                <MaterialCommunityIcons
+                  name="heart-outline"
+                  size={32}
+                  color="white"
                 />
                 <Text className="text-white text-center mt-2">
                   약속을 지키고 식물을 키워서{'\n'}티켓을 모아보세요!
                 </Text>
-                
+
                 <TouchableOpacity
                   onPress={() => router.push('/(child)/promises')}
                   className="bg-white/20 rounded-lg px-4 py-2 mt-3"
@@ -357,11 +361,7 @@ export default function StoreTabScreen() {
             </Text>
           </View>
           <View className="bg-white/20 rounded-full w-16 h-16 items-center justify-center">
-            <MaterialCommunityIcons 
-              name="cards" 
-              size={32} 
-              color="white" 
-            />
+            <MaterialCommunityIcons name="cards" size={32} color="white" />
           </View>
         </View>
 
@@ -373,9 +373,7 @@ export default function StoreTabScreen() {
             onPress={() => router.navigate('/(auth)/login')}
             className="bg-white/20 rounded-lg px-4 py-2 mt-3 self-center"
           >
-            <Text className="text-white font-medium text-sm">
-              로그인하기
-            </Text>
+            <Text className="text-white font-medium text-sm">로그인하기</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -391,13 +389,13 @@ export default function StoreTabScreen() {
     isRefetching,
     total,
     counts,
-    hasTickets: isChild ? hasTickets() : false
+    hasTickets: isChild ? hasTickets() : false,
   });
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      <ScrollView 
-        className="flex-1" 
+      <ScrollView
+        className="flex-1"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -415,25 +413,30 @@ export default function StoreTabScreen() {
               <View>
                 <Text className="text-2xl font-bold text-gray-800">상점</Text>
                 <Text className="text-gray-600 mt-1">
-                  {isParent 
+                  {isParent
                     ? '자녀와 함께 새로운 식물을 만나보세요'
-                    : '뽑기 티켓으로 새로운 식물을 만나보세요'
-                  }
+                    : '약속을 통해 식물을 키우면 티켓 획득 !'}
                 </Text>
               </View>
             </View>
           </View>
 
           {/* 🎯 계정 타입별 카드팩 섹션 */}
-          <View className="mb-6">
-            {!isAuthenticated ? renderGuestContent() :
-             isParent ? renderParentContent() :
-             isChild ? renderChildContent() :
-             renderGuestContent()}
+          <View className="mb-2">
+            {!isAuthenticated
+              ? renderGuestContent()
+              : isParent
+                ? renderParentContent()
+                : isChild
+                  ? renderChildContent()
+                  : renderGuestContent()}
           </View>
 
+
           {/* 기타 상점 아이템들 */}
-          <Text className="text-xl font-bold text-gray-800 mb-4">다른 아이템들</Text>
+          <Text className="text-xl font-bold text-gray-800 mb-4">
+            다른 아이템들
+          </Text>
           <View className="flex-row flex-wrap justify-between">
             {storeItems.map((item) => (
               <TouchableOpacity
@@ -445,10 +448,10 @@ export default function StoreTabScreen() {
                 <View className="p-4 h-32">
                   <View className="flex-1 items-center justify-center">
                     <View className="w-12 h-12 rounded-xl items-center justify-center mb-3 bg-gray-300">
-                      <MaterialCommunityIcons 
-                        name={item.icon} 
-                        size={24} 
-                        color="#9CA3AF" 
+                      <MaterialCommunityIcons
+                        name={item.icon}
+                        size={24}
+                        color="#9CA3AF"
                       />
                     </View>
                   </View>
@@ -464,7 +467,9 @@ export default function StoreTabScreen() {
 
                   <View className="absolute top-2 right-2">
                     <View className="bg-gray-400 px-2 py-1 rounded-full">
-                      <Text className="text-white text-xs font-medium">Soon</Text>
+                      <Text className="text-white text-xs font-medium">
+                        Soon
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -477,7 +482,10 @@ export default function StoreTabScreen() {
             <TouchableOpacity
               onPress={() => {
                 if (isParent) {
-                  Alert.alert('안내', '식물 컬렉션은 자녀 계정에서 확인할 수 있어요.');
+                  Alert.alert(
+                    '안내',
+                    '식물 컬렉션은 자녀 계정에서 확인할 수 있어요.',
+                  );
                 } else {
                   router.push('/(child)/select-plant');
                 }
