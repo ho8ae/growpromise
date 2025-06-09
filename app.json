@@ -31,8 +31,11 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
-        "com.apple.developer.applesignin": ["Default"]
-      }
+        "com.apple.developer.applesignin": [
+          "Default"
+        ]
+      },
+      "buildNumber": "3"
     },
     "android": {
       "adaptiveIcon": {
@@ -95,7 +98,10 @@
         {
           "mediaTypes": "photo",
           "allowsEditing": true,
-          "aspect": [4, 3],
+          "aspect": [
+            4,
+            3
+          ],
           "quality": 1,
           "cameraPermission": "약속 인증을 위해 카메라 접근이 필요합니다.",
           "photosPermission": "사진을 선택하기 위해 갤러리 접근이 필요합니다."
