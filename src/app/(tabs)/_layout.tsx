@@ -3,7 +3,6 @@ import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Image, View } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '../../constants/Colors';
 
@@ -62,7 +61,7 @@ export default function TabLayout() {
           ),
         }}
       />
-      
+
       {/* 갤러리 탭 추가 */}
       <Tabs.Screen
         name="gallery"
@@ -81,8 +80,7 @@ export default function TabLayout() {
           ),
         }}
       />
-    
-      
+
       <Tabs.Screen
         name="store-tab"
         options={{
@@ -116,6 +114,12 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="profile"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="alarm"
         options={{
           href: null,
         }}
