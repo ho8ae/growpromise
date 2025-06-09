@@ -61,7 +61,7 @@ const AppHeader = ({
         />
       </View>
       
-      <View className="flex-row items-center mr-2">
+      <View className="flex-row items-center">
         {/* 알림 아이콘 */}
         <Pressable 
           onPress={() => router.push('/(tabs)/alarm')}
@@ -69,7 +69,7 @@ const AppHeader = ({
         >
           <Image
             source={require('../../assets/images/icon/alarm_icon.png')}
-            style={{ width: 28, height: 28 }}
+            style={{ width: 28, height: 26 }}
           />
           
           {/* 읽지 않은 알림 배지 */}
