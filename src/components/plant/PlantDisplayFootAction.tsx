@@ -1,11 +1,11 @@
 import { Plant } from '@/src/api/modules/plant';
+import { Toast } from '@/src/components/common/Toast';
+import { useToast } from '@/src/hooks/useToast';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import Colors from '../../constants/Colors';
-import { useToast } from '@/src/hooks/useToast';
-import { Toast } from '@/src/components/common/Toast';
 
 interface PlantActionProps {
   plant: Plant | null;
@@ -66,7 +66,7 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
           opacity={toast.opacity}
           onHide={toast.hideToast}
         />
-        
+
         <View className="flex-row gap-6 mt-4 items-center justify-center">
           <ActionButton
             icon="dashboard"
@@ -85,6 +85,7 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
               })
             }
           />
+          {plant !== null ? (
           <ActionButton
             icon="opacity"
             label="물주기"
@@ -93,12 +94,33 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
               toast.info('현재 물주기는 자녀만 가능합니다.');
             }}
           />
-          <ActionButton
-            icon="info"
-            label="정보"
-            color={Colors.light.primary}
-            onPress={handleInfoPress}
-          />
+          ) : (
+            <ActionButton
+              icon="opacity"
+              label="물주기"
+              color={Colors.light.textSecondary}
+              onPress={() => {
+                toast.info('아직 자녀의 식물이 없습니다.');
+              }}
+            />
+          )}
+          {plant !== null ? (
+            <ActionButton
+              icon="info"
+              label="정보"
+              color={Colors.light.primary}
+              onPress={handleInfoPress}
+            />
+          ) : (
+            <ActionButton
+              icon="info"
+              label="정보"
+              color={Colors.light.textSecondary}
+              onPress={() => {
+                toast.info('아직 자녀의 식물이 없습니다.');
+              }}
+            />
+          )}
         </View>
       </>
     );
@@ -116,31 +138,31 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
         opacity={toast.opacity}
         onHide={toast.hideToast}
       />
-      
+
       <View className="mt-4 flex-row gap-6 items-center justify-center">
-      {plant !== null ? (
-        <ActionButton
-          icon="opacity"
-          label="물주기"
-          color={Colors.light.info}
-          onPress={onWaterPress}
-        />
-      ) : (
-        <ActionButton
-          icon="opacity"
-          label="물주기"
-          color={Colors.light.textSecondary}
-          onPress={() => {
-            toast.warning('식물이 없습니다.');
-          }}
-        />
-      )}
+        {plant !== null ? (
+          <ActionButton
+            icon="opacity"
+            label="물주기"
+            color={Colors.light.info}
+            onPress={onWaterPress}
+          />
+        ) : (
+          <ActionButton
+            icon="opacity"
+            label="물주기"
+            color={Colors.light.textSecondary}
+            onPress={() => {
+              toast.warning('식물이 없습니다.');
+            }}
+          />
+        )}
         <ActionButton
           icon="book"
           label="식물 도감"
           color={Colors.light.primary}
           onPress={() => {
-            router.push('/(child)/plant-collection')
+            router.push('/(child)/plant-collection');
           }}
         />
         <ActionButton
@@ -159,10 +181,10 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
             onPress={() => router.push('/(child)/plant-detail')}
           />
         ) : (
-          <ActionButton 
-            icon="info" 
-            label="정보" 
-            color={Colors.light.textSecondary} 
+          <ActionButton
+            icon="info"
+            label="정보"
+            color={Colors.light.textSecondary}
             onPress={() => {
               toast.info('정보를 확인할 수 없습니다.');
             }}
