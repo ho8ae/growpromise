@@ -102,7 +102,7 @@ const SelectedStickerPreview = ({
             flatListRef.current.scrollToIndex({
               index: realIndex + allStickers.length,
               animated: false,
-            });
+                          });
             
           }
         }, 100);
@@ -226,7 +226,7 @@ const SelectedStickerPreview = ({
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item, index) => `${item.id}-${index}`}
         renderItem={(props) => renderStickerItem(props)}
-        initialScrollIndex={allStickers.length} // 중간에서 시작
+        initialScrollIndex={allStickers.length + 1} // 중간에서 시작
         getItemLayout={(data, index) => ({
           length: ITEM_WIDTH + ITEM_SPACING,
           offset: (ITEM_WIDTH + ITEM_SPACING) * index,
