@@ -1,9 +1,9 @@
 // app/index.tsx
+import { FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Redirect } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View, Text, Platform } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { ActivityIndicator, Text, View } from 'react-native';
 import SafeStatusBar from '../../src/components/common/SafeStatusBar';
 import { useAuthStore } from '../../src/stores/authStore';
 
@@ -15,18 +15,14 @@ export default function IndexScreen() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        console.log('🚀 앱 초기화 시작...');
-        
-        // AsyncStorage에서 온보딩 상태 확인
-        const [
-          isFirstLaunch,
-          onboardingCompleted,
-          onboardingSkipped
-        ] = await AsyncStorage.multiGet([
-          'isFirstLaunch',
-          'onboardingCompleted', 
-          'onboardingSkipped'
-        ]);
+        console.log('🚀 앱 초기화 시작 (테스트 모드)...');
+
+        const [isFirstLaunch, onboardingCompleted, onboardingSkipped] =
+          await AsyncStorage.multiGet([
+            'isFirstLaunch',
+            'onboardingCompleted',
+            'onboardingSkipped',
+          ]);
 
         const firstLaunch = isFirstLaunch[1];
         const completed = onboardingCompleted[1];
@@ -37,24 +33,17 @@ export default function IndexScreen() {
         console.log('- onboardingCompleted:', completed);
         console.log('- onboardingSkipped:', skipped);
 
-        // 온보딩을 보여줄 조건:
-        // 1. 처음 실행이거나 (isFirstLaunch가 null)
-        // 2. isFirstLaunch가 'true'이고, 완료되지 않았고, 건너뛰지 않았을 때
-        const shouldShow = (
-          firstLaunch === null || 
-          (firstLaunch !== 'false' && completed !== 'true' && skipped !== 'true')
-        );
+        const shouldShow =
+          firstLaunch === null ||
+          (firstLaunch !== 'false' &&
+            completed !== 'true' &&
+            skipped !== 'true');
 
         setShouldShowOnboarding(shouldShow);
-        
-        console.log('🎯 온보딩 표시 여부:', shouldShow);
-        
       } catch (error) {
         console.error('❌ 앱 초기화 중 오류:', error);
-        // 오류 발생 시 온보딩 건너뛰기
-        setShouldShowOnboarding(false);
+        setShouldShowOnboarding(true);
       } finally {
-        // 약간의 지연 후 초기화 완료
         setTimeout(() => {
           setIsInitializing(false);
         }, 500);
@@ -69,7 +58,7 @@ export default function IndexScreen() {
     return (
       <View className="flex-1 justify-center items-center bg-white">
         <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
-        
+
         <View className="bg-[#E6F4D7] p-6 rounded-full mb-6">
           <FontAwesome5 name="seedling" size={50} color="#58CC02" />
         </View>
@@ -81,15 +70,15 @@ export default function IndexScreen() {
   }
 
   // 초기화 완료 후 라우팅 결정
-  console.log('🎯 라우팅 결정 단계:');
+  console.log('🎯 라우팅 결정 단계 (테스트 모드):');
   console.log('- shouldShowOnboarding:', shouldShowOnboarding);
   console.log('- isAuthChecked:', isAuthChecked);
   console.log('- isAuthenticated:', isAuthenticated);
   console.log('- userType:', user?.userType);
 
-  // 1. 온보딩이 필요한 경우
+  // 1. 온보딩이 필요한 경우 (테스트 모드에서는 항상 true)
   if (shouldShowOnboarding) {
-    console.log('➡️  온보딩 화면으로 이동');
+    console.log('➡️  온보딩 화면으로 이동 (테스트 모드)');
     return <Redirect href="/onboarding" />;
   }
 
@@ -98,7 +87,9 @@ export default function IndexScreen() {
     return (
       <View className="flex-1 justify-center items-center bg-white">
         <ActivityIndicator size="large" color="#58CC02" />
-        <Text className="mt-4 text-gray-600">로그인 상태를 확인하고 있어요...</Text>
+        <Text className="mt-4 text-gray-600">
+          로그인 상태를 확인하고 있어요...
+        </Text>
       </View>
     );
   }
