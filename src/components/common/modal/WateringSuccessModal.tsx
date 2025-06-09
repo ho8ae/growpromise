@@ -165,78 +165,7 @@ const WateringSuccessModal: React.FC<WateringSuccessModalProps> = ({
           }}
           className="bg-white rounded-3xl p-6 mx-6 items-center shadow-2xl relative overflow-hidden"
         >
-          {/* 물방울 애니메이션 */}
-          <View className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none">
-            {waterDrops.map((drop, index) => (
-              <Animated.View
-                key={index}
-                style={{
-                  position: 'absolute',
-                  left: `${20 + index * 15}%`,
-                  top: -20,
-                  transform: [
-                    {
-                      translateY: drop.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [-50, 150],
-                      }),
-                    },
-                    {
-                      scale: drop.interpolate({
-                        inputRange: [0, 0.5, 1],
-                        outputRange: [0, 1.2, 0.8],
-                      }),
-                    },
-                  ],
-                  opacity: drop.interpolate({
-                    inputRange: [0, 0.2, 0.8, 1],
-                    outputRange: [0, 1, 1, 0],
-                  }),
-                }}
-              >
-                <Text style={{ fontSize: 20 }}>💧</Text>
-              </Animated.View>
-            ))}
-          </View>
-
-          {/* 반짝이 효과 */}
-          <Animated.View
-            style={{
-              position: 'absolute',
-              top: 20,
-              right: 30,
-              opacity: sparkleAnim,
-              transform: [
-                {
-                  rotate: sparkleAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['0deg', '360deg'],
-                  }),
-                },
-              ],
-            }}
-          >
-            <MaterialIcons name="auto-fix-high" size={24} color="#FFD700" />
-          </Animated.View>
-
-          <Animated.View
-            style={{
-              position: 'absolute',
-              top: 40,
-              left: 20,
-              opacity: sparkleAnim,
-              transform: [
-                {
-                  rotate: sparkleAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['360deg', '0deg'],
-                  }),
-                },
-              ],
-            }}
-          >
-            <MaterialIcons name="auto-fix-high" size={20} color="#4ECDC4" />
-          </Animated.View>
+      
 
           {/* 메인 아이콘 */}
           <Animated.View
@@ -252,28 +181,26 @@ const WateringSuccessModal: React.FC<WateringSuccessModalProps> = ({
             }}
             className="bg-blue-100 p-6 rounded-full mb-4"
           >
-            <Text style={{ fontSize: 48 }}>🌱</Text>
+            <Text style={{ fontSize: 48 }}>💧</Text>
           </Animated.View>
 
           {/* 메인 텍스트 */}
           <Text className="text-2xl font-bold text-center text-gray-800 mb-2">
-            💧 물주기 성공! 💧
+            물주기 성공!
           </Text>
           
           <Text className="text-lg text-center text-blue-600 mb-4">
-            식물이 건강하게 자라고 있어요!
+            식물이 무럭무럭 자라고 있어요!
           </Text>
 
           {/* 통계 정보 */}
-          <View className="bg-blue-50 rounded-2xl p-4 mb-4 w-full">
+          <View className=" rounded-2xl p-4 mb-4 w-full">
             {/* 연속 물주기 */}
             {wateringStreak > 1 && (
               <View className="flex-row items-center justify-center mb-3">
-                <MaterialIcons name="local-fire-department" size={24} color="#FF6B6B" />
                 <Text className="text-lg font-bold text-blue-800 ml-2">
                   연속 {wateringStreak}일째!
                 </Text>
-                <Text style={{ fontSize: 20, marginLeft: 8 }}>🔥</Text>
               </View>
             )}
 
@@ -308,10 +235,10 @@ const WateringSuccessModal: React.FC<WateringSuccessModalProps> = ({
           <View className="bg-green-50 rounded-2xl p-4 mb-6 w-full">
             <Text className="text-green-700 text-center font-medium">
               {wateringStreak > 5 
-                ? "대단해요! 꾸준히 식물을 돌보고 있네요! 🌟"
+                ? "대단해요! 꾸준히 식물을 돌보고 있네요! "
                 : wateringStreak > 1 
-                ? "연속으로 물을 주고 있어요! 계속 해보세요! 💪"
-                : "식물이 물을 마시고 기뻐해요! 내일도 잊지 말아요! 😊"
+                ? "연속으로 물을 주고 있어요! 계속 해보세요! "
+                : "식물이 물을 마시고 기뻐해요! 내일도 잊지 말아요! "
               }
             </Text>
           </View>
@@ -322,7 +249,7 @@ const WateringSuccessModal: React.FC<WateringSuccessModalProps> = ({
             onPress={handleClose}
           >
             <Text className="text-white text-lg font-bold text-center">
-              내일도 물주기! 🌱
+              돌아가기
             </Text>
           </Pressable>
         </Animated.View>
