@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -47,9 +47,27 @@ export default function SetRewardsScreen() {
   // FlatList 참조 생성
   const stickerFlatListRef = useRef<FlatList>(null);
 
-  // 가능한 스티커 수 옵션 배열
-  const stickerOptions = Array.from({ length: 20 }, (_, i) =>
+  // 가능한 스티커 수 옵션 배열 (1~50개로 확장)
+  const stickerOptions = Array.from({ length: 100 }, (_, i) =>
     (i + 1).toString(),
+  );
+
+  // 안전한 인덱스 계산 함수
+  const getSafeIndex = useCallback(
+    (value: string): number => {
+      const index = parseInt(value, 10) - 1;
+      return Math.max(0, Math.min(index, stickerOptions.length - 1));
+    },
+    [stickerOptions.length],
+  );
+
+  // 안전한 값 계산 함수
+  const getSafeValue = useCallback(
+    (index: number): string => {
+      const safeIndex = Math.max(0, Math.min(index, stickerOptions.length - 1));
+      return stickerOptions[safeIndex] || '1';
+    },
+    [stickerOptions],
   );
 
   // 데이터 쿼리
@@ -286,6 +304,60 @@ export default function SetRewardsScreen() {
       ],
     );
   };
+
+  // 안전한 스크롤 처리 함수들
+  const scrollToValue = useCallback(
+    (value: string) => {
+      const index = getSafeIndex(value);
+      setTimeout(() => {
+        stickerFlatListRef.current?.scrollToIndex({
+          index,
+          animated: true,
+        });
+      }, 100);
+    },
+    [getSafeIndex],
+  );
+
+  const handleMomentumScrollEnd = useCallback(
+    (event: any) => {
+      const contentOffsetY = event.nativeEvent.contentOffset.y;
+      const index = Math.round(contentOffsetY / 50);
+      const selectedValue = getSafeValue(index);
+
+      if (selectedValue && selectedValue !== stickerGoal) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setStickerGoal(selectedValue);
+      }
+    },
+    [getSafeValue, stickerGoal],
+  );
+
+  const handleScrollEndDrag = useCallback(
+    (event: any) => {
+      const contentOffsetY = event.nativeEvent.contentOffset.y;
+      const index = Math.round(contentOffsetY / 50);
+      const safeIndex = Math.max(0, Math.min(index, stickerOptions.length - 1));
+
+      setTimeout(() => {
+        stickerFlatListRef.current?.scrollToIndex({
+          index: safeIndex,
+          animated: true,
+        });
+      }, 50);
+    },
+    [stickerOptions.length],
+  );
+
+  const handleStickerSelect = useCallback(
+    (item: string, index: number) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setStickerGoal(item);
+      scrollToValue(item);
+    },
+    [scrollToValue],
+  );
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       {/* 토스트 메시지 */}
@@ -396,7 +468,7 @@ export default function SetRewardsScreen() {
             </Pressable>
           </View>
 
-          {/* 정확한 간격 조정된 스티커 수 선택 모달 */}
+          {/* 개선된 스티커 수 선택 모달 */}
           <Modal
             visible={stickerPickerVisible}
             transparent={true}
@@ -434,7 +506,7 @@ export default function SetRewardsScreen() {
                     </Pressable>
                   </View>
 
-                  {/* 정밀 조정된 휠 피커 */}
+                  {/* 개선된 휠 피커 */}
                   <View className="h-60 relative overflow-hidden">
                     {/* 배경 그라데이션 */}
                     <View className="absolute inset-0 pointer-events-none">
@@ -443,12 +515,12 @@ export default function SetRewardsScreen() {
                       <View className="h-20 bg-gradient-to-t from-white to-transparent" />
                     </View>
 
-                    {/* 선택 영역 하이라이트 - 정확한 중앙 위치 */}
+                    {/* 선택 영역 하이라이트 */}
                     <View
                       className="absolute left-4 right-4 bg-emerald-50 border-2 border-emerald-200 rounded-xl pointer-events-none"
                       style={{
-                        height: 50, // 아이템 높이와 정확히 일치
-                        top: 105, // (240 - 50) / 2 = 95 + 10 (미세 조정)
+                        height: 50,
+                        top: 105,
                       }}
                     />
 
@@ -461,18 +533,8 @@ export default function SetRewardsScreen() {
                         return (
                           <Pressable
                             className="justify-center px-6"
-                            onPress={() => {
-                              Haptics.impactAsync(
-                                Haptics.ImpactFeedbackStyle.Light,
-                              );
-                              setStickerGoal(item);
-                              // 선택 시 해당 위치로 스크롤
-                              stickerFlatListRef.current?.scrollToIndex({
-                                index,
-                                animated: true,
-                              });
-                            }}
-                            style={{ height: 50 }} // 정확한 높이 설정
+                            onPress={() => handleStickerSelect(item, index)}
+                            style={{ height: 50 }}
                           >
                             <Text
                               className={`text-center text-xl ${
@@ -492,63 +554,41 @@ export default function SetRewardsScreen() {
                       }}
                       showsVerticalScrollIndicator={false}
                       decelerationRate="fast"
-                      snapToInterval={50} // 아이템 높이와 정확히 일치
+                      snapToInterval={50}
                       snapToAlignment="center"
                       contentContainerStyle={{
-                        paddingVertical: 105, // (240 - 50) / 2 = 정확한 중앙 정렬
+                        paddingVertical: 105,
                       }}
                       getItemLayout={(data, index) => ({
                         length: 50,
                         offset: 50 * index,
                         index,
                       })}
-                      initialScrollIndex={Math.max(
-                        0,
-                        parseInt(stickerGoal) - 1,
-                      )}
+                      initialScrollIndex={getSafeIndex(stickerGoal)}
                       onScrollToIndexFailed={(info) => {
+                        const offset = Math.min(
+                          info.index * 50,
+                          (stickerOptions.length - 1) * 50,
+                        );
                         setTimeout(() => {
                           stickerFlatListRef.current?.scrollToOffset({
-                            offset: info.index * 50,
+                            offset,
                             animated: false,
                           });
                         }, 50);
                       }}
-                      onMomentumScrollEnd={(event) => {
-                        // 정확한 인덱스 계산
-                        const contentOffsetY =
-                          event.nativeEvent.contentOffset.y;
-                        const index = Math.round(contentOffsetY / 50);
-                        const selectedValue = stickerOptions[index];
-
-                        if (selectedValue && selectedValue !== stickerGoal) {
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
-                          setStickerGoal(selectedValue);
-                        }
-                      }}
-                      onScrollEndDrag={(event) => {
-                        // 드래그가 끝났을 때도 정확한 위치로 스냅
-                        const contentOffsetY =
-                          event.nativeEvent.contentOffset.y;
-                        const index = Math.round(contentOffsetY / 50);
-
-                        stickerFlatListRef.current?.scrollToIndex({
-                          index,
-                          animated: true,
-                        });
-                      }}
+                      onMomentumScrollEnd={handleMomentumScrollEnd}
+                      onScrollEndDrag={handleScrollEndDrag}
                     />
 
                     {/* 사이드 인디케이터 */}
                     <View
                       className="absolute left-2 w-1 h-10 bg-emerald-400 rounded-full pointer-events-none"
-                      style={{ top: 114 }} // 선택 영역 중앙에 맞춤
+                      style={{ top: 114 }}
                     />
                     <View
                       className="absolute right-2 w-1 h-10 bg-emerald-400 rounded-full pointer-events-none"
-                      style={{ top: 114 }} // 선택 영역 중앙에 맞춤
+                      style={{ top: 114 }}
                     />
                   </View>
 
@@ -561,20 +601,11 @@ export default function SetRewardsScreen() {
                       자녀가 이만큼의 스티커를 모으면 보상을 받을 수 있어요
                     </Text>
                   </View>
-
-                  {/* 디버깅용 정보 (개발 중에만 사용) */}
-                  {/* {__DEV__ && (
-                    <View className="mt-2 p-2 bg-gray-100 rounded">
-                      <Text className="text-xs text-gray-600 text-center">
-                        Debug: 선택된 값 = {stickerGoal}, 인덱스 ={' '}
-                        {parseInt(stickerGoal) - 1}
-                      </Text>
-                    </View>
-                  )} */}
                 </View>
               </View>
             </View>
           </Modal>
+
           {/* 보상 목록 필터 */}
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-lg font-medium">보상 목록</Text>
@@ -623,6 +654,7 @@ export default function SetRewardsScreen() {
               </Pressable>
             </View>
           </View>
+
           {/* 로딩 상태 */}
           {isLoading && (
             <View className="items-center py-6">
@@ -632,6 +664,7 @@ export default function SetRewardsScreen() {
               </Text>
             </View>
           )}
+
           {/* 에러 상태 */}
           {error && (
             <View className="items-center py-6 bg-red-50 rounded-xl">
@@ -649,6 +682,7 @@ export default function SetRewardsScreen() {
               </Pressable>
             </View>
           )}
+
           {/* 데이터가 없는 경우 */}
           {!isLoading && !error && filteredRewards.length === 0 && (
             <View className="items-center py-8 bg-gray-50 rounded-xl">
