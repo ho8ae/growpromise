@@ -1,7 +1,11 @@
+// src/components/tabs/TabsHeader.tsx (업데이트된 버전)
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import { Animated, Image, Pressable, View, Text } from 'react-native';
+import { useNotifications } from '../../hooks/useNotifications';
+import { notificationUtils } from '../../utils/notificationUtils';
+import Colors from '../../constants/Colors';
 
 interface AppHeaderProps {
   fadeAnim?: Animated.Value;
@@ -15,8 +19,8 @@ interface HeaderProps {
 const AppHeader = ({
   userType,
 }: AppHeaderProps & HeaderProps) => {
-  // 현재 시간 상태 추가
   const [currentTime, setCurrentTime] = useState('');
+  const { unreadCount } = useNotifications();
   
   // 시간 업데이트 함수
   const updateTime = () => {
@@ -57,14 +61,28 @@ const AppHeader = ({
         />
       </View>
       
-      {/* 중앙에 현재 시간 표시
-      <View className="absolute left-0 right-0 items-center">
-        <Text className="text-base font-medium text-gray-700">
-          {currentTime}
-        </Text>
-      </View> */}
-      
       <View className="flex-row items-center mr-2">
+        {/* 알림 아이콘 */}
+        <Pressable 
+          onPress={() => router.push('/(tabs)/alarm')}
+          className="relative mr-3"
+        >
+          <Image
+            source={require('../../assets/images/icon/alarm_icon.png')}
+            style={{ width: 28, height: 28 }}
+          />
+          
+          {/* 읽지 않은 알림 배지 */}
+          {unreadCount > 0 && (
+            <View className="absolute -top-2 -right-2 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center">
+              <Text className="text-white text-xs font-bold">
+                {notificationUtils.formatBadgeCount(unreadCount)}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+
+        {/* 캘린더 아이콘 */}
         <Pressable onPress={() => router.push('/calendar')}>
           <Image
             source={require('../../assets/images/icon/calendar_icon.png')}
