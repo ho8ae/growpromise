@@ -118,6 +118,23 @@ export interface AccountStatusResponse {
   isActive: boolean;
 }
 
+// 푸시 토큰 업데이트 요청 타입
+export interface UpdatePushTokenRequest {
+  expoPushToken: string;
+}
+
+// 알림 설정 업데이트 요청 타입  
+export interface UpdateNotificationSettingsRequest {
+  enabled: boolean;
+}
+
+// 알림 설정 응답 타입
+export interface NotificationSettingsResponse {
+  hasToken: boolean;
+  isEnabled: boolean;
+  lastUpdated?: string;
+}
+
 // 사용자 관련 API 함수들
 const userApi = {
   // 기본 사용자 프로필 정보 조회
@@ -220,6 +237,47 @@ const userApi = {
     }
   },
 
+   // 푸시 토큰 저장/업데이트
+   updatePushToken: async (data: UpdatePushTokenRequest): Promise<void> => {
+    try {
+      await apiRequest<void>('post', '/users/push-token', data);
+    } catch (error) {
+      console.error('푸시 토큰 업데이트 오류:', error);
+      throw error;
+    }
+  },
+
+  // 알림 설정 조회
+  getNotificationSettings: async (): Promise<NotificationSettingsResponse> => {
+    try {
+      return await apiRequest<NotificationSettingsResponse>('get', '/users/notification-settings');
+    } catch (error) {
+      console.error('알림 설정 조회 오류:', error);
+      throw error;
+    }
+  },
+
+  // 알림 설정 업데이트
+  updateNotificationSettings: async (data: UpdateNotificationSettingsRequest): Promise<void> => {
+    try {
+      await apiRequest<void>('put', '/users/notification-settings', data);
+    } catch (error) {
+      console.error('알림 설정 업데이트 오류:', error);
+      throw error;
+    }
+  },
+
+  // 테스트 푸시 알림 전송
+  sendTestPushNotification: async (): Promise<void> => {
+    try {
+      console.log('sendTestPushNotification API 호출 시작');
+      const response = await apiRequest<void>('post', '/users/test-push');
+      console.log('sendTestPushNotification API 응답:', response);
+    } catch (error) {
+      console.error('sendTestPushNotification API 오류:', error);
+      throw error;
+    }
+  },
   /* 
   // S3 프로필 이미지 업로드 기능 (필요할 때 주석 해제)
   updateProfileImage: async (imageUri: string): Promise<{ id: string; username: string; profileImage: string }> => {

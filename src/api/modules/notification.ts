@@ -59,8 +59,8 @@ const notificationApi = {
       throw error;
     }
   },
-  
-  // 알림 읽음 상태 업데이트
+    // 알림 읽음 상태 업데이트
+
   updateNotificationReadStatus: async (id: string, isRead: boolean): Promise<Notification> => {
     try {
       return await apiRequest<Notification>('put', `/notifications/${id}/read`, { isRead });
@@ -90,7 +90,7 @@ const notificationApi = {
   // 모든 알림 읽음으로 표시
   markAllNotificationsAsRead: async (): Promise<{ updatedCount: number }> => {
     try {
-      return await apiRequest<{ updatedCount: number }>('put', `/notifications/all/read`, {});
+      return await apiRequest<{ updatedCount: number }>('put', `/notifications/all/read`);
     } catch (error) {
       console.error('모든 알림 읽음 표시 오류:', error);
       throw error;
