@@ -3,6 +3,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -22,8 +23,6 @@ import TermsOfServiceModal from '../../components/common/modal/TermsOfServiceMod
 import Colors from '../../constants/Colors';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useAuthStore } from '../../stores/authStore';
-import * as Linking from 'expo-linking';
-
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -34,7 +33,10 @@ export default function ProfileScreen() {
     sendTestNotification,
     sendImmediateTestNotification,
     checkScheduledNotifications,
+    sendLocalTestNotification,
     debugPermissions,
+    runDiagnosticTest,
+    testNotificationChannels,
     isLoading: isNotificationLoading,
   } = useNotifications();
 
@@ -213,32 +215,32 @@ export default function ProfileScreen() {
       Alert.alert('알림 권한 필요', '먼저 알림 권한을 허용해주세요.');
       return;
     }
-
+  
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    if (__DEV__) {
-      Alert.alert('알림 테스트 선택', '어떤 테스트를 실행하시겠습니까?', [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '일반 테스트 (2초 후)',
-          onPress: sendTestNotification,
-        },
-        {
-          text: '즉시 테스트',
-          onPress: sendImmediateTestNotification,
-        },
-        {
-          text: '예약된 알림 확인',
-          onPress: checkScheduledNotifications,
-        },
-        {
-          text: '권한 디버깅',
-          onPress: debugPermissions,
-        },
-      ]);
-    } else {
-      sendTestNotification();
-    }
+  
+    Alert.alert('알림 테스트 선택', '어떤 테스트를 실행하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '🔍 진단 테스트 (권장)',
+        onPress: runDiagnosticTest,
+      },
+      {
+        text: '📱 채널별 테스트 (Android)',
+        onPress: testNotificationChannels,
+      },
+      {
+        text: '🧪 로컬 테스트 (2초 후)',
+        onPress: sendLocalTestNotification,
+      },
+      {
+        text: '🚀 서버 푸시 테스트',
+        onPress: sendTestNotification,
+      },
+      {
+        text: '📋 예약된 알림 확인',
+        onPress: checkScheduledNotifications,
+      },
+    ]);
   };
 
   // 알림 토글 핸들러
@@ -263,14 +265,7 @@ export default function ProfileScreen() {
       const success = await toggleNotifications();
 
       if (success) {
-        Alert.alert(
-          '알림 설정 완료',
-          '알림이 활성화되었습니다! 테스트 알림을 보내보시겠습니까?',
-          [
-            { text: '나중에', style: 'cancel' },
-            { text: '테스트', onPress: sendTestNotification },
-          ],
-        );
+        Alert.alert('알림 설정 완료');
       }
     }
   };
@@ -688,9 +683,7 @@ export default function ProfileScreen() {
                           className="text-xs mt-0.5"
                           style={{ color: Colors.light.textSecondary }}
                         >
-                          {__DEV__
-                            ? '개발 모드: 다양한 테스트 옵션'
-                            : '2초 후 테스트 알림 전송'}
+                          로컬 및 서버 푸시 알림 테스트
                         </Text>
                       </View>
                     </View>
