@@ -13,6 +13,12 @@ install! 'cocoapods',
 
 prepare_react_native_project!
 
+def pod(*args)
+  name = args.first
+  return if name.to_s.include?('Firebase') || name.to_s.include?('RNFB')
+  super(*args)
+end
+
 target 'growpromise' do
   use_expo_modules!
 
