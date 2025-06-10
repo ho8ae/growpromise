@@ -1,3 +1,5 @@
+// src/api/modules/user.ts - 기존 코드 기반 FCM 지원 추가
+import { Platform } from 'react-native';
 import apiClient, { ApiResponse, apiRequest } from '../client';
 
 // 기본 사용자 프로필 타입
@@ -118,8 +120,15 @@ export interface AccountStatusResponse {
   isActive: boolean;
 }
 
-// 푸시 토큰 업데이트 요청 타입
+// 🔥 플랫폼별 푸시 토큰 업데이트 요청 타입 (새로 추가)
 export interface UpdatePushTokenRequest {
+  expoPushToken?: string;    // iOS용
+  fcmToken?: string;         // Android용
+  platform: 'ios' | 'android';
+}
+
+// 🔥 레거시 푸시 토큰 요청 타입 (하위 호환성)
+export interface LegacyPushTokenRequest {
   expoPushToken: string;
 }
 
@@ -128,11 +137,14 @@ export interface UpdateNotificationSettingsRequest {
   enabled: boolean;
 }
 
-// 알림 설정 응답 타입
+// 🔥 알림 설정 응답 타입 (플랫폼별 정보 포함)
 export interface NotificationSettingsResponse {
-  hasToken: boolean;
-  isEnabled: boolean;
-  lastUpdated?: string;
+  hasToken: boolean;         // 전체 토큰 보유 여부
+  hasExpoToken: boolean;     // Expo 토큰 보유 여부 (새로 추가)
+  hasFcmToken: boolean;      // FCM 토큰 보유 여부 (새로 추가)
+  platform?: string;        // 현재 플랫폼 (새로 추가)
+  isEnabled: boolean;        // 알림 활성화 여부
+  lastUpdated?: string;      // 마지막 업데이트 시간
 }
 
 // 사용자 관련 API 함수들
@@ -237,17 +249,65 @@ const userApi = {
     }
   },
 
-   // 푸시 토큰 저장/업데이트
-   updatePushToken: async (data: UpdatePushTokenRequest): Promise<void> => {
+  // 🔥 플랫폼별 푸시 토큰 업데이트 (새로운 방식)
+  updatePushToken: async (tokenData: UpdatePushTokenRequest): Promise<void> => {
     try {
-      await apiRequest<void>('post', '/users/push-token', data);
+      console.log(`[${tokenData.platform.toUpperCase()}] 푸시 토큰 업데이트 요청:`, {
+        hasExpoToken: !!tokenData.expoPushToken,
+        hasFcmToken: !!tokenData.fcmToken,
+        platform: tokenData.platform
+      });
+
+      await apiRequest<void>('post', '/users/push-token', tokenData);
+      
+      console.log(`✅ ${tokenData.platform.toUpperCase()} 푸시 토큰 업데이트 완료`);
     } catch (error) {
-      console.error('푸시 토큰 업데이트 오류:', error);
+      console.error(`❌ ${tokenData.platform.toUpperCase()} 푸시 토큰 업데이트 실패:`, error);
       throw error;
     }
   },
 
-  // 알림 설정 조회
+  // 🔥 레거시 푸시 토큰 업데이트 (하위 호환성)
+  updatePushTokenLegacy: async (tokenData: LegacyPushTokenRequest): Promise<void> => {
+    try {
+      console.log('레거시 푸시 토큰 업데이트 요청');
+      
+      await apiRequest<void>('post', '/users/push-token/legacy', tokenData);
+      
+      console.log('✅ 레거시 푸시 토큰 업데이트 완료');
+    } catch (error) {
+      console.error('❌ 레거시 푸시 토큰 업데이트 실패:', error);
+      throw error;
+    }
+  },
+
+  // 🔥 현재 플랫폼에 맞는 푸시 토큰 자동 업데이트
+  updateCurrentPlatformPushToken: async (expoPushToken?: string, fcmToken?: string): Promise<void> => {
+    const currentPlatform = Platform.OS as 'ios' | 'android';
+    
+    const tokenData: UpdatePushTokenRequest = {
+      platform: currentPlatform,
+    };
+
+    if (currentPlatform === 'ios' && expoPushToken) {
+      tokenData.expoPushToken = expoPushToken;
+    } else if (currentPlatform === 'android') {
+      if (fcmToken) {
+        tokenData.fcmToken = fcmToken;
+      } else if (expoPushToken) {
+        // FCM 토큰이 없으면 Expo 토큰으로 폴백
+        tokenData.expoPushToken = expoPushToken;
+      }
+    }
+
+    if (!tokenData.expoPushToken && !tokenData.fcmToken) {
+      throw new Error(`${currentPlatform.toUpperCase()}에서 사용할 수 있는 푸시 토큰이 없습니다.`);
+    }
+
+    return await userApi.updatePushToken(tokenData);
+  },
+
+  // 🔥 알림 설정 조회 (플랫폼별 정보 포함)
   getNotificationSettings: async (): Promise<NotificationSettingsResponse> => {
     try {
       return await apiRequest<NotificationSettingsResponse>('get', '/users/notification-settings');
@@ -278,6 +338,7 @@ const userApi = {
       throw error;
     }
   },
+
   /* 
   // S3 프로필 이미지 업로드 기능 (필요할 때 주석 해제)
   updateProfileImage: async (imageUri: string): Promise<{ id: string; username: string; profileImage: string }> => {
