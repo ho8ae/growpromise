@@ -38,8 +38,9 @@
       "buildNumber": "5"
     },
     "android": {
+      "icon": "./src/assets/images/icon.png",
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/images/adaptive-icon.png",
+        "foregroundImage": "./src/assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
