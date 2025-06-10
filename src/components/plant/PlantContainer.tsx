@@ -60,7 +60,6 @@ const PlantContainer: React.FC<PlantContainerProps> = ({
         className="mb-4"
       >
         <ParentPlantDisplay
-          plant={plant} // null/undefined일 수 있음
           childId={childId!}
           onPress={onPress}
           connectedChildren={connectedChildren}
