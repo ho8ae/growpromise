@@ -115,19 +115,7 @@
           "icon": "./src/assets/images/icon.png",
           "color": "#58CC02",
           "mode": "production",
-          "defaultChannel": "default",
-          "android": {
-            "useNextNotificationsApi": true,
-            "enableBackgroundRefresh": true,
-            "channelId": "default",
-            "priority": "max",
-            "vibrate": true
-          },
-          "ios": {
-            "allowAlert": true,
-            "allowBadge": true,
-            "allowSound": true
-          }
+          "defaultChannel": "default"
         }
       ],
       "expo-mail-composer",
