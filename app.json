@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.low-k.growpromise",
       "requireFullScreen": false,
       "infoPlist": {
@@ -35,7 +35,7 @@
           "Default"
         ]
       },
-      "buildNumber": "6"
+      "buildNumber": "7"
     },
     "android": {
       "icon": "./src/assets/images/icon.png",
