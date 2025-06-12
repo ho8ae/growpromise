@@ -366,7 +366,10 @@ export default function ParentDashboard() {
           <MenuButton
             title="홈으로 돌아가기"
             icon="home"
-            onPress={() => router.replace('/(tab)/index' as any)} // 임시로
+            onPress={() => {
+              router.dismissAll();
+              router.replace('/(tabs)');
+            }}
             color="bg-emerald-500"
             activeColor="active:bg-emerald-600"
           />
