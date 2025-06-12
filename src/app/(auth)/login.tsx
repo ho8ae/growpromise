@@ -90,7 +90,7 @@ export default function LoginScreen() {
     }
 
     if (value.trim().length < 2) {
-      setUsernameError('아이디는 2자 이상이어야 합니다');
+      setUsernameError('이름은 2자 이상이어야 합니다');
       return false;
     }
 
@@ -414,7 +414,21 @@ export default function LoginScreen() {
                     setIsPasswordFocused(false);
                     validatePassword(password);
                   }}
-                  onSubmitEditing={handleLogin}
+                  onSubmitEditing={() => {
+                    // 조건 체크 후 로그인 실행
+                    if (
+                      username &&
+                      password &&
+                      !usernameError &&
+                      !passwordError &&
+                      !isAnyLoading
+                    ) {
+                      handleLogin();
+                    } else {
+                      // 조건 불만족 시 키보드만 닫기
+                      Keyboard.dismiss();
+                    }
+                  }}
                   placeholder="비밀번호를 입력하세요"
                   className={`bg-gray-100 rounded-xl px-4 py-3.5 text-gray-800 ${
                     isPasswordFocused
