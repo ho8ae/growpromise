@@ -2,7 +2,7 @@
   "expo": {
     "name": "쑥쑥약속",
     "slug": "kids-plan",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./src/assets/images/icon.png",
     "scheme": "growpromise",
