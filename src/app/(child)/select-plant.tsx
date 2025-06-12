@@ -821,7 +821,7 @@ export default function SelectPlantScreen() {
                     value={plantName}
                     onChangeText={handleNameChange}
                     placeholder={`나의 ${selectedPlantType?.name || '식물'}`}
-                    className="flex-1 text-gray-700"
+                    className="flex-1 text-gray-700 text-sm"
                     maxLength={12}
                   />
                   {plantName.length > 0 && (
