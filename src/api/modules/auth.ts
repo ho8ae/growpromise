@@ -126,6 +126,17 @@ export interface ResetChildPasswordResponse {
   temporaryPassword?: string; // 임시 비밀번호 생성 시만
 }
 
+// 아이디 중복 확인 요청 타입 추가
+export interface CheckUsernameRequest {
+  username: string;
+}
+
+// 아이디 중복 확인 응답 타입 추가
+export interface CheckUsernameResponse {
+  available: boolean;
+  message: string;
+}
+
 // 인증 관련 API 함수들
 const authApi = {
   // 로그인
@@ -155,6 +166,35 @@ const authApi = {
     } catch (error) {
       console.error('로그인 오류:', error);
       throw error;
+    }
+  },
+
+  checkUsername: async (data: CheckUsernameRequest): Promise<CheckUsernameResponse> => {
+    try {
+      const response = await apiClient.post(
+        '/auth/check-username',
+        data,
+      );
+      
+      console.log('📝 checkUsername 응답:', response.data);
+      
+      // 서버 응답을 그대로 사용
+      const { success, available, message } = response.data;
+      
+      if (success) {
+        return { available, message };
+      } else {
+        throw new Error(message || '아이디 확인에 실패했습니다.');
+      }
+    } catch (error: any) {
+      console.error('아이디 중복 확인 오류:', error);
+      
+      // 네트워크 에러나 서버 에러 처리
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      
+      throw new Error('네트워크 오류가 발생했습니다.');
     }
   },
 
@@ -499,6 +539,8 @@ const authApi = {
       throw error;
     }
   },
+
+  
 };
 
 export default authApi;
