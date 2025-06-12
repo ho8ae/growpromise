@@ -1,4 +1,4 @@
-// app/(auth)/signup.tsx - 선택/해제 가능한 계정 타입 선택
+// app/(auth)/signup.tsx - 실시간 아이디 중복 확인 추가
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -37,6 +37,14 @@ export default function SignupScreen() {
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [parentCode, setParentCode] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // 🔥 아이디 중복 확인 상태 추가
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameCheckResult, setUsernameCheckResult] = useState<{
+    checked: boolean;
+    available: boolean;
+    message: string;
+  }>({ checked: false, available: false, message: '' });
 
   // 폼 유효성 검증 상태
   const [errors, setErrors] = useState({
@@ -103,6 +111,46 @@ export default function SignupScreen() {
   };
   LocaleConfig.defaultLocale = 'ko';
 
+  // 🔥 아이디 중복 확인 함수
+  const checkUsernameAvailability = async (usernameValue: string) => {
+    if (!usernameValue.trim() || usernameValue.length < 2) {
+      setUsernameCheckResult({ checked: false, available: false, message: '' });
+      return;
+    }
+
+    try {
+      setIsCheckingUsername(true);
+      const response = await authApi.checkUsername({ username: usernameValue });
+      
+      setUsernameCheckResult({
+        checked: true,
+        available: response.available,
+        message: response.message,
+      });
+    } catch (error: any) {
+      setUsernameCheckResult({
+        checked: true,
+        available: false,
+        message: '아이디 확인 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setIsCheckingUsername(false);
+    }
+  };
+
+  // 🔥 디바운스된 아이디 중복 확인
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (username.trim() && username.length >= 2) {
+        checkUsernameAvailability(username);
+      } else {
+        setUsernameCheckResult({ checked: false, available: false, message: '' });
+      }
+    }, 500); // 500ms 후에 확인
+
+    return () => clearTimeout(timeoutId);
+  }, [username]);
+
   // 다음 단계로 전환 시 애니메이션
   const goToNextStep = () => {
     Animated.timing(slideAnim, {
@@ -159,6 +207,11 @@ export default function SignupScreen() {
 
       if (password !== confirmPassword) {
         throw new Error('비밀번호가 일치하지 않습니다.');
+      }
+
+      // 🔥 아이디 중복 확인이 완료되지 않은 경우
+      if (!usernameCheckResult.checked || !usernameCheckResult.available) {
+        throw new Error('아이디 중복 확인을 완료해주세요.');
       }
 
       if (userType === 'PARENT') {
@@ -227,7 +280,7 @@ export default function SignupScreen() {
     }
   };
 
-  // 사용자 이름 유효성 검사
+  // 🔥 사용자 이름 유효성 검사 (중복 확인 포함)
   const validateUsername = (value: string) => {
     let error = '';
     if (!value.trim()) {
@@ -236,6 +289,8 @@ export default function SignupScreen() {
       error = '이름은 2자 이상이어야 합니다.';
     } else if (value.trim().length > 30) {
       error = '이름은 30자 이하여야 합니다.';
+    } else if (usernameCheckResult.checked && !usernameCheckResult.available) {
+      error = '이미 사용 중인 아이디입니다.';
     }
 
     setErrors({ ...errors, username: error });
@@ -306,6 +361,12 @@ export default function SignupScreen() {
     isValid = validatePassword(password) && isValid;
     isValid = validateConfirmPassword(confirmPassword, password) && isValid;
 
+    // 🔥 아이디 중복 확인 여부 검사
+    if (!usernameCheckResult.checked || !usernameCheckResult.available) {
+      setErrors(prev => ({ ...prev, username: '아이디 중복 확인을 완료해주세요.' }));
+      isValid = false;
+    }
+
     // 사용자 타입에 따른 추가 검증
     if (userType === 'PARENT') {
       isValid = validateEmail(email) && isValid;
@@ -320,7 +381,7 @@ export default function SignupScreen() {
   const validateCurrentStep = () => {
     switch (step) {
       case 2: // 사용자 이름
-        return validateUsername(username);
+        return validateUsername(username) && usernameCheckResult.checked && usernameCheckResult.available;
       case 3: // 이메일 또는 생년월일
         if (userType === 'PARENT') {
           return validateEmail(email);
@@ -346,7 +407,14 @@ export default function SignupScreen() {
       case 1: // 계정 타입 선택
         return !userType; // 계정 타입이 선택되지 않으면 비활성화
       case 2:
-        return !username.trim() || !!errors.username;
+        // 🔥 아이디 검사 상태 포함
+        return (
+          !username.trim() || 
+          !!errors.username || 
+          isCheckingUsername || 
+          !usernameCheckResult.checked || 
+          !usernameCheckResult.available
+        );
       case 3:
         if (userType === 'PARENT') {
           return !email.trim() || !!errors.email;
@@ -367,6 +435,47 @@ export default function SignupScreen() {
       default:
         return false;
     }
+  };
+
+  // 🔥 아이디 상태 표시 컴포넌트
+  const renderUsernameStatus = () => {
+    if (isCheckingUsername) {
+      return (
+        <View className="flex-row items-center ml-2 mt-1">
+          <ActivityIndicator size="small" color={Colors.light.primary} />
+          <Text className="text-gray-500 text-sm ml-2">확인 중...</Text>
+        </View>
+      );
+    }
+
+    if (errors.username) {
+      return (
+        <View className="flex-row items-center ml-2 mt-1">
+          <FontAwesome5 name="times-circle" size={14} color="#ef4444" />
+          <Text className="text-red-500 text-sm ml-2">{errors.username}</Text>
+        </View>
+      );
+    }
+
+    if (usernameCheckResult.checked) {
+      if (usernameCheckResult.available) {
+        return (
+          <View className="flex-row items-center ml-2 mt-1">
+            <FontAwesome5 name="check-circle" size={14} color="#10b981" />
+            <Text className="text-green-500 text-sm ml-2">사용 가능한 아이디입니다</Text>
+          </View>
+        );
+      } else {
+        return (
+          <View className="flex-row items-center ml-2 mt-1">
+            <FontAwesome5 name="times-circle" size={14} color="#ef4444" />
+            <Text className="text-red-500 text-sm ml-2">{usernameCheckResult.message}</Text>
+          </View>
+        );
+      }
+    }
+
+    return <Text className="text-transparent text-sm ml-2 mt-1">-</Text>;
   };
 
   // 현재 단계에 따라 다른 화면 렌더링
@@ -449,25 +558,27 @@ export default function SignupScreen() {
 
             <View className="mb-8">
               <TextInput
-                className={`bg-gray-100 rounded-2xl px-4 py-5 text-gray-800 mb-1 ${errors.username ? 'border border-red-500' : ''}`}
+                className={`bg-gray-100 rounded-2xl px-4 py-5 text-gray-800 mb-1 ${
+                  errors.username ? 'border border-red-500' : 
+                  usernameCheckResult.checked && usernameCheckResult.available ? 'border border-green-500' :
+                  ''
+                }`}
                 placeholder="이름 입력"
                 value={username}
                 onChangeText={(text) => {
                   setUsername(text);
-                  if (text) validateUsername(text);
+                  // 🔥 입력 시 중복 확인 상태 초기화
+                  setUsernameCheckResult({ checked: false, available: false, message: '' });
+                  setErrors({ ...errors, username: '' });
                 }}
                 onBlur={() => validateUsername(username)}
                 autoFocus
                 editable={!signupMutation.isPending}
+                textAlignVertical="center"
               />
 
-              {errors.username ? (
-                <Text className="text-red-500 text-sm ml-2 mt-1">
-                  {errors.username}
-                </Text>
-              ) : (
-                <Text className="text-transparent text-sm ml-2 mt-1">-</Text>
-              )}
+              {/* 🔥 아이디 상태 표시 */}
+              {renderUsernameStatus()}
             </View>
           </View>
         );
@@ -496,6 +607,7 @@ export default function SignupScreen() {
                 autoCapitalize="none"
                 autoFocus
                 editable={!signupMutation.isPending}
+                textAlignVertical="center"
               />
 
               {errors.email ? (
@@ -583,6 +695,7 @@ export default function SignupScreen() {
                 secureTextEntry
                 autoFocus
                 editable={!signupMutation.isPending}
+                textAlignVertical="center"
               />
 
               {errors.password ? (
@@ -612,6 +725,7 @@ export default function SignupScreen() {
                 }
                 secureTextEntry
                 editable={!signupMutation.isPending}
+                textAlignVertical="center"
               />
 
               {errors.confirmPassword ? (
@@ -655,6 +769,7 @@ export default function SignupScreen() {
                   maxLength={6}
                   autoFocus
                   editable={!signupMutation.isPending}
+                  textAlignVertical="center"
                 />
 
                 {errors.parentCode ? (
