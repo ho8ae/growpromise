@@ -841,7 +841,12 @@ export default function SetRewardsScreen() {
         animationType="slide"
         onRequestClose={() => setIsEditModalVisible(false)}
       >
-        <View className="flex-1 justify-end bg-black bg-opacity-50">
+        <View className="flex-1 justify-end bg-black/30">
+          <BlurView intensity={10} tint="dark" className="absolute inset-0" />
+          <Pressable
+            className="absolute inset-0"
+            onPress={() => setIsEditModalVisible(false)}
+          />
           <View className="bg-white rounded-t-3xl p-4">
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-xl font-bold text-emerald-700">
