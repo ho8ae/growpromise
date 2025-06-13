@@ -76,7 +76,7 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
           />
           <ActionButton
             icon="star"
-            label="보상"
+            label="칭찬 스티커"
             color={Colors.light.secondary}
             onPress={() =>
               router.push({
