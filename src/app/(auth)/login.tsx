@@ -323,10 +323,10 @@ export default function LoginScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
         >
-          <View className="px-6 flex-1 justify-center">
+          <View className="px-6 flex-1 justify-end pb-12">
             {/* 로고 및 타이틀 */}
             <Animated.View
-              className="items-center mb-8"
+              className="items-center mb-12"
               style={{
                 transform: [{ scale: logoScale }],
               }}
@@ -334,7 +334,7 @@ export default function LoginScreen() {
               <View className="">
                 <Image
                   source={require('../../assets/images/icon.png')}
-                  style={{ width: 130, height: 130 }}
+                  style={{ width: 160, height: 160 }}
                 />
               </View>
               <Text className="text-2xl font-bold text-[#58CC02] mb-2">
@@ -395,7 +395,7 @@ export default function LoginScreen() {
                 )}
               </View>
 
-              <View className="mb-6">
+              <View className="mb-2">
                 <Text className="text-gray-700 mb-2 font-medium ml-1">
                   비밀번호
                 </Text>
@@ -460,7 +460,7 @@ export default function LoginScreen() {
                   isAnyLoading
                     ? 'bg-[#AEDBAE]'
                     : 'bg-[#58CC02]'
-                } py-4 rounded-xl shadow-sm  active:opacity-90`}
+                } py-4 rounded-xl shadow-sm  active:opacity-90 `}
                 onPress={handleLogin}
                 disabled={
                   !username ||
@@ -495,9 +495,39 @@ export default function LoginScreen() {
                 )}
               </Pressable>
 
+              <View className="flex-row justify-center items-center mt-6 gap-2">
+                {/* 일반 회원가입 링크 */}
+                <Pressable
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    router.navigate('/(auth)/signup');
+                  }}
+                  className="active:opacity-70 flex-1 items-end"
+                  disabled={isAnyLoading}
+                >
+                  <Text className=" text-[#58CC02] font-medium">
+                    일반 회원가입
+                  </Text>
+                </Pressable>
+                <View className="items-center mx-2">
+                  <Text className="text-gray-500 text-lg">|</Text>
+                </View>
+                {/* 둘러보기 링크 */}
+                <Pressable
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    router.navigate('/(tabs)');
+                  }}
+                  className="active:opacity-70 flex-1 items-start"
+                  disabled={isAnyLoading}
+                >
+                  <Text className=" text-gray-500">미리보기</Text>
+                </Pressable>
+              </View>
+
               {/* 소셜 로그인 버튼들 */}
               <Animated.View
-                className="mb-6"
+                className="mb-6 mt-6"
                 style={{
                   opacity: formOpacity,
                   transform: [{ translateY: formTranslateY }],
@@ -514,34 +544,6 @@ export default function LoginScreen() {
                 <Text className="text-red-500 text-center mb-4">{error}</Text>
               )}
             </Animated.View>
-
-            {/* 일반 회원가입 링크 */}
-            <Pressable
-              onPress={() => {
-                Haptics.selectionAsync();
-                router.navigate('/(auth)/signup');
-              }}
-              className="active:opacity-70"
-              disabled={isAnyLoading}
-            >
-              <Text className="text-center text-[#58CC02] font-medium">
-                일반 계정으로 회원가입
-              </Text>
-            </Pressable>
-
-            {/* 둘러보기 링크 */}
-            <Pressable
-              onPress={() => {
-                Haptics.selectionAsync();
-                router.navigate('/(tabs)');
-              }}
-              className="mt-4 active:opacity-70"
-              disabled={isAnyLoading}
-            >
-              <Text className="text-center text-gray-500">
-                로그인 없이 둘러보기
-              </Text>
-            </Pressable>
           </View>
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>

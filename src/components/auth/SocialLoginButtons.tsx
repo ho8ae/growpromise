@@ -85,12 +85,12 @@ export default function SocialLoginButtons({
 
   return (
     <View>
-      {/* 구분선 */}
+      {/* 구분선
       <View className="flex-row items-center my-6">
         <View className="flex-1 h-px bg-gray-300" />
         <Text className="mx-4 text-gray-500 font-medium">또는</Text>
         <View className="flex-1 h-px bg-gray-300" />
-      </View>
+      </View> */}
 
       {/* Google 로그인 버튼 */}
       <Pressable
