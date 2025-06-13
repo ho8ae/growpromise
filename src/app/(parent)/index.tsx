@@ -1,4 +1,5 @@
 import SafeStatusBar from '@/src/components/common/SafeStatusBar';
+import RevolveFAB from '@/src/components/common/toggle/RevolveFAB'; // 새로 추가
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -164,34 +165,6 @@ export default function ParentDashboard() {
     </View>
   );
 
-  // 메뉴 버튼 컴포넌트
-  const MenuButton = ({
-    title,
-    icon,
-    onPress,
-    color = 'bg-emerald-500',
-    activeColor = 'active:bg-emerald-600',
-  }: {
-    title: string;
-    icon: string;
-    onPress: () => void;
-    color?: string;
-    activeColor?: string;
-  }) => (
-    <Pressable
-      className={`${color} py-3.5 rounded-xl shadow-sm mb-3 ${activeColor}`}
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        onPress();
-      }}
-    >
-      <View className="flex-row items-center justify-center">
-        <FontAwesome5 name={icon} size={16} color="white" className="mr-2" />
-        <Text className="text-white text-center font-medium">{title}</Text>
-      </View>
-    </Pressable>
-  );
-
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
       <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
@@ -207,7 +180,7 @@ export default function ParentDashboard() {
       {/* 메인 컨텐츠 */}
       <ScrollView
         className="flex-1"
-        contentContainerClassName="pb-8"
+        contentContainerClassName="pb-32" // FAB 공간을 위해 여백 추가
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -327,54 +300,9 @@ export default function ParentDashboard() {
           </View>
         </View>
       </ScrollView>
-      {/* 메뉴 버튼 */}
-      <Animated.View
-        className="px-5 mb-4"
-        style={{
-          opacity: animation.interpolate({
-            inputRange: [0, 100],
-            outputRange: [1, 0],
-          }),
-          transform: [{ translateY: animation }],
-        }}
-      >
-        <View className="bg-gray-50 p-5 rounded-xl mb-5">
-          {/* <MenuButton
-            title="새 약속 만들기"
-            icon="plus"
-            onPress={() => router.push('/(parent)/create-promise')}
-            color="bg-emerald-500"
-            activeColor="active:bg-emerald-600"
-          /> */}
 
-          <MenuButton
-            title="약속 관리하기"
-            icon="list"
-            onPress={() => router.push('/(parent)/manage-promises')}
-            color="bg-blue-500"
-            activeColor="active:bg-blue-600"
-          />
-
-          <MenuButton
-            title="보상 설정하기"
-            icon="gift"
-            onPress={() => router.push('/(parent)/set-rewards')}
-            color="bg-amber-500"
-            activeColor="active:bg-amber-600"
-          />
-
-          <MenuButton
-            title="홈으로 돌아가기"
-            icon="home"
-            onPress={() => {
-              router.dismissAll();
-              router.replace('/(tabs)');
-            }}
-            color="bg-emerald-500"
-            activeColor="active:bg-emerald-600"
-          />
-        </View>
-      </Animated.View>
+      {/* 리볼버 FAB 메뉴 */}
+      <RevolveFAB />
     </SafeAreaView>
   );
 }
