@@ -2,6 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import authApi, { AuthResponse, LoginRequest, SocialSetupRequest } from '../api/modules/auth';
+import userApi from '../api/modules/user';
 
 interface User {
   id: string;
@@ -246,9 +247,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     try {
       console.log('🔄 사용자 프로필 새로고침...');
       
-      // API 모듈이 있다면 사용 (예시)
-      // const userProfile = await api.user.getUserProfile();
-      // set({ user: { ...currentUser, ...userProfile } });
+      // API 모듈이 있다면 사용 (
+      const userProfile = await userApi.getUserProfile();
+      set({ user: { ...currentUser, ...userProfile } });
+
       
       console.log('✅ 사용자 프로필 새로고침 완료');
     } catch (error) {
@@ -299,7 +301,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ redirectAfterLogin: path });
   },
 
-  // 인증 상태 확인
+  // 🔥 인증 상태 확인 - username 로딩 개선
   checkAuthStatus: async () => {
     set({ isLoading: true });
 
@@ -321,25 +323,55 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
 
       if (token[1] && userType[1] && userId[1]) {
-        // 저장된 인증 정보가 있으면 인증된 상태로 설정
-        const user: User = {
-          id: userId[1],
-          username: '', // 필요시 API에서 가져오기
-          userType: userType[1] as 'PARENT' | 'CHILD',
-          profileId: profileId[1] || '',
-        };
+        try {
+          // 🔥 서버에서 최신 사용자 프로필 정보 가져오기
+          console.log('📡 서버에서 사용자 프로필 정보 가져오는 중...');
+          const userProfile = await userApi.getUserProfile();
+          
+          const user: User = {
+            id: userId[1],
+            username: userProfile.username, //  서버에서 가져온 실제 username 사용
+            email: userProfile.email,
+            userType: userType[1] as 'PARENT' | 'CHILD',
+            profileId: profileId[1] || '',
+            profileImage: userProfile.profileImage,
+          };
 
-        set({
-          user,
-          isAuthenticated: true,
-          isLoading: false,
-          isAuthChecked: true,
-        });
+          set({
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+            isAuthChecked: true,
+          });
 
-        console.log('✅ 기존 로그인 상태 복원:', {
-          userId: user.id,
-          userType: user.userType,
-        });
+          console.log('✅ 기존 로그인 상태 복원 완료:', {
+            userId: user.id,
+            username: user.username,
+            userType: user.userType,
+          });
+        } catch (profileError) {
+          console.error('❌ 사용자 프로필 로드 실패:', profileError);
+          
+          // 프로필 로드에 실패하면 기본 정보만으로 상태 설정
+          const user: User = {
+            id: userId[1],
+            username: '사용자', // 기본값
+            userType: userType[1] as 'PARENT' | 'CHILD',
+            profileId: profileId[1] || '',
+          };
+
+          set({
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+            isAuthChecked: true,
+          });
+
+          console.log('⚠️ 기본 정보로 로그인 상태 복원:', {
+            userId: user.id,
+            userType: user.userType,
+          });
+        }
       } else {
         // 인증 정보가 없으면 비인증 상태
         set({
