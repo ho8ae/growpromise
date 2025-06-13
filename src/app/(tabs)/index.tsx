@@ -1,4 +1,4 @@
-// src/app/(tabs)/index.tsx - 수정된 handlePlantPress 함수
+// src/app/(tabs)/index.tsx - 연결 모달이 추가된 홈 화면
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 // API
 import api from '../../api';
 
@@ -23,6 +24,7 @@ import ErrorMessage from '../../components/tabs/ErrorMessage';
 import PromiseActionCard from '../../components/tabs/PromiseActionCard';
 import PlantHeader from '../../components/tabs/TabsHeader';
 import TipsCard from '../../components/tabs/TipsCard';
+import ConnectionPromptModal from '../../components/common/modal/ConnectionPromptModal'; // 새로 추가
 
 // Stores
 import SafeStatusBar from '@/src/components/common/SafeStatusBar';
@@ -43,6 +45,9 @@ export default function TabsScreen() {
   // 경험치 획득 애니메이션 상태
   const [showExperienceAnimation, setShowExperienceAnimation] = useState(false);
   const [experienceGained, setExperienceGained] = useState(0);
+
+  // 🔥 연결 모달 상태 (새로 추가)
+  const [showConnectionModal, setShowConnectionModal] = useState(false);
 
   // 애니메이션 값 설정
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -67,6 +72,25 @@ export default function TabsScreen() {
       }
     },
     enabled: isAuthenticated && user?.userType === 'PARENT',
+  });
+
+  // 🔥 연결된 부모 목록 조회 (자녀 계정용) - 새로 추가
+  const { data: connectedParents, isLoading: isLoadingParents } = useQuery({
+    queryKey: ['connectedParents'],
+    queryFn: async () => {
+      if (!isAuthenticated || user?.userType !== 'CHILD') return [];
+
+      try {
+        const parents = await api.user.getChildParents();
+        console.log('Connected parents fetched successfully');
+        return parents;
+      } catch (error) {
+        console.error('부모 목록 조회 실패:', error);
+        setError('부모 정보를 불러오는 중 오류가 발생했습니다.');
+        return [];
+      }
+    },
+    enabled: isAuthenticated && user?.userType === 'CHILD',
   });
 
   // 현재 식물 정보 가져오기
@@ -129,6 +153,40 @@ export default function TabsScreen() {
       setSelectedChildData(firstChild); // 자녀 전체 데이터 저장
     }
   }, [connectedChildren, selectedChildId]);
+
+  // 🔥 연결 모달 표시 로직 (새로 추가)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // 데이터 로딩 완료를 기다림
+    const isDataLoaded = user?.userType === 'PARENT' 
+      ? !isLoadingChildren 
+      : !isLoadingParents;
+
+    if (isDataLoaded) {
+      // 부모인 경우 자녀 연결 확인
+      if (user?.userType === 'PARENT') {
+        const hasConnectedChildren = connectedChildren && connectedChildren.length > 0;
+        if (!hasConnectedChildren) {
+          // 잠시 딜레이 후 모달 표시 (화면 로딩 완료 대기)
+          setTimeout(() => {
+            setShowConnectionModal(true);
+          }, 1000);
+        }
+      }
+      
+      // 자녀인 경우 부모 연결 확인
+      if (user?.userType === 'CHILD') {
+        const hasConnectedParents = connectedParents && connectedParents.length > 0;
+        if (!hasConnectedParents) {
+          // 잠시 딜레이 후 모달 표시 (화면 로딩 완료 대기)
+          setTimeout(() => {
+            setShowConnectionModal(true);
+          }, 1000);
+        }
+      }
+    }
+  }, [isAuthenticated, user?.userType, connectedChildren, connectedParents, isLoadingChildren, isLoadingParents]);
 
   // 자녀 선택 처리 (부모 계정용)
   const handleChildSelect = (childId: string) => {
@@ -285,6 +343,7 @@ export default function TabsScreen() {
       // invalidate 대신 refetch 사용
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['connectedChildren'] }),
+        queryClient.refetchQueries({ queryKey: ['connectedParents'] }), // 새로 추가
         queryClient.refetchQueries({ queryKey: ['currentPlant'] }),
         queryClient.refetchQueries({ queryKey: ['promiseStats'] }),
         queryClient.refetchQueries({ queryKey: ['notifications'] }),
@@ -296,7 +355,12 @@ export default function TabsScreen() {
         setRefreshing(false);
       }, 800);
     }
-  }, [isAuthenticated, queryClient]); // selectedChildId 의존성 제거
+  }, [isAuthenticated, queryClient]);
+
+  // 🔥 연결 모달 닫기 처리 (새로 추가)
+  const handleConnectionModalClose = () => {
+    setShowConnectionModal(false);
+  };
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -372,6 +436,15 @@ export default function TabsScreen() {
           />
         </View>
       </ScrollView>
+
+      {/* 🔥 연결 안내 모달 (새로 추가) */}
+      {isAuthenticated && user?.userType && (
+        <ConnectionPromptModal
+          visible={showConnectionModal}
+          onClose={handleConnectionModalClose}
+          userType={user.userType}
+        />
+      )}
     </View>
   );
 }
