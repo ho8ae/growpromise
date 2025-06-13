@@ -35,7 +35,7 @@
           "Default"
         ]
       },
-      "buildNumber": "8"
+      "buildNumber": "9"
     },
     "android": {
       "icon": "./src/assets/images/icon.png",
