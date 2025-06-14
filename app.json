@@ -2,7 +2,7 @@
   "expo": {
     "name": "쑥쑥약속",
     "slug": "kids-plan",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./src/assets/images/icon.png",
     "scheme": "growpromise",
@@ -35,7 +35,7 @@
           "Default"
         ]
       },
-      "buildNumber": "9"
+      "buildNumber": "10"
     },
     "android": {
       "icon": "./src/assets/images/icon.png",
