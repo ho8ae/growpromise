@@ -262,7 +262,7 @@ export default function ParentDashboard() {
                       className="mb-3 bg-white p-4 rounded-xl border border-gray-100 shadow-sm active:bg-gray-50"
                       onPress={() => navigateToApproval(verification.id)}
                     >
-                      <View className="flex-row items-center">
+                      <View className="flex-row items-center gap-2">
                         <Image
                           source={
                             verification.child?.user.profileImage
@@ -273,9 +273,9 @@ export default function ParentDashboard() {
                           }
                           style={{ width: 50, height: 50 }}
                           contentFit="contain"
-                          className="mr-3 rounded-full bg-gray-200"
+                          className="rounded-full bg-gray-200"
                         />
-                        <View className="flex-1">
+                        <View className="flex-1 ml-2">
                           <Text className="text-base font-bold text-gray-800">
                             {verification.promise?.title || '제목 없음'}
                           </Text>
