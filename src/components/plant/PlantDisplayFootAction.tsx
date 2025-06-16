@@ -2,6 +2,7 @@ import { Plant } from '@/src/api/modules/plant';
 import { Toast } from '@/src/components/common/Toast';
 import { useToast } from '@/src/hooks/useToast';
 import { usePendingCount } from '@/src/hooks/usePendingVerifications';
+import { usePlant } from '@/src/hooks/usePlant';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -30,8 +31,50 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
   const router = useRouter();
   const toast = useToast();
   
-  //  인증 대기 개수 가져오기 (새로운 훅 사용)
+  // 🔔 인증 대기 개수 가져오기 (부모용)
   const { count: pendingCount, isLoading: isPendingLoading } = usePendingCount(childId);
+  
+  // 🌱 식물 정보 가져오기 (자녀용 물주기 상태 확인)
+  const { plant: plantInfo } = usePlant({ 
+    childId, 
+    isParent: userType === 'parent' || userType === 'PARENT' 
+  });
+
+  // 🚰 물주기 가능 여부 확인
+  const canWater = React.useMemo(() => {
+    if (!plantInfo) return false;
+    
+    // 식물의 물주기 가능 상태 확인 (API에서 제공하는 필드들)
+    const now = new Date();
+    
+    // 1. 마지막 물주기 시간이 있다면 24시간 이후에만 가능
+    if (plantInfo.lastWatered) {
+      const lastWatered = new Date(plantInfo.lastWatered);
+      const timeDiff = now.getTime() - lastWatered.getTime();
+      const hoursDiff = timeDiff / (1000 * 60 * 60);
+      
+      return hoursDiff >= 24; // 24시간 후 물주기 가능
+    }
+    
+    // 2. 한 번도 물을 준 적이 없다면 가능
+    return true;
+  }, [plantInfo]);
+
+  // 🚰 물주기 필요도 확인 (더 적극적인 알림)
+  const needsWater = React.useMemo(() => {
+    if (!plantInfo || !canWater) return false;
+    
+    // 마지막 물주기로부터 36시간 이상 지났으면 더 적극적인 알림
+    if (plantInfo.lastWatered) {
+      const lastWatered = new Date(plantInfo.lastWatered);
+      const timeDiff = new Date().getTime() - lastWatered.getTime();
+      const hoursDiff = timeDiff / (1000 * 60 * 60);
+      
+      return hoursDiff >= 36; // 36시간 후부터 적극적인 알림
+    }
+    
+    return canWater;
+  }, [plantInfo, canWater]);
 
   // 부모용 액션 버튼 렌더링 (대소문자 구분 없이 처리)
   if (userType === 'parent' || userType === 'PARENT') {
@@ -76,7 +119,7 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
         />
 
         <View className="flex-row gap-6 mt-4 items-center justify-center">
-          {/*  대시보드 버튼 (배지 포함) */}
+          {/* 🎯 대시보드 버튼 (배지 포함) */}
           <ActionButtonWithBadge
             icon="dashboard"
             label="대시보드"
@@ -155,11 +198,14 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
 
       <View className="mt-4 flex-row gap-6 items-center justify-center">
         {plant !== null ? (
-          <ActionButton
+          <ActionButtonWithBadge
             icon="opacity"
             label="물주기"
             color={Colors.light.info}
             onPress={onWaterPress}
+            badgeCount={canWater ? 1 : 0}
+            badgeType={needsWater ? 'urgent' : 'normal'}
+            isWatering={true}
           />
         ) : (
           <ActionButton
@@ -209,7 +255,7 @@ const PlantDisplayFootAction: React.FC<PlantActionProps> = ({
   );
 };
 
-//  배지가 포함된 액션 버튼 컴포넌트
+// 🎯 배지가 포함된 액션 버튼 컴포넌트
 interface ActionButtonWithBadgeProps {
   icon: keyof typeof MaterialIcons.glyphMap;
   label: string;
@@ -217,6 +263,8 @@ interface ActionButtonWithBadgeProps {
   onPress?: () => void;
   badgeCount?: number;
   isLoading?: boolean;
+  badgeType?: 'urgent' | 'normal';
+  isWatering?: boolean;
 }
 
 const ActionButtonWithBadge: React.FC<ActionButtonWithBadgeProps> = ({
@@ -226,6 +274,8 @@ const ActionButtonWithBadge: React.FC<ActionButtonWithBadgeProps> = ({
   onPress,
   badgeCount = 0,
   isLoading = false,
+  badgeType = 'normal',
+  isWatering = false,
 }) => {
   // 배지 애니메이션
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
@@ -319,7 +369,7 @@ const ActionButtonWithBadge: React.FC<ActionButtonWithBadgeProps> = ({
           />
         </Animated.View>
         
-        {/*  인증 대기 배지 */}
+        {/* 🔔 인증 대기 배지 */}
         {badgeCount > 0 && !isLoading && (
           <Animated.View
             className="absolute -top-2 -right-2 rounded-full min-w-[20px] h-6 items-center justify-center px-1 shadow-sm"
