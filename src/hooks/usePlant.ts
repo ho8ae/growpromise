@@ -2,6 +2,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import plantApi, { Plant, PlantType } from '../api/modules/plant';
+import { useAppReviewContext } from '../providers/AppReviewProvider';
 
 interface UsePlantProps {
   plantId?: string;
@@ -37,6 +38,7 @@ export const usePlant = ({
   isParent = false,
 }: UsePlantProps): UsePlantReturn => {
   const queryClient = useQueryClient();
+  const { trackEvent } = useAppReviewContext();
 
   // 현재 식물 정보 쿼리
   const {
@@ -256,6 +258,10 @@ export const usePlant = ({
       console.log('물주기 시작:', plant.id);
       const result = await plantApi.waterPlant(plant.id);
 
+      // 물주기 이벤트 추적
+      await trackEvent('plant_watered');
+
+
       // 모든 관련 쿼리 무효화 - 실시간 업데이트 핵심!
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['currentPlant'] }),
@@ -271,7 +277,7 @@ export const usePlant = ({
       console.error('물주기 오류:', err);
       throw err;
     }
-  }, [plant, queryClient, calculateWateringStatus]);
+  }, [plant, queryClient, calculateWateringStatus, trackEvent]);
 
   //  성장 단계 올리기
   const growPlant = useCallback(async () => {
@@ -292,6 +298,14 @@ export const usePlant = ({
       });
 
       const result = await plantApi.growPlant(plant.id);
+
+       // 리뷰 이벤트 추적 - 식물 성장 시
+       await trackEvent('plant_grown');
+
+       // 식물 완료 체크 - 최대 단계 도달 시
+       if (result.isCompleted || result.isMaxStage) {
+         await trackEvent('plant_completed');
+       }
 
       // 모든 관련 쿼리 무효화 - 실시간 업데이트 핵심!
       await Promise.all([
@@ -314,7 +328,7 @@ export const usePlant = ({
       console.error('식물 성장 오류:', err);
       throw err;
     }
-  }, [plant, queryClient]);
+  }, [plant, queryClient, trackEvent]);
 
   // 식물 데이터 새로고침
   const refreshPlant = useCallback(async () => {

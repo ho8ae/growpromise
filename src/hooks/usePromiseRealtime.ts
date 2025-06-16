@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { AppState, AppStateStatus } from 'react-native';
 import promiseApi from '../api/modules/promise';
 import { useAuthStore } from '../stores/authStore';
+import { useAppReviewContext } from '../providers/AppReviewProvider';
 
 /**
  * 약속 관련 실시간 상태 업데이트를 위한 커스텀 훅
@@ -12,10 +13,11 @@ import { useAuthStore } from '../stores/authStore';
 export const usePromiseRealtime = () => {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
+  const { trackEvent } = useAppReviewContext();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
-  // 📊 실시간 데이터 폴링 설정
+  // 실시간 데이터 폴링 설정
   const startPolling = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -103,6 +105,11 @@ export const usePromiseRealtime = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
     try {
+      // 리뷰 이벤트 추적 - 약속 인증 제출 시
+      if (user?.userType === 'CHILD') {
+        await trackEvent('promise_verified');
+      }
+
       // 즉시 UI 업데이트를 위한 옵티미스틱 업데이트
       if (assignmentId) {
         // 해당 assignment의 상태를 즉시 SUBMITTED로 변경
@@ -157,7 +164,7 @@ export const usePromiseRealtime = () => {
     } catch (error) {
       console.error('Error in verification submitted callback:', error);
     }
-  }, [queryClient, user]);
+  }, [queryClient, user, trackEvent]);
 
   //  약속 승인/거절 후 데이터 갱신 (확장)
   const onPromiseVerificationResponded = useCallback(async (assignmentId: string, approved: boolean, childId?: string) => {
@@ -171,6 +178,12 @@ export const usePromiseRealtime = () => {
     );
     
     try {
+
+      // 리뷰 이벤트 추적 - 약속 승인/거절 시
+      if (approved && user?.userType === 'PARENT') {
+        await trackEvent('promise_approved');
+      }
+
       // 옵티미스틱 업데이트: 대기 목록에서 해당 항목 제거
       const currentPending = queryClient.getQueryData(['pendingVerifications']);
       if (currentPending && Array.isArray(currentPending)) {
@@ -212,7 +225,7 @@ export const usePromiseRealtime = () => {
     } catch (error) {
       console.error('Error in verification responded callback:', error);
     }
-  }, [queryClient]);
+  }, [queryClient, trackEvent, user]);
 
   // 약속 생성 후 데이터 갱신 (확장)
   const onPromiseCreated = useCallback((childIds?: string[]) => {

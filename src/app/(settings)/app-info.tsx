@@ -18,6 +18,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Colors from '../../constants/Colors';
+import { useAppReviewContext } from '../../providers/AppReviewProvider';
+
 
 const appInfo = {
   name: '쑥쑥약속',
@@ -75,6 +77,11 @@ export default function AppInfoScreen() {
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
   const [termsModalVisible, setTermsModalVisible] = useState(false);
   const [deviceInfo, setDeviceInfo] = useState<any>(null);
+  
+  const { manualRequestReview, getReviewStats } = useAppReviewContext();
+  const [reviewStats, setReviewStats] = useState<any>(null);
+
+  
 
   React.useEffect(() => {
     const getDeviceInfo = async () => {
@@ -135,26 +142,22 @@ export default function AppInfoScreen() {
   const handleRateApp = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-      const storeUrl =
-        Platform.OS === 'ios'
+      
+      const success = await manualRequestReview();
+      
+      if (!success) {
+        // 네이티브 리뷰가 실패한 경우 스토어로 이동
+        const storeUrl = Platform.OS === 'ios'
           ? 'itms-apps://itunes.apple.com/app/id6746965526?action=write-review'
-          : 'market://details?id=com.low_k.growpromise';
-
-      const canOpen = await Linking.canOpenURL(storeUrl);
-
-      if (canOpen) {
-        await Linking.openURL(storeUrl);
-      } else {
-        const webUrl =
-          Platform.OS === 'ios'
-            ? 'https://apps.apple.com/app/id6746965526'
-            : 'https://play.google.com/store/apps/details?id=com.low_k.growpromise';
-        await Linking.openURL(webUrl);
+          : `market://details?id=com.low_k.growpromise`;
+          
+        const canOpen = await Linking.canOpenURL(storeUrl);
+        if (canOpen) {
+          await Linking.openURL(storeUrl);
+        }
       }
     } catch (error) {
       console.error('평점 주기 오류:', error);
-      Alert.alert('오류', '앱스토어로 이동할 수 없습니다.');
     }
   };
 

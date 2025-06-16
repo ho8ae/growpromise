@@ -1,4 +1,4 @@
-// app/_layout.tsx - 새로운 구조
+// app/_layout.tsx - AppReview 시스템 추가
 import '../../global.css';
 
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -8,8 +8,9 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// Providers & Managers (새로운 구조)
+// Providers & Managers
 import { QueryProvider } from '../providers/QueryProvider';
+import { AppReviewProvider } from '../providers/AppReviewProvider';
 import { AppStateManager } from '../../src/managers/AppStateManager';
 import { ModalManagerProvider } from '../../src/managers/ModalManager';
 import { NavigationProvider } from '../../src/providers/NavigationProvider';
@@ -55,7 +56,7 @@ function LoadingScreen() {
   );
 }
 
-// 인증 매니저 (개선된 버전)
+// 인증 매니저 (기존과 동일)
 function AuthenticationManager({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthChecked, checkAuthStatus } = useAuthStore();
   const [isInitialized, setIsInitialized] = useState(false);
@@ -90,7 +91,7 @@ function AuthenticationManager({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// 메인 앱 컴포넌트
+// 메인 앱 컴포넌트 (기존과 동일)
 function App() {
   return (
     <AuthenticationManager>
@@ -114,23 +115,26 @@ function App() {
   );
 }
 
-// Root Layout - 시니어 개발자 추천 Provider 계층 구조
+// Root Layout 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       {/* 1. 서버 상태 관리 */}
       <QueryProvider>
-        {/* 2. 네비게이션 로직 */}
-        <NavigationProvider>
-          {/* 3. 모달 관리 */}
-          <ModalManagerProvider>
-            {/* 4. 앱 상태 통합 관리 */}
-            <AppStateManager>
-              {/* 5. 실제 앱 */}
-              <App />
-            </AppStateManager>
-          </ModalManagerProvider>
-        </NavigationProvider>
+        {/* 2. 앱 리뷰 시스템 (서버 상태 다음, 네비게이션 전) */}
+        <AppReviewProvider>
+          {/* 3. 네비게이션 로직 */}
+          <NavigationProvider>
+            {/* 4. 모달 관리 */}
+            <ModalManagerProvider>
+              {/* 5. 앱 상태 통합 관리 */}
+              <AppStateManager>
+                {/* 6. 실제 앱 */}
+                <App />
+              </AppStateManager>
+            </ModalManagerProvider>
+          </NavigationProvider>
+        </AppReviewProvider>
       </QueryProvider>
     </GestureHandlerRootView>
   );
