@@ -360,6 +360,8 @@ PODS:
     - Yoga
   - ExpoSplashScreen (0.30.8):
     - ExpoModulesCore
+  - ExpoStoreReview (8.1.5):
+    - ExpoModulesCore
   - ExpoSymbols (0.4.4):
     - ExpoModulesCore
   - ExpoSystemUI (5.0.7):
@@ -2500,6 +2502,7 @@ DEPENDENCIES:
   - ExpoMediaLibrary (from `../node_modules/expo-media-library/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
+  - ExpoStoreReview (from `../node_modules/expo-store-review/ios`)
   - ExpoSymbols (from `../node_modules/expo-symbols/ios`)
   - ExpoSystemUI (from `../node_modules/expo-system-ui/ios`)
   - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
@@ -2672,6 +2675,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-modules-core"
   ExpoSplashScreen:
     :path: "../node_modules/expo-splash-screen/ios"
+  ExpoStoreReview:
+    :path: "../node_modules/expo-store-review/ios"
   ExpoSymbols:
     :path: "../node_modules/expo-symbols/ios"
   ExpoSystemUI:
@@ -2875,6 +2880,7 @@ SPEC CHECKSUMS:
   ExpoMediaLibrary: ef14f0390b06ddecca98118eb7332e92efe4765a
   ExpoModulesCore: 5d37821c36f3781dcd0ea9a393800c90eaa6259d
   ExpoSplashScreen: f524572afd81522e40850eaa7163e2ae99cce783
+  ExpoStoreReview: f70e5929ba4a594078dd3285d5151427167f48fa
   ExpoSymbols: 5324de61341b396965a1cd3d2c738227b13d6a60
   ExpoSystemUI: 82c970cf8495449698e7343b4f78a0d04bcec9ee
   ExpoWebBrowser: 06fb5f767f53ad53944b068cdd207984cb998712
