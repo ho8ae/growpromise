@@ -21,8 +21,8 @@ import Colors from '../../constants/Colors';
 
 const appInfo = {
   name: '쑥쑥약속',
-  version: '1.0.0',
-  buildNumber: '1',
+  version: '1.0.2',
+  buildNumber: '11',
   description: '부모와 아이를 위한 약속 관리 앱',
   developer: 'GrowPromise Team',
   website: 'https://whoiswhat.vercel.app/',
@@ -138,7 +138,7 @@ export default function AppInfoScreen() {
 
       const storeUrl =
         Platform.OS === 'ios'
-          ? 'itms-apps://itunes.apple.com/app/id[APP_ID]?action=write-review'
+          ? 'itms-apps://itunes.apple.com/app/id6746965526?action=write-review'
           : 'market://details?id=com.low_k.growpromise';
 
       const canOpen = await Linking.canOpenURL(storeUrl);
@@ -148,7 +148,7 @@ export default function AppInfoScreen() {
       } else {
         const webUrl =
           Platform.OS === 'ios'
-            ? 'https://apps.apple.com/app/id[APP_ID]'
+            ? 'https://apps.apple.com/app/id6746965526'
             : 'https://play.google.com/store/apps/details?id=com.low_k.growpromise';
         await Linking.openURL(webUrl);
       }
