@@ -1,6 +1,5 @@
-// components/plant/ChildPlantDisplay.tsx - 모달 사용 버전
+// components/plant/ChildPlantDisplay.tsx - 쿨다운 모달 적용 버전
 import { MaterialIcons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -14,8 +13,14 @@ import {
 import stickerApi from '../../api/modules/sticker';
 import Colors from '../../constants/Colors';
 import { usePlant } from '../../hooks/usePlant';
+import { 
+  parseRemainingTimeFromError, 
+  triggerWateringCooldownHaptic, 
+  triggerWateringSuccessHaptic 
+} from '../../utils/wateringUtils';
 import RewardAchievementModal from '../common/modal/RewardAchievementModal';
 import WateringSuccessModal from '../common/modal/WateringSuccessModal';
+import WateringCooldownModal from '../common/modal/WateringCooldownModal';
 import PlantDisplayFootAction from './PlantDisplayFootAction';
 
 // 스티커 통계 타입
@@ -64,11 +69,13 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
   // 모달 상태
   const [wateringModalVisible, setWateringModalVisible] = useState(false);
   const [rewardModalVisible, setRewardModalVisible] = useState(false);
+  const [cooldownModalVisible, setCooldownModalVisible] = useState(false);
   const [wateringResult, setWateringResult] = useState<any>(null);
   const [rewardData, setRewardData] = useState<{
     title: string;
     stickerCount: number;
   } | null>(null);
+  const [remainingTime, setRemainingTime] = useState<string>('');
 
   // 스티커 개수 로드
   const loadStickerStats = async () => {
@@ -83,6 +90,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
       setIsLoadingStickers(false);
     }
   };
+
 
   // 컴포넌트 마운트 시 스티커 개수 로드
   useEffect(() => {
@@ -143,15 +151,18 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     ).start();
   }, []);
 
-  // 물주기 핸들러 - 모달 사용
+  // 물주기 핸들러 - 쿨다운 모달 적용
   const handleWaterPress = async () => {
     if (isWatering || !plant) return;
 
     try {
       setIsWatering(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
+      
+      // 성공 시에만 성공 진동
       const result = await waterPlant();
+      
+      // 성공 진동 패턴 실행
+      await triggerWateringSuccessHaptic();
 
       // 결과 저장하고 모달 표시
       setWateringResult(result);
@@ -163,12 +174,22 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
       console.error('물주기 실패:', error);
 
       if (error instanceof Error) {
-        if (error.message.includes('already watered')) {
-          Alert.alert(
-            '알림',
-            '오늘은 이미 물을 줬어요. 내일 다시 시도해보세요.',
-          );
+        if (error.message.includes('아직 물을 줄 수 없습니다') || 
+            error.message.includes('already watered')) {
+          
+          // 쿨다운 진동 패턴 실행
+          await triggerWateringCooldownHaptic();
+          
+          // 에러 메시지에서 남은 시간 추출 (유틸리티 함수 사용)
+          const parsedTime = parseRemainingTimeFromError(error.message);
+          setRemainingTime(parsedTime);
+          
+          // 쿨다운 모달 표시
+          setCooldownModalVisible(true);
         } else {
+          // 다른 에러의 경우는 기존 Alert 유지
+          const { notificationAsync, NotificationFeedbackType } = await import('expo-haptics');
+          await notificationAsync(NotificationFeedbackType.Error);
           Alert.alert('오류', '물주기 과정에서 문제가 발생했습니다.');
         }
       }
@@ -183,7 +204,10 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
 
     try {
       setIsGrowing(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      // 성장 성공 진동
+      const { impactAsync, ImpactFeedbackStyle } = await import('expo-haptics');
+      await impactAsync(ImpactFeedbackStyle.Medium);
 
       const result = await growPlant();
 
@@ -231,7 +255,6 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
     );
   }
 
-  // 이제 plant가 null인 경우는 상위에서 처리하므로 여기서는 제거
   // 오류 상태만 처리
   if (error) {
     return (
@@ -447,6 +470,13 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
         wateringStreak={wateringResult?.wateringStreak || 1}
         healthGain={wateringResult?.wateringLog?.healthGain || 10}
         newHealth={wateringResult?.updatedPlant?.health || plant?.health || 100}
+      />
+
+      {/* 물주기 쿨다운 모달 (새로 추가) */}
+      <WateringCooldownModal
+        visible={cooldownModalVisible}
+        onClose={() => setCooldownModalVisible(false)}
+        remainingTime={remainingTime}
       />
 
       {/* 보상 달성 모달 */}
