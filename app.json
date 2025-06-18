@@ -39,12 +39,13 @@
           "Default"
         ]
       },
-      "buildNumber": "12"
+      "buildNumber": "13"
     },
     "android": {
       "icon": "./src/assets/images/icon.png",
+      "label": "쑥쑥약속",
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/images/icon.png",
+        "foregroundImage": "./src/assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
