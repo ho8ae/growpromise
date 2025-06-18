@@ -19,7 +19,7 @@ def pod(*args)
   super(*args)
 end
 
-target 'growpromise' do
+target 'app' do
   use_expo_modules!
 
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
