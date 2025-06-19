@@ -11,6 +11,7 @@
     "ios": {
       "bundleIdentifier": "com.low-k.growpromise",
       "requireFullScreen": false,
+      "supportsTablet": true,
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
         "UIStatusBarStyle": "UIStatusBarStyleDefault",
@@ -39,7 +40,7 @@
           "Default"
         ]
       },
-      "buildNumber": "14"
+      "buildNumber": "17"
     },
     "android": {
       "icon": "./src/assets/images/icon.png",
