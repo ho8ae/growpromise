@@ -1,8 +1,6 @@
-// app/(auth)/signup.tsx - 실시간 아이디 중복 확인 추가
+// app/(auth)/signup.tsx - 키보드 입력 가능한 생년월일 (1부)
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -16,7 +14,6 @@ import {
   View,
   Keyboard,
 } from 'react-native';
-import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import authApi from '../../../src/api/modules/auth';
 import SafeStatusBar from '../../../src/components/common/SafeStatusBar';
@@ -34,11 +31,10 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [birthDate, setBirthDate] = useState(''); //  문자열로 변경
   const [parentCode, setParentCode] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // 🔥 아이디 중복 확인 상태 추가
+  //  아이디 중복 확인 상태 추가
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameCheckResult, setUsernameCheckResult] = useState<{
     checked: boolean;
@@ -52,6 +48,7 @@ export default function SignupScreen() {
     email: '',
     password: '',
     confirmPassword: '',
+    birthDate: '', //  생년월일 에러 추가
     parentCode: '',
   });
 
@@ -67,51 +64,69 @@ export default function SignupScreen() {
     }).start();
   }, [step]);
 
-  // 한국어 설정 (컴포넌트 외부에 한 번만)
-  LocaleConfig.locales['ko'] = {
-    monthNames: [
-      '1월',
-      '2월',
-      '3월',
-      '4월',
-      '5월',
-      '6월',
-      '7월',
-      '8월',
-      '9월',
-      '10월',
-      '11월',
-      '12월',
-    ],
-    monthNamesShort: [
-      '1월',
-      '2월',
-      '3월',
-      '4월',
-      '5월',
-      '6월',
-      '7월',
-      '8월',
-      '9월',
-      '10월',
-      '11월',
-      '12월',
-    ],
-    dayNames: [
-      '일요일',
-      '월요일',
-      '화요일',
-      '수요일',
-      '목요일',
-      '금요일',
-      '토요일',
-    ],
-    dayNamesShort: ['일', '월', '화', '수', '목', '금', '토'],
-    today: '오늘',
+  //  생년월일 포맷팅 함수
+  const formatBirthDate = (text: string) => {
+    // 숫자만 추출
+    const numbers = text.replace(/[^0-9]/g, '');
+    
+    // 최대 8자리까지만
+    const limited = numbers.slice(0, 8);
+    
+    // YYYY-MM-DD 형식으로 포맷팅
+    if (limited.length <= 4) {
+      return limited;
+    } else if (limited.length <= 6) {
+      return `${limited.slice(0, 4)}-${limited.slice(4)}`;
+    } else {
+      return `${limited.slice(0, 4)}-${limited.slice(4, 6)}-${limited.slice(6)}`;
+    }
   };
-  LocaleConfig.defaultLocale = 'ko';
 
-  // 🔥 아이디 중복 확인 함수
+  //  생년월일 유효성 검사
+  const validateBirthDate = (dateString: string) => {
+    let error = '';
+    
+    if (!dateString.trim()) {
+      // 생년월일은 선택사항이므로 빈 값은 에러가 아님
+      setErrors({ ...errors, birthDate: '' });
+      return true;
+    }
+
+    // YYYY-MM-DD 형식 체크
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(dateString)) {
+      error = '올바른 날짜 형식으로 입력해주세요 (예: 2010-01-01)';
+    } else {
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      
+      // 유효한 날짜인지 확인
+      if (
+        date.getFullYear() !== year ||
+        date.getMonth() !== month - 1 ||
+        date.getDate() !== day
+      ) {
+        error = '존재하지 않는 날짜입니다';
+      } else {
+        // 미래 날짜 체크
+        const today = new Date();
+        if (date > today) {
+          error = '미래 날짜는 입력할 수 없습니다';
+        }
+        
+        // 너무 과거 날짜 체크 (1900년 이후)
+        const minDate = new Date(1900, 0, 1);
+        if (date < minDate) {
+          error = '1900년 이후 날짜를 입력해주세요';
+        }
+      }
+    }
+
+    setErrors({ ...errors, birthDate: error });
+    return !error;
+  };
+
+  //  아이디 중복 확인 함수
   const checkUsernameAvailability = async (usernameValue: string) => {
     if (!usernameValue.trim() || usernameValue.length < 2) {
       setUsernameCheckResult({ checked: false, available: false, message: '' });
@@ -138,7 +153,7 @@ export default function SignupScreen() {
     }
   };
 
-  // 🔥 디바운스된 아이디 중복 확인
+  //  디바운스된 아이디 중복 확인
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (username.trim() && username.length >= 2) {
@@ -146,7 +161,7 @@ export default function SignupScreen() {
       } else {
         setUsernameCheckResult({ checked: false, available: false, message: '' });
       }
-    }, 500); // 500ms 후에 확인
+    }, 500);
 
     return () => clearTimeout(timeoutId);
   }, [username]);
@@ -161,11 +176,11 @@ export default function SignupScreen() {
       setStep(step + 1);
       slideAnim.setValue(400);
       setErrors({
-        ...errors,
         username: '',
         email: '',
         password: '',
         confirmPassword: '',
+        birthDate: '',
         parentCode: '',
       });
     });
@@ -209,7 +224,7 @@ export default function SignupScreen() {
         throw new Error('비밀번호가 일치하지 않습니다.');
       }
 
-      // 🔥 아이디 중복 확인이 완료되지 않은 경우
+      //  아이디 중복 확인이 완료되지 않은 경우
       if (!usernameCheckResult.checked || !usernameCheckResult.available) {
         throw new Error('아이디 중복 확인을 완료해주세요.');
       }
@@ -228,11 +243,19 @@ export default function SignupScreen() {
         });
       } else {
         console.log('👶 자녀 회원가입 요청...');
+        
+        //  생년월일이 있는 경우 Date 객체로 변환
+        let birthDateObj: Date | undefined;
+        if (birthDate.trim()) {
+          const [year, month, day] = birthDate.split('-').map(Number);
+          birthDateObj = new Date(year, month - 1, day);
+        }
+        
         return await authApi.childSignup({
           username,
           password,
           confirmPassword,
-          birthDate: birthDate ? birthDate.toISOString() : undefined,
+          birthDate: birthDateObj ? birthDateObj.toISOString() : undefined,
           parentCode: parentCode || undefined,
         });
       }
@@ -259,18 +282,9 @@ export default function SignupScreen() {
   // 계정 타입 토글 함수
   const handleUserTypeToggle = (type: 'PARENT' | 'CHILD') => {
     if (userType === type) {
-      // 이미 선택된 타입을 다시 클릭하면 해제
       setUserType(null);
     } else {
-      // 다른 타입 선택
       setUserType(type);
-    }
-  };
-
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setBirthDate(selectedDate);
     }
   };
 
@@ -280,7 +294,7 @@ export default function SignupScreen() {
     }
   };
 
-  // 🔥 사용자 이름 유효성 검사 (중복 확인 포함)
+  //  사용자 이름 유효성 검사 (중복 확인 포함)
   const validateUsername = (value: string) => {
     let error = '';
     if (!value.trim()) {
@@ -361,7 +375,7 @@ export default function SignupScreen() {
     isValid = validatePassword(password) && isValid;
     isValid = validateConfirmPassword(confirmPassword, password) && isValid;
 
-    // 🔥 아이디 중복 확인 여부 검사
+    //  아이디 중복 확인 여부 검사
     if (!usernameCheckResult.checked || !usernameCheckResult.available) {
       setErrors(prev => ({ ...prev, username: '아이디 중복 확인을 완료해주세요.' }));
       isValid = false;
@@ -370,8 +384,15 @@ export default function SignupScreen() {
     // 사용자 타입에 따른 추가 검증
     if (userType === 'PARENT') {
       isValid = validateEmail(email) && isValid;
-    } else if (userType === 'CHILD' && parentCode) {
-      isValid = validateParentCode(parentCode) && isValid;
+    } else if (userType === 'CHILD') {
+      // 생년월일 검증 (선택사항이지만 입력했다면 유효해야 함)
+      if (birthDate.trim()) {
+        isValid = validateBirthDate(birthDate) && isValid;
+      }
+      // 부모 코드 검증
+      if (parentCode) {
+        isValid = validateParentCode(parentCode) && isValid;
+      }
     }
 
     return isValid;
@@ -385,8 +406,13 @@ export default function SignupScreen() {
       case 3: // 이메일 또는 생년월일
         if (userType === 'PARENT') {
           return validateEmail(email);
+        } else {
+          // 생년월일은 선택사항이지만 입력했다면 유효해야 함
+          if (birthDate.trim()) {
+            return validateBirthDate(birthDate);
+          }
+          return true;
         }
-        return true; // 생년월일은 선택사항
       case 4: // 비밀번호
         return (
           validatePassword(password) &&
@@ -396,7 +422,7 @@ export default function SignupScreen() {
         if (userType === 'CHILD' && parentCode) {
           return validateParentCode(parentCode);
         }
-        return true; // 부모 연결 코드는 선택사항
+        return true;
       default:
         return true;
     }
@@ -405,9 +431,9 @@ export default function SignupScreen() {
   const isNextButtonDisabled = () => {
     switch (step) {
       case 1: // 계정 타입 선택
-        return !userType; // 계정 타입이 선택되지 않으면 비활성화
+        return !userType;
       case 2:
-        // 🔥 아이디 검사 상태 포함
+        //  아이디 검사 상태 포함
         return (
           !username.trim() || 
           !!errors.username || 
@@ -418,8 +444,10 @@ export default function SignupScreen() {
       case 3:
         if (userType === 'PARENT') {
           return !email.trim() || !!errors.email;
+        } else {
+          // 생년월일은 선택사항이지만 입력했다면 유효해야 함
+          return birthDate.trim() && !!errors.birthDate;
         }
-        return false; // 생년월일은 선택사항
       case 4:
         return (
           !password.trim() ||
@@ -431,13 +459,13 @@ export default function SignupScreen() {
         if (userType === 'CHILD' && parentCode) {
           return !!errors.parentCode;
         }
-        return false; // 부모 연결 코드는 선택사항
+        return false;
       default:
         return false;
     }
   };
 
-  // 🔥 아이디 상태 표시 컴포넌트
+  //  아이디 상태 표시 컴포넌트
   const renderUsernameStatus = () => {
     if (isCheckingUsername) {
       return (
@@ -567,7 +595,6 @@ export default function SignupScreen() {
                 value={username}
                 onChangeText={(text) => {
                   setUsername(text);
-                  // 🔥 입력 시 중복 확인 상태 초기화
                   setUsernameCheckResult({ checked: false, available: false, message: '' });
                   setErrors({ ...errors, username: '' });
                 }}
@@ -577,7 +604,6 @@ export default function SignupScreen() {
                 textAlignVertical="center"
               />
 
-              {/* 🔥 아이디 상태 표시 */}
               {renderUsernameStatus()}
             </View>
           </View>
@@ -620,54 +646,57 @@ export default function SignupScreen() {
             </View>
           </View>
         ) : (
-          <View className="p-6 flex-1 justify-center">
-            <Text className="text-2xl font-bold text-center mb-3 text-gray-800">
-              생년월일을 알려주세요 (선택)
-            </Text>
-            <Text className="text-center text-gray-500 mb-8">
-              맞춤형 콘텐츠를 제공하는데 도움이 됩니다
-            </Text>
-
-            <Pressable
-              className="bg-gray-100 rounded-2xl px-4 py-5 flex-row justify-between items-center mb-8"
-              onPress={() => setShowDatePicker(true)}
-              disabled={signupMutation.isPending}
-            >
-              <Text
-                className={
-                  birthDate ? 'text-gray-800 text-lg' : 'text-gray-400 text-lg'
-                }
-              >
-                {birthDate
-                  ? format(birthDate, 'yyyy년 MM월 dd일', { locale: ko })
-                  : '생년월일 선택'}
+          //  키보드 입력 가능한 생년월일
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View className="p-6 flex-1 justify-center">
+              <Text className="text-2xl font-bold text-center mb-3 text-gray-800">
+                생년월일을 알려주세요 (선택)
               </Text>
-              <FontAwesome5
-                name="calendar-alt"
-                size={20}
-                color={Colors.light.primary}
-              />
-            </Pressable>
+              <Text className="text-center text-gray-500 mb-8">
+                맞춤형 콘텐츠를 제공하는데 도움이 됩니다
+              </Text>
 
-            {showDatePicker && (
-              <Calendar
-                onDayPress={(day) => {
-                  setBirthDate(new Date(day.dateString));
-                  setShowDatePicker(false);
-                }}
-                maxDate={new Date().toISOString().split('T')[0]}
-                theme={{
-                  selectedDayBackgroundColor: Colors.light.primary,
-                  arrowColor: Colors.light.primary,
-                  todayTextColor: Colors.light.primary,
-                  textDayFontFamily: 'System',
-                  textMonthFontFamily: 'System',
-                  textDayHeaderFontFamily: 'System',
-                }}
-                firstDay={0} // 일요일부터 시작
-              />
-            )}
-          </View>
+              <View className="mb-8">
+                <TextInput
+                  className={`bg-gray-100 rounded-2xl px-4 py-4 text-gray-800 text-base text-center mb-1 ${
+                    errors.birthDate ? 'border border-red-500' : 
+                    birthDate.trim() && !errors.birthDate ? 'border border-green-500' : ''
+                  }`}
+                  placeholder="2010-01-01"
+                  value={birthDate}
+                  onChangeText={(text) => {
+                    const formatted = formatBirthDate(text);
+                    setBirthDate(formatted);
+                    setErrors({ ...errors, birthDate: '' });
+                  }}
+                  onBlur={() => validateBirthDate(birthDate)}
+                  keyboardType="number-pad"
+                  maxLength={10} // YYYY-MM-DD
+                  autoFocus
+                  editable={!signupMutation.isPending}
+                  textAlignVertical="center"
+                />
+
+                {errors.birthDate ? (
+                  <Text className="text-red-500 text-sm text-center mt-1">
+                    {errors.birthDate}
+                  </Text>
+                ) : birthDate.trim() && !errors.birthDate ? (
+                  <Text className="text-green-500 text-sm text-center mt-1">
+                    올바른 날짜 형식입니다
+                  </Text>
+                ) : (
+                  <Text className="text-gray-400 text-sm text-center mt-1">
+                    예: 2010-01-01 (숫자만 입력하세요)
+                  </Text>
+                )}
+              </View>
+
+              <Text className="text-center text-gray-500">
+                나중에 설정할 수도 있어요
+              </Text>
+            </View>
+          </TouchableWithoutFeedback>
         );
 
       case 4: // 비밀번호 입력
@@ -704,9 +733,7 @@ export default function SignupScreen() {
                 </Text>
               ) : (
                 <Text className="text-green-500 text-sm ml-2 mt-1">
-                  {password
-                    ? `비밀번호는 ${userType === 'PARENT' ? '8' : '6'}자 이상이어야 합니다`
-                    : ''}
+                  {password ? '비밀번호가 일치합니다' : `비밀번호는 ${userType === 'PARENT' ? '8' : '6'}자 이상이어야 합니다`}
                 </Text>
               )}
             </View>
