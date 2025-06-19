@@ -2,7 +2,7 @@
 /**
  * 물주기 관련 유틸리티 함수들
  */
-
+import * as Haptics from 'expo-haptics';
 /**
  * 에러 메시지에서 남은 시간을 파싱하는 함수
  * @param errorMessage API에서 받은 에러 메시지
@@ -116,14 +116,13 @@ export const parseRemainingTimeFromError = (errorMessage: string): string => {
    * 물주기 쿨다운 진동 패턴
    */
   export const triggerWateringCooldownHaptic = async () => {
-    const { notificationAsync, impactAsync, NotificationFeedbackType, ImpactFeedbackStyle } = await import('expo-haptics');
     
     // 짧은 경고 진동 패턴
-    await notificationAsync(NotificationFeedbackType.Warning);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     
     // 추가로 약간의 지연 후 한 번 더 (선택적)
     setTimeout(async () => {
-      await impactAsync(ImpactFeedbackStyle.Light);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }, 100);
   };
   
@@ -131,13 +130,12 @@ export const parseRemainingTimeFromError = (errorMessage: string): string => {
    * 물주기 성공 진동 패턴
    */
   export const triggerWateringSuccessHaptic = async () => {
-    const { notificationAsync, impactAsync, NotificationFeedbackType, ImpactFeedbackStyle } = await import('expo-haptics');
     
     // 성공적인 중간 강도 진동
-    await impactAsync(ImpactFeedbackStyle.Medium);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     // 약간의 지연 후 성공 알림
     setTimeout(async () => {
-      await notificationAsync(NotificationFeedbackType.Success);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }, 150);
   };

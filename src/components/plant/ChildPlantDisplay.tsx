@@ -22,6 +22,7 @@ import RewardAchievementModal from '../common/modal/RewardAchievementModal';
 import WateringSuccessModal from '../common/modal/WateringSuccessModal';
 import WateringCooldownModal from '../common/modal/WateringCooldownModal';
 import PlantDisplayFootAction from './PlantDisplayFootAction';
+import * as Haptics from 'expo-haptics';
 
 // 스티커 통계 타입
 interface StickerStats {
@@ -188,8 +189,7 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
           setCooldownModalVisible(true);
         } else {
           // 다른 에러의 경우는 기존 Alert 유지
-          const { notificationAsync, NotificationFeedbackType } = await import('expo-haptics');
-          await notificationAsync(NotificationFeedbackType.Error);
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           Alert.alert('오류', '물주기 과정에서 문제가 발생했습니다.');
         }
       }
@@ -206,8 +206,8 @@ const ChildPlantDisplay: React.FC<ChildPlantDisplayProps> = ({
       setIsGrowing(true);
       
       // 성장 성공 진동
-      const { impactAsync, ImpactFeedbackStyle } = await import('expo-haptics');
-      await impactAsync(ImpactFeedbackStyle.Medium);
+      
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       const result = await growPlant();
 
