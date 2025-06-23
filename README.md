@@ -54,6 +54,21 @@
 
 <br/><br/>
 
+## 노력한 점
+
+### 다양한 인터렉티브한 UI/UX를 구현하였습니다.
+
+| <img src="https://github.com/user-attachments/assets/4244d7b5-97ef-4dfb-af4c-30c32ba68b71" alt="이미지1" width="90%"> | <img src="https://github.com/user-attachments/assets/4f2f509d-9662-4249-b457-29590802fa5e" alt="이미지2" width="100%"> |<img src="https://velog.velcdn.com/images/ho8ae/post/5d24e68a-7ef9-44e0-b5c6-e7a14ff3c110/image.gif" alt="이미지2" width="100%">|
+|-------------------------------------------------------|-------------------------------------------------------|------------|
+|식물 카드 뽑기 화면 |홈 화면|로그인 화면|
+
+
+### 스켈레톤 UI도 적용하며 유저 사용자 경험을 증가해봤습니다.
+<img src='https://velog.velcdn.com/images/ho8ae/post/fdf4f962-5102-409a-8413-a548a175b66f/image.gif' width="30%" />
+
+
+
+<br/><br/>
 
 ## 느낀점
 
