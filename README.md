@@ -7,9 +7,9 @@
 [🔗 App Store ](https://apps.apple.com/kr/app/%EC%91%A5%EC%91%A5%EC%95%BD%EC%86%8D/id6746965526)
 <br/>
 
-[🔗 Google Play Store (심사중) ]()
+[🔗 Google Play Store ](https://play.google.com/store/apps/details?id=com.low_k.growpromise)
 
-<br/><br/>
+<br/>
 
 <img width="100%" src="https://github.com/user-attachments/assets/268e8ff6-b861-4194-a53f-440b80513fae">
 
@@ -47,10 +47,11 @@
 
 <br/><br/>
 
-## 🛠️ 아키텍처
+## 🛠️ 기술 & 아키텍처
 
 <img src="https://github.com/user-attachments/assets/5da566fb-ce4b-4e54-a4c7-20ccf67423e7" width="100%">
-<img src="https://github.com/user-attachments/assets/15609f3d-8476-4f21-a8c6-a5b7301e5555" width="100%">
+<img src="https://github.com/user-attachments/assets/7f957e13-6d7a-4fd7-94d4-d30528e07d0e" width="100%">
+
 
 <br/><br/>
 
