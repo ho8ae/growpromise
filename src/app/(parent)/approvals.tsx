@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,6 +13,8 @@ import {
   Text,
   TextInput,
   View,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -32,6 +34,8 @@ import ExperienceGainAnimation from '../../components/plant/ExperienceGainAnimat
 import SafeStatusBar from '@/src/components/common/SafeStatusBar';
 import Colors from '../../constants/Colors';
 import { getFallbackTemplates } from '../../services/stickerService';
+
+const { height: screenHeight } = Dimensions.get('window');
 
 export default function ApprovalsScreen() {
   const router = useRouter();
@@ -59,22 +63,38 @@ export default function ApprovalsScreen() {
   const { onPromiseVerificationResponded } = usePromiseRealtime();
 
   // 애니메이션 값
-  const scrollY = React.useRef(new Animated.Value(0)).current;
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // 헤더 애니메이션 값들
   const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 60],
+    inputRange: [0, 80],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
 
   const headerScale = scrollY.interpolate({
-    inputRange: [0, 60],
-    outputRange: [0.96, 1],
+    inputRange: [0, 80],
+    outputRange: [0.95, 1],
     extrapolate: 'clamp',
   });
 
   const titleOpacity = scrollY.interpolate({
-    inputRange: [0, 60],
+    inputRange: [0, 80],
     outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  // 타이틀 섹션 애니메이션
+  const titleSectionOpacity = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const titleSectionTranslateY = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [0, -30],
     extrapolate: 'clamp',
   });
 
@@ -87,7 +107,6 @@ export default function ApprovalsScreen() {
     queryKey: ['verification', id],
     queryFn: async () => {
       try {
-        // 이 API 엔드포인트가 구현되어 있지 않은 경우 getPendingVerifications에서 필터링하여 사용
         const pendingVerifications = await promiseApi.getPendingVerifications();
         const verificationDetails = pendingVerifications.find(
           (v: any) => v.id === id,
@@ -114,12 +133,10 @@ export default function ApprovalsScreen() {
     queryKey: ['stickerTemplates'],
     queryFn: async () => {
       try {
-        // 서버에서 스티커 템플릿 가져오기
         const apiTemplates = await stickerApi.getAllStickerTemplates();
         return apiTemplates;
       } catch (error) {
         console.error('스티커 템플릿 로드 오류:', error);
-        // API 호출 실패 시 폴백 템플릿 사용
         return getFallbackTemplates();
       }
     },
@@ -176,7 +193,6 @@ export default function ApprovalsScreen() {
   }, []);
 
   // 인증 승인 처리
-  // 인증 승인 처리 - 간단화
   const handleApprove = useCallback(async () => {
     if (!selectedStickerId) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -217,7 +233,7 @@ export default function ApprovalsScreen() {
               }
             }
 
-            // ✨ 핵심: 실시간 업데이트 트리거
+            // 실시간 업데이트 트리거
             onPromiseVerificationResponded(id as string, true);
 
             setIsSubmitting(false);
@@ -279,7 +295,7 @@ export default function ApprovalsScreen() {
               rejectionReason,
             );
 
-            // ✨ 핵심: 실시간 업데이트 트리거
+            // 실시간 업데이트 트리거
             onPromiseVerificationResponded(id as string, false);
 
             setIsSubmitting(false);
@@ -316,7 +332,7 @@ export default function ApprovalsScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <View className="flex-1 bg-gray-50">
       <SafeStatusBar style="dark" backgroundColor="#FFFFFF" />
       <Stack.Screen
         options={{
@@ -324,17 +340,17 @@ export default function ApprovalsScreen() {
         }}
       />
 
-      {/* 개선된 헤더 */}
+      {/* 고정 헤더 */}
       <Animated.View
-        className="absolute left-0 right-0 top-0 z-10"
+        className="absolute left-0 right-0 top-0 z-20"
         style={{
           opacity: headerOpacity,
           transform: [{ scale: headerScale }],
         }}
       >
         <LinearGradient
-          colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.9)']}
-          className="border-b border-gray-200"
+          colors={['rgba(255,255,255,0.98)', 'rgba(255,255,255,0.95)']}
+          className="border-b border-gray-200 shadow-sm"
         >
           <SafeAreaView edges={['top']}>
             <View className="flex-row items-center justify-between px-4 h-14">
@@ -368,41 +384,17 @@ export default function ApprovalsScreen() {
         </LinearGradient>
       </Animated.View>
 
-      {/* 상단 타이틀 섹션 - 스크롤 시 서서히 사라짐 */}
-      <Animated.View
-        className="absolute left-0 right-0 top-0 z-5 pt-14"
-        style={{
-          opacity: Animated.subtract(1, headerOpacity),
-          transform: [
-            {
-              translateY: scrollY.interpolate({
-                inputRange: [0, 60],
-                outputRange: [0, -20],
-                extrapolate: 'clamp',
-              }),
-            },
-          ],
-        }}
-      >
-        <View className="px-5 pt-4 pb-2">
-          <Text className="text-2xl font-bold text-gray-800">인증 확인</Text>
-          <Text className="text-gray-500 mt-1">
-            자녀의 약속 인증을 확인하고 응답해 주세요
-          </Text>
-        </View>
-      </Animated.View>
-
       {/* 로딩 상태 */}
       {isVerificationLoading && (
-        <View className="flex-1 justify-center items-center">
+        <SafeAreaView className="flex-1 justify-center items-center" edges={['top']}>
           <ActivityIndicator size="large" color={Colors.light.primary} />
           <Text className="mt-3 text-gray-600">인증 정보를 불러오는 중...</Text>
-        </View>
+        </SafeAreaView>
       )}
 
       {/* 에러 상태 */}
       {verificationError && (
-        <View className="flex-1 justify-center items-center p-6">
+        <SafeAreaView className="flex-1 justify-center items-center p-6" edges={['top']}>
           <FontAwesome5 name="exclamation-circle" size={40} color="#ef4444" />
           <Text className="mt-4 text-lg font-bold text-gray-800">
             불러오기 실패
@@ -418,12 +410,12 @@ export default function ApprovalsScreen() {
           >
             <Text className="text-white font-semibold">돌아가기</Text>
           </Pressable>
-        </View>
+        </SafeAreaView>
       )}
 
       {/* 데이터가 없는 경우 */}
       {!isVerificationLoading && !verificationError && !verification && (
-        <View className="flex-1 justify-center items-center p-6">
+        <SafeAreaView className="flex-1 justify-center items-center p-6" edges={['top']}>
           <FontAwesome5 name="search" size={40} color="#d1d5db" />
           <Text className="mt-4 text-lg font-bold text-gray-800">
             인증을 찾을 수 없습니다
@@ -438,230 +430,244 @@ export default function ApprovalsScreen() {
           >
             <Text className="text-white font-semibold">돌아가기</Text>
           </Pressable>
-        </View>
+        </SafeAreaView>
       )}
 
-      {/* 인증 정보 */}
+      {/* 메인 콘텐츠 */}
       {!isVerificationLoading && !verificationError && verification && (
-        <Animated.ScrollView
-          className="flex-1 pt-20"
-          showsVerticalScrollIndicator={false}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true },
-          )}
-          scrollEventThrottle={16}
-        >
-          <View className="px-5 pb-10">
-            {/* 인증 이미지 - 더 눈에 띄게 상단에 배치 */}
-            <View className="mb-6 rounded-2xl shadow-sm overflow-hidden">
-              {/* 인증 이미지 */}
-              {verification.verificationImage ? (
-                <Image
-                  source={getImageUrl(verification.verificationImage)}
-                  style={{ width: '100%', height: 280 }}
-                  contentFit="cover"
-                  transition={300}
-                />
-              ) : (
-                <View className="bg-gray-200 h-64 items-center justify-center">
-                  <FontAwesome5 name="image" size={40} color="#9ca3af" />
-                  <Text className="text-gray-500 mt-2">이미지 없음</Text>
-                </View>
-              )}
+        <SafeAreaView className="flex-1" edges={['top']}>
+          {/* 상단 타이틀 섹션 */}
+          <Animated.View
+            className="px-5 pt-4 pb-2 bg-gray-50"
+            style={{
+              opacity: titleSectionOpacity,
+              transform: [{ translateY: titleSectionTranslateY }],
+            }}
+          >
+            <Text className="text-2xl font-bold text-gray-800">인증 확인</Text>
+            <Text className="text-gray-500 mt-1">
+              자녀의 약속 인증을 확인하고 응답해 주세요
+            </Text>
+          </Animated.View>
 
-              {/* 약속 및 자녀 정보 */}
-              <View className="bg-white p-5">
-                {/* 약속 제목 및 설명 */}
-                <Text className="text-xl font-bold text-gray-800 mb-1">
-                  {verification.promise?.title || '제목 없음'}
-                </Text>
-                {verification.promise?.description && (
-                  <Text className="text-gray-600 mt-1 mb-4">
-                    {verification.promise.description}
-                  </Text>
-                )}
-
-                {/* 인증 메시지 (있는 경우) */}
-                {verification.verificationDescription && (
-                  <View className="bg-blue-50 p-3 rounded-lg mb-4">
-                    <View className="flex-row items-center mb-1">
-                      <FontAwesome5
-                        name="comment"
-                        size={12}
-                        color={Colors.light.primary}
-                        solid
-                      />
-                      <Text className="ml-2 text-sm font-medium text-gray-700">
-                        자녀의 메시지
-                      </Text>
-                    </View>
-                    <Text className="text-gray-600">
-                      {verification.verificationDescription}
-                    </Text>
-                  </View>
-                )}
-
-                {/* 구분선 */}
-                <View className="border-t border-gray-100 my-4" />
-
-                {/* 자녀 정보 및 시간 정보 */}
-                <View className="flex-row items-center">
+          {/* 스크롤 가능한 콘텐츠 */}
+          <Animated.ScrollView
+            ref={scrollViewRef}
+            className="flex-1"
+            showsVerticalScrollIndicator={false}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true },
+            )}
+            scrollEventThrottle={16}
+            contentContainerStyle={{ 
+              paddingBottom: 40, // 하단 여백 추가
+              minHeight: screenHeight - 100, // 최소 높이 보장
+            }}
+          >
+            <View className="px-5">
+              {/* 인증 이미지 및 정보 카드 */}
+              <View className="mb-6 rounded-2xl shadow-sm overflow-hidden bg-white">
+                {/* 인증 이미지 */}
+                {verification.verificationImage ? (
                   <Image
-                    source={
-                      verification.child?.user.profileImage
-                        ? getImageUrl(verification.child.user.profileImage)
-                        : require('../../assets/images/icon/basicPeople_icon.png')
-                    }
-                    style={{ width: 40, height: 40 }}
-                    contentFit="contain"
-                    className="rounded-full bg-gray-200"
+                    source={getImageUrl(verification.verificationImage)}
+                    style={{ width: '100%', height: 280 }}
+                    contentFit="cover"
+                    transition={300}
                   />
-                  <View className="ml-3 flex-1">
-                    <Text className="text-gray-800 font-medium">
-                      {verification.child?.user.username || '이름 없음'}
-                    </Text>
-                    <Text className="text-gray-500 text-xs">
-                      인증 시간: {formatDate(verification.verificationTime)}
-                    </Text>
+                ) : (
+                  <View className="bg-gray-200 h-64 items-center justify-center">
+                    <FontAwesome5 name="image" size={40} color="#9ca3af" />
+                    <Text className="text-gray-500 mt-2">이미지 없음</Text>
                   </View>
+                )}
 
-                  {/* 기한 정보 */}
-                  <View className="bg-gray-100 px-3 py-2 rounded-lg">
-                    <View className="flex-row items-center">
-                      <FontAwesome5
-                        name="calendar-alt"
-                        size={12}
-                        color="#4b5563"
-                        className="mr-1"
-                      />
-                      <Text className="text-xs text-gray-600 font-medium">
-                        기한
+                {/* 약속 및 자녀 정보 */}
+                <View className="p-5">
+                  {/* 약속 제목 및 설명 */}
+                  <Text className="text-xl font-bold text-gray-800 mb-1">
+                    {verification.promise?.title || '제목 없음'}
+                  </Text>
+                  {verification.promise?.description && (
+                    <Text className="text-gray-600 mt-1 mb-4">
+                      {verification.promise.description}
+                    </Text>
+                  )}
+
+                  {/* 인증 메시지 */}
+                  {verification.verificationDescription && (
+                    <View className="bg-blue-50 p-3 rounded-lg mb-4">
+                      <View className="flex-row items-center mb-1">
+                        <FontAwesome5
+                          name="comment"
+                          size={12}
+                          color={Colors.light.primary}
+                          solid
+                        />
+                        <Text className="ml-2 text-sm font-medium text-gray-700">
+                          자녀의 메시지
+                        </Text>
+                      </View>
+                      <Text className="text-gray-600">
+                        {verification.verificationDescription}
                       </Text>
                     </View>
-                    <Text className="text-xs text-gray-700 mt-1">
-                      {formatDate(verification.dueDate)
-                        .split(' ')
-                        .slice(0, 3)
-                        .join(' ')}
-                    </Text>
+                  )}
+
+                  {/* 구분선 */}
+                  <View className="border-t border-gray-100 my-4" />
+
+                  {/* 자녀 정보 및 시간 정보 */}
+                  <View className="flex-row items-center">
+                    <Image
+                      source={
+                        verification.child?.user.profileImage
+                          ? getImageUrl(verification.child.user.profileImage)
+                          : require('../../assets/images/icon/basicPeople_icon.png')
+                      }
+                      style={{ width: 40, height: 40 }}
+                      contentFit="contain"
+                      className="rounded-full bg-gray-200"
+                    />
+                    <View className="ml-3 flex-1">
+                      <Text className="text-gray-800 font-medium">
+                        {verification.child?.user.username || '이름 없음'}
+                      </Text>
+                      <Text className="text-gray-500 text-xs">
+                        인증 시간: {formatDate(verification.verificationTime)}
+                      </Text>
+                    </View>
+
+                    {/* 기한 정보 */}
+                    <View className="bg-gray-100 px-3 py-2 rounded-lg">
+                      <View className="flex-row items-center">
+                        <FontAwesome5
+                          name="calendar-alt"
+                          size={12}
+                          color="#4b5563"
+                          className="mr-1"
+                        />
+                        <Text className="text-xs text-gray-600 font-medium">
+                          기한
+                        </Text>
+                      </View>
+                      <Text className="text-xs text-gray-700 mt-1">
+                        {formatDate(verification.dueDate)
+                          .split(' ')
+                          .slice(0, 3)
+                          .join(' ')}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               </View>
-            </View>
 
-            {/* 스티커 선택 영역 */}
-            <View className="bg-white p-5 rounded-2xl mb-5 shadow-sm">
-              <View className="flex-row items-center mb-2">
-                <FontAwesome5
-                  name="star"
-                  size={16}
-                  color={Colors.light.primary}
-                  className="mr-2"
-                />
-                <Text className="text-lg font-bold text-gray-800">
-                  스티커 선택
-                </Text>
-              </View>
-
-              <Text className="text-gray-600 mb-4">
-                승인 시 자녀에게 지급할 스티커를 선택해주세요
-              </Text>
-
-              {isTemplatesLoading ? (
-                <SelectedStickerPreview
-                  selectedSticker={selectedStickerTemplate || null}
-                  onPress={openStickerSelector}
-                  allStickers={templates}
-                  onSelectSticker={handleSelectSticker}
-                />
-              ) : (
-                <SelectedStickerPreview
-                  selectedSticker={selectedStickerTemplate || null}
-                  onPress={openStickerSelector}
-                  allStickers={templates}
-                  onSelectSticker={handleSelectSticker}
-                />
-              )}
-            </View>
-
-            {/* 승인/거절 영역 */}
-            <View className="mb-4">
-              <View className="flex-row items-center mb-2">
-                <FontAwesome5
-                  name="clipboard-check"
-                  size={16}
-                  color="#4b5563"
-                  className="mr-2"
-                />
-                <Text className="text-lg font-bold text-gray-800">
-                  거절 사유
-                </Text>
-              </View>
-
-              {/* 거절 사유 입력 필드 */}
-              <TextInput
-                className="border border-gray-200 rounded-xl p-4 mb-4 bg-white"
-                placeholder="거절 사유를 입력하세요 (거절 시 필수)"
-                value={rejectionReason}
-                onChangeText={setRejectionReason}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-
-              {/* 버튼 영역 */}
-              <View className="flex-row mt-2">
-                <Pressable
-                  className="flex-1 bg-gray-100 py-3.5 rounded-xl mr-2 active:bg-gray-200 border border-gray-200"
-                  onPress={handleReject}
-                  disabled={isSubmitting}
-                >
-                  <View className="flex-row items-center justify-center">
-                    <FontAwesome5
-                      name="times"
-                      size={15}
-                      color="#ef4444"
-                      className="mr-2"
-                    />
-                    <Text className="text-gray-800 text-center font-medium">
-                      거절하기
-                    </Text>
-                  </View>
-                </Pressable>
-
-                <Pressable
-                  className="flex-1 bg-emerald-500 py-3.5 rounded-xl ml-2 active:bg-emerald-600"
-                  onPress={handleApprove}
-                  disabled={isSubmitting}
-                >
-                  <View className="flex-row items-center justify-center">
-                    <FontAwesome5
-                      name="check"
-                      size={15}
-                      color="white"
-                      className="mr-2"
-                    />
-                    <Text className="text-white text-center font-medium">
-                      승인하기
-                    </Text>
-                  </View>
-                </Pressable>
-              </View>
-
-              {/* 로딩 상태 */}
-              {isSubmitting && (
-                <View className="items-center mt-4">
-                  <ActivityIndicator
-                    size="small"
+              {/* 스티커 선택 영역 */}
+              <View className="bg-white p-5 rounded-2xl mb-5 shadow-sm">
+                <View className="flex-row items-center mb-2">
+                  <FontAwesome5
+                    name="star"
+                    size={16}
                     color={Colors.light.primary}
+                    className="mr-2"
                   />
-                  <Text className="text-gray-500 mt-1">처리 중...</Text>
+                  <Text className="text-lg font-bold text-gray-800">
+                    스티커 선택
+                  </Text>
                 </View>
-              )}
+
+                <Text className="text-gray-600 mb-4">
+                  승인 시 자녀에게 지급할 스티커를 선택해주세요
+                </Text>
+
+                <SelectedStickerPreview
+                  selectedSticker={selectedStickerTemplate || null}
+                  onPress={openStickerSelector}
+                  allStickers={templates}
+                  onSelectSticker={handleSelectSticker}
+                />
+              </View>
+
+              {/* 거절 사유 및 버튼 영역 */}
+              <View className="bg-white p-5 rounded-2xl shadow-sm">
+                <View className="flex-row items-center mb-2">
+                  <FontAwesome5
+                    name="clipboard-check"
+                    size={16}
+                    color="#4b5563"
+                    className="mr-2"
+                  />
+                  <Text className="text-lg font-bold text-gray-800">
+                    거절 사유
+                  </Text>
+                </View>
+
+                {/* 거절 사유 입력 필드 */}
+                <TextInput
+                  className="border border-gray-200 rounded-xl p-4 mb-4 bg-gray-50"
+                  placeholder="거절 사유를 입력하세요 (거절 시 필수)"
+                  value={rejectionReason}
+                  onChangeText={setRejectionReason}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  style={{ minHeight: 80 }}
+                />
+
+                {/* 버튼 영역 */}
+                <View className="flex-row mt-2">
+                  <Pressable
+                    className="flex-1 bg-gray-100 py-3.5 rounded-xl mr-2 active:bg-gray-200 border border-gray-200"
+                    onPress={handleReject}
+                    disabled={isSubmitting}
+                  >
+                    <View className="flex-row items-center justify-center">
+                      <FontAwesome5
+                        name="times"
+                        size={15}
+                        color="#ef4444"
+                        className="mr-2"
+                      />
+                      <Text className="text-gray-800 text-center font-medium">
+                        거절하기
+                      </Text>
+                    </View>
+                  </Pressable>
+
+                  <Pressable
+                    className="flex-1 bg-emerald-500 py-3.5 rounded-xl ml-2 active:bg-emerald-600"
+                    onPress={handleApprove}
+                    disabled={isSubmitting}
+                  >
+                    <View className="flex-row items-center justify-center">
+                      <FontAwesome5
+                        name="check"
+                        size={15}
+                        color="white"
+                        className="mr-2"
+                      />
+                      <Text className="text-white text-center font-medium">
+                        승인하기
+                      </Text>
+                    </View>
+                  </Pressable>
+                </View>
+
+                {/* 로딩 상태 */}
+                {isSubmitting && (
+                  <View className="items-center mt-4">
+                    <ActivityIndicator
+                      size="small"
+                      color={Colors.light.primary}
+                    />
+                    <Text className="text-gray-500 mt-1">처리 중...</Text>
+                  </View>
+                )}
+              </View>
             </View>
-          </View>
-        </Animated.ScrollView>
+          </Animated.ScrollView>
+        </SafeAreaView>
       )}
 
       {/* 경험치 획득 애니메이션 */}
@@ -678,6 +684,6 @@ export default function ApprovalsScreen() {
         onSelectSticker={handleSelectSticker}
         onConfirm={handleApprove}
       />
-    </SafeAreaView>
+    </View>
   );
 }
